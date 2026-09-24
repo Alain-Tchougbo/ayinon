@@ -6,28 +6,39 @@ declare module "vue-router" {
   interface RouteMeta {
     rolesAutorises?: RoleUtilisateur[];
     necessiteAuth?: boolean;
+    titre: string;
   }
 }
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: "/", name: "accueil", component: () => import("../views/AccueilView.vue") },
-    { path: "/carte", name: "carte", component: () => import("../views/CarteView.vue") },
-    { path: "/scanner", name: "scanner", component: () => import("../views/citoyen/ScannerView.vue") },
-    { path: "/simulateur-frais", name: "simulateur", component: () => import("../views/citoyen/SimulateurFraisView.vue") },
-    { path: "/connexion", name: "connexion", component: () => import("../views/auth/LoginView.vue") },
+    { path: "/", name: "accueil", component: () => import("../views/AccueilView.vue"), meta: { titre: "Accueil" } },
+    { path: "/carte", name: "carte", component: () => import("../views/CarteView.vue"), meta: { titre: "Carte cadastrale" } },
+    {
+      path: "/scanner",
+      name: "scanner",
+      component: () => import("../views/citoyen/ScannerView.vue"),
+      meta: { titre: "Scanner anti-fraude" },
+    },
+    {
+      path: "/simulateur-frais",
+      name: "simulateur",
+      component: () => import("../views/citoyen/SimulateurFraisView.vue"),
+      meta: { titre: "Simulateur de frais" },
+    },
+    { path: "/connexion", name: "connexion", component: () => import("../views/auth/LoginView.vue"), meta: { titre: "Connexion" } },
     {
       path: "/passeport-foncier",
       name: "passeport-foncier",
       component: () => import("../views/citoyen/PasseportFoncierView.vue"),
-      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.CITOYEN] },
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.CITOYEN], titre: "Passeport foncier" },
     },
     {
       path: "/geometre",
       name: "geometre",
       component: () => import("../views/geometre/ImportTopoView.vue"),
-      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.GEOMETRE] },
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.GEOMETRE], titre: "Import de bornage" },
     },
     {
       path: "/famille",
@@ -36,21 +47,26 @@ const router = createRouter({
       meta: {
         necessiteAuth: true,
         rolesAutorises: [RoleUtilisateur.CITOYEN, RoleUtilisateur.MANDATAIRE_FAMILIAL, RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.ADMIN],
+        titre: "Multi-signature familiale",
       },
     },
     {
       path: "/andf",
       name: "andf",
       component: () => import("../views/andf/ConsolePolesView.vue"),
-      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.MAGISTRAT_CSAF, RoleUtilisateur.ADMIN] },
+      meta: {
+        necessiteAuth: true,
+        rolesAutorises: [RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.MAGISTRAT_CSAF, RoleUtilisateur.ADMIN],
+        titre: "Console des poles",
+      },
     },
     {
       path: "/csaf",
       name: "csaf",
       component: () => import("../views/andf/GelCsafView.vue"),
-      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.MAGISTRAT_CSAF] },
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.MAGISTRAT_CSAF], titre: "Gel conservatoire CSAF" },
     },
-    { path: "/:pathMatch(.*)*", name: "introuvable", component: () => import("../views/IntrouvableView.vue") },
+    { path: "/:pathMatch(.*)*", name: "introuvable", component: () => import("../views/IntrouvableView.vue"), meta: { titre: "Page introuvable" } },
   ],
 });
 
@@ -69,6 +85,10 @@ router.beforeEach(async (to) => {
   }
 
   return true;
+});
+
+router.afterEach((to) => {
+  document.title = to.meta.titre ? `${to.meta.titre} — AYINON` : "AYINON";
 });
 
 export default router;

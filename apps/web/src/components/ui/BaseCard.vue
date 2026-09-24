@@ -2,9 +2,11 @@
 interface Props {
   accentue?: "aucun" | "danger" | "accent" | "succes";
   rembourrage?: "sm" | "md";
+  to?: string;
+  interactif?: boolean;
 }
 
-const props = withDefaults(defineProps<Props>(), { accentue: "aucun", rembourrage: "md" });
+const props = withDefaults(defineProps<Props>(), { accentue: "aucun", rembourrage: "md", to: undefined, interactif: false });
 
 const BORDURES: Record<NonNullable<Props["accentue"]>, string> = {
   aucun: "border-bordure",
@@ -22,9 +24,18 @@ const FONDS: Record<NonNullable<Props["accentue"]>, string> = {
 </script>
 
 <template>
-  <div
-    class="rounded-carte border shadow-carte"
+  <RouterLink
+    v-if="to"
+    :to="to"
+    class="group block rounded-carte border shadow-carte transition hover:-translate-y-0.5 hover:border-primaire hover:shadow-flottant"
     :class="[BORDURES[accentue], FONDS[accentue], rembourrage === 'md' ? 'p-5' : 'p-3']"
+  >
+    <slot />
+  </RouterLink>
+  <div
+    v-else
+    class="rounded-carte border shadow-carte"
+    :class="[BORDURES[accentue], FONDS[accentue], rembourrage === 'md' ? 'p-5' : 'p-3', interactif && 'transition hover:-translate-y-0.5 hover:shadow-flottant']"
   >
     <slot />
   </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { CircleCheck, PenLine, Ruler, TriangleAlert } from "@lucide/vue";
+import { CircleCheck, PenLine, Ruler, TriangleAlert, Upload } from "@lucide/vue";
 import type { GeoJsonPolygon } from "@ayinon/shared";
+import { area as calculerAireTurf, polygon as polygoneTurf } from "@turf/turf";
 import { computed, onMounted, ref } from "vue";
 import { detecterChevauchementLocal, type ConflitLocal } from "../../composables/useOverlapDetection";
 import { ApiError, api } from "../../services/api";
@@ -19,10 +20,14 @@ interface ReponseImport {
 const parcelles = useParcellesStore();
 onMounted(() => parcelles.chargerToutes());
 
+const enDev = import.meta.env.DEV;
+
 const parcelleId = ref("");
 const referenceDossier = ref("");
 const geometrieTexte = ref("");
 const numeroOrdreOgeb = ref("OGEB-512");
+const fichierInput = ref<HTMLInputElement>();
+const erreurFichier = ref<string | null>(null);
 
 const conflitsLocaux = ref<ConflitLocal[]>([]);
 const resultatServeur = ref<ReponseImport | null>(null);
@@ -31,6 +36,20 @@ const enCours = ref(false);
 const planSigne = ref(false);
 
 const parcelleSelectionnee = computed(() => parcelles.parcelles.find((p) => p.id === parcelleId.value));
+
+/** Resume lisible calcule localement a chaque frappe : evite d'exposer le JSON brut comme seul retour utilisateur. */
+const resumeGeometrie = computed(() => {
+  try {
+    const geometrie = JSON.parse(geometrieTexte.value) as GeoJsonPolygon;
+    const anneau = geometrie.coordinates?.[0];
+    if (!anneau || anneau.length < 4) return null;
+    const nombreSommets = anneau.length - 1; // le premier point est repete en dernier (anneau ferme)
+    const aireM2 = calculerAireTurf(polygoneTurf(geometrie.coordinates));
+    return { nombreSommets, aireM2 };
+  } catch {
+    return null;
+  }
+});
 
 function genererPolygoneDemo() {
   const cible = parcelleSelectionnee.value;
@@ -52,6 +71,27 @@ function genererPolygoneDemo() {
     ],
   };
   geometrieTexte.value = JSON.stringify(geometrie, null, 2);
+  preverifierLocalement();
+}
+
+function declencherImportFichier() {
+  fichierInput.value?.click();
+}
+
+async function surFichierChoisi(evenement: Event) {
+  erreurFichier.value = null;
+  const fichier = (evenement.target as HTMLInputElement).files?.[0];
+  if (!fichier) return;
+  try {
+    const texte = await fichier.text();
+    JSON.parse(texte); // valide juste que c'est un JSON lisible ; la structure est verifiee a l'import
+    geometrieTexte.value = JSON.stringify(JSON.parse(texte), null, 2);
+    preverifierLocalement();
+  } catch {
+    erreurFichier.value = "Ce fichier n'est pas un GeoJSON valide (JSON illisible).";
+  } finally {
+    (evenement.target as HTMLInputElement).value = "";
+  }
 }
 
 function preverifierLocalement() {
@@ -73,14 +113,19 @@ async function importerBornage() {
   planSigne.value = false;
   enCours.value = true;
   try {
-    const geometrie = JSON.parse(geometrieTexte.value) as GeoJsonPolygon;
+    let geometrie: GeoJsonPolygon;
+    try {
+      geometrie = JSON.parse(geometrieTexte.value) as GeoJsonPolygon;
+    } catch {
+      throw new Error("Le polygone saisi n'est pas un GeoJSON valide (verifiez les crochets et virgules).");
+    }
     resultatServeur.value = await api.post<ReponseImport>("/geometre/bornage", {
       parcelleId: parcelleId.value,
       referenceDossier: referenceDossier.value,
       geometrie,
     });
   } catch (e) {
-    erreur.value = e instanceof ApiError ? e.message : "Geometrie invalide ou import impossible";
+    erreur.value = e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Import impossible";
   } finally {
     enCours.value = false;
   }
@@ -123,35 +168,62 @@ async function signerPlan() {
         <BaseInput id="dossier" v-model="referenceDossier" label="Reference dossier" required />
 
         <div>
-          <div class="mb-1 flex items-center justify-between">
-            <label for="geometrie" class="block text-sm font-medium text-texte">Geometrie du plan (GeoJSON Polygon)</label>
-            <button type="button" class="min-h-0 text-xs font-medium text-primaire underline underline-offset-2 disabled:opacity-40" :disabled="!parcelleId" @click="genererPolygoneDemo">
-              Pre-remplir un exemple (demo)
-            </button>
-          </div>
-          <textarea
-            id="geometrie"
-            v-model="geometrieTexte"
-            rows="6"
-            required
-            class="w-full rounded-carte border border-bordure bg-fond px-3.5 py-2.5 font-mono text-xs text-texte"
-            @input="preverifierLocalement"
-          />
+          <label class="mb-1 block text-sm font-medium text-texte">Plan de bornage</label>
+          <input ref="fichierInput" type="file" accept=".geojson,.json,application/geo+json" class="hidden" @change="surFichierChoisi" />
+          <BaseButton type="button" variant="secondaire" @click="declencherImportFichier">
+            <Upload :size="16" aria-hidden="true" />
+            Importer un fichier (.geojson, .json)
+          </BaseButton>
+          <p v-if="erreurFichier" class="mt-1.5 text-xs text-danger" role="alert">{{ erreurFichier }}</p>
+
+          <p v-if="resumeGeometrie" class="mt-2.5 flex items-center gap-1.5 text-sm text-texte" role="status">
+            <CircleCheck :size="15" class="shrink-0 text-succes" aria-hidden="true" />
+            Plan lu : {{ resumeGeometrie.nombreSommets }} sommets, environ
+            {{ Math.round(resumeGeometrie.aireM2).toLocaleString("fr-FR") }} m² de superficie.
+          </p>
+          <p v-else-if="geometrieTexte" class="mt-2.5 text-sm text-danger" role="alert">
+            Le contenu importe n'est pas un polygone GeoJSON valide.
+          </p>
+
+          <details class="mt-2.5 rounded-carte border border-bordure bg-surface p-3.5 text-sm">
+            <summary class="cursor-pointer font-medium text-texte">
+              Mode avance : saisir ou modifier les coordonnees (GeoJSON)
+            </summary>
+            <div class="mt-2.5 flex items-center justify-between">
+              <span class="text-xs text-texte-attenue">Coordonnees [longitude, latitude] du polygone</span>
+              <button
+                v-if="enDev"
+                type="button"
+                class="min-h-0 text-xs font-medium text-primaire underline underline-offset-2 disabled:opacity-40"
+                :disabled="!parcelleId"
+                @click="genererPolygoneDemo"
+              >
+                Pre-remplir un exemple (dev)
+              </button>
+            </div>
+            <textarea
+              id="geometrie"
+              v-model="geometrieTexte"
+              rows="6"
+              class="mt-1.5 w-full rounded-carte border border-bordure bg-fond px-3.5 py-2.5 font-mono text-xs text-texte"
+              @input="preverifierLocalement"
+            />
+          </details>
         </div>
 
-        <p v-if="conflitsLocaux.length > 0" class="flex items-start gap-2 rounded-carte border border-accent/30 bg-accent/10 p-3 text-xs text-texte">
+        <p v-if="conflitsLocaux.length > 0" class="flex items-start gap-2 rounded-carte border border-accent/30 bg-accent/10 p-3 text-xs text-texte" role="status">
           <TriangleAlert :size="16" class="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
           Pre-verification locale : chevauchement probable avec {{ conflitsLocaux.map((c) => c.nup).join(", ") }}.
           Confirmation officielle par le serveur a l'import.
         </p>
 
-        <BaseButton type="submit" :disabled="enCours">Importer et analyser</BaseButton>
+        <BaseButton type="submit" :disabled="enCours || !geometrieTexte || !parcelleId">Importer et analyser</BaseButton>
       </form>
     </BaseCard>
 
     <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ erreur }}</p>
 
-    <BaseCard v-if="resultatServeur" :accentue="resultatServeur.chevauchementDetecte ? 'danger' : 'succes'">
+    <BaseCard v-if="resultatServeur" :accentue="resultatServeur.chevauchementDetecte ? 'danger' : 'succes'" role="status">
       <p class="flex items-center gap-2 font-bold" :class="resultatServeur.chevauchementDetecte ? 'text-danger' : 'text-succes'">
         <TriangleAlert v-if="resultatServeur.chevauchementDetecte" :size="20" aria-hidden="true" />
         <CircleCheck v-else :size="20" aria-hidden="true" />

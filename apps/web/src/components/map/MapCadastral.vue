@@ -24,23 +24,28 @@ const SVG_CADENAS =
   'stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="11" width="18" ' +
   'height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
 
+/**
+ * Le popup MapLibre est du HTML brut ajoute au document (hors rendu Vue) : on reference les
+ * variables CSS de tokens.css (var(--color-...)) plutot que des couleurs figees, pour que le
+ * popup suive fidelement le theme actif (clair/sombre/plein-soleil) au lieu de rester fige en blanc.
+ */
 function construirePopupHtml(parcelle: ParcelleCache): string {
   const couleurStatut = COULEUR_STATUT_PARCELLE[parcelle.statut];
   return `
-    <div style="font-family:system-ui,sans-serif;font-size:13px;line-height:1.6;min-width:200px">
+    <div style="font-family:system-ui,sans-serif;font-size:13px;line-height:1.6;min-width:200px;background:var(--color-surface);color:var(--color-texte);margin:-10px;padding:10px;border-radius:0.5rem">
       <div style="font-weight:700;font-size:14px;margin-bottom:2px">${parcelle.nup}</div>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
         <span style="width:9px;height:9px;border-radius:999px;background:${couleurStatut};display:inline-block"></span>
         <span>${LIBELLE_STATUT[parcelle.statut]}</span>
       </div>
-      <div style="color:#435449">
+      <div style="color:var(--color-texte-attenue)">
         ${parcelle.commune}${parcelle.arrondissement ? " — " + parcelle.arrondissement : ""}<br/>
         Superficie : ${parcelle.superficieM2.toLocaleString("fr-FR")} m²<br/>
         Proprietaire : ${parcelle.proprietaireNom ?? "Non renseigne"}
       </div>
       ${
         parcelle.verrouAntiVente
-          ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:5px;background:#15803d1a;color:#15803d;padding:3px 8px;border-radius:999px;font-weight:600;font-size:12px">${SVG_CADENAS} Verrou anti-vente actif</div>`
+          ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--color-succes);color:var(--color-succes);padding:2px 8px;border-radius:999px;font-weight:600;font-size:12px">${SVG_CADENAS} Verrou anti-vente actif</div>`
           : ""
       }
     </div>`;
@@ -62,6 +67,7 @@ const STYLE_FOND: StyleSpecification = {
 
 let carte: maplibregl.Map | undefined;
 let popup: maplibregl.Popup | undefined;
+let observateurTaille: ResizeObserver | undefined;
 const conteneur = ref<HTMLDivElement>();
 
 function construireGeoJson(parcelles: ParcelleCache[]): GeoJSON.FeatureCollection {
@@ -113,6 +119,15 @@ onMounted(() => {
     attributionControl: { compact: true },
   });
   carte.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+
+  // Le conteneur est dimensionne par un layout flex (main flex-1 min-h-0 -> ... -> h-full en
+  // cascade) : sa taille finale n'est pas forcement connue au premier rendu synchrone, ce qui
+  // laisserait MapLibre initialiser un canvas de hauteur 0. Un ResizeObserver garantit un
+  // carte.resize() des que la taille reelle du conteneur est disponible, et a chaque changement
+  // ulterieur (ouverture du menu mobile, redimensionnement de fenetre, ...).
+  observateurTaille = new ResizeObserver(() => carte?.resize());
+  observateurTaille.observe(conteneur.value);
+
   if (import.meta.env.DEV) {
     // Expose l'instance en dev uniquement, pour l'inspection manuelle / les scripts de verification.
     (window as unknown as { __ayinonMap?: maplibregl.Map }).__ayinonMap = carte;
@@ -178,6 +193,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  observateurTaille?.disconnect();
   popup?.remove();
   carte?.remove();
 });
@@ -186,7 +202,7 @@ watch(() => props.parcelles, rafraichirDonnees, { deep: false });
 </script>
 
 <template>
-  <div class="relative h-full w-full overflow-hidden rounded-carte border border-bordure">
-    <div ref="conteneur" class="h-full w-full" role="application" aria-label="Carte cadastrale interactive" />
+  <div class="relative flex w-full flex-1 overflow-hidden rounded-carte border border-bordure">
+    <div ref="conteneur" class="w-full flex-1" role="application" aria-label="Carte cadastrale interactive" />
   </div>
 </template>

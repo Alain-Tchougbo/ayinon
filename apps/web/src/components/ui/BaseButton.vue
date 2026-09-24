@@ -2,7 +2,7 @@
 import { computed } from "vue";
 
 interface Props {
-  variant?: "primaire" | "secondaire" | "ghost" | "danger" | "succes";
+  variant?: "primaire" | "secondaire" | "ghost" | "danger" | "succes" | "accent";
   taille?: "sm" | "md";
   to?: string;
   type?: "button" | "submit";
@@ -27,6 +27,7 @@ const VARIANTS: Record<NonNullable<Props["variant"]>, string> = {
   ghost: "text-texte hover:bg-fond",
   danger: "bg-danger text-white hover:brightness-110",
   succes: "bg-succes text-white hover:brightness-110",
+  accent: "bg-accent text-accent-contraste hover:brightness-110",
 };
 
 const TAILLES: Record<NonNullable<Props["taille"]>, string> = {

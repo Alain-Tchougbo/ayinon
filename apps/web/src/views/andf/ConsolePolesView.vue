@@ -36,7 +36,10 @@ onMounted(async () => {
       <template #icone><Landmark :size="22" class="text-primaire" aria-hidden="true" /></template>
     </PageHeader>
 
-    <p v-if="chargement" class="text-sm text-texte-attenue">Chargement...</p>
+    <p v-if="chargement" class="text-sm text-texte-attenue" role="status">Chargement...</p>
+    <p v-else-if="stats.length === 0" class="rounded-carte border border-dashed border-bordure p-4 text-sm text-texte-attenue">
+      Aucun pole territorial disponible pour le moment.
+    </p>
 
     <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <BaseCard v-for="pole in stats" :key="pole.pole">
@@ -47,7 +50,7 @@ onMounted(async () => {
         <ul class="mt-3.5 space-y-1.5 border-t border-bordure pt-3 text-xs">
           <li v-for="ligne in REPARTITION" :key="ligne.cle" class="flex items-center justify-between">
             <span class="flex items-center gap-1.5 text-texte-attenue">
-              <span class="h-2 w-2 rounded-full" :class="ligne.couleur" aria-hidden="true" />
+              <span class="h-2.5 w-2.5 shrink-0 rounded-full" :class="ligne.couleur" aria-hidden="true" />
               {{ ligne.label }}
             </span>
             <span class="font-medium text-texte">{{ pole.parStatut[ligne.cle] ?? 0 }}</span>

@@ -23,10 +23,14 @@ const nupRecherche = ref("");
 const parcelleCible = ref<{ id: string; nup: string; statut: string } | null>(null);
 const motif = ref("");
 const referenceDossierJudiciaire = ref("");
-const motifLevee = ref("");
 const message = ref<string | null>(null);
 const erreur = ref<string | null>(null);
 const confirmationRequise = ref(false);
+
+// Levee de gel : meme exigence de motif + confirmation explicite que la pose du gel, pour un acte
+// judiciaire tout aussi lourd (voir audit : la levee etait auparavant un simple clic sans motif).
+const conflitEnLevee = ref<string | null>(null);
+const motifLeveeParConflit = ref<Record<string, string>>({});
 
 onMounted(chargerConflits);
 
@@ -62,10 +66,19 @@ async function confirmerGel() {
   }
 }
 
-async function lever(conflitId: string) {
+async function confirmerLevee(conflitId: string) {
   erreur.value = null;
+  message.value = null;
+  const motifLevee = motifLeveeParConflit.value[conflitId]?.trim() ?? "";
+  if (motifLevee.length < 10) {
+    erreur.value = "Le motif de levee doit compter au moins 10 caracteres";
+    return;
+  }
   try {
-    await api.post("/csaf/levee", { conflitId, motifLevee: motifLevee.value || "Leve par le magistrat" });
+    await api.post("/csaf/levee", { conflitId, motifLevee });
+    message.value = "Gel conservatoire leve.";
+    conflitEnLevee.value = null;
+    delete motifLeveeParConflit.value[conflitId];
     await chargerConflits();
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Levee impossible";
@@ -95,7 +108,7 @@ async function lever(conflitId: string) {
     </form>
 
     <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ erreur }}</p>
-    <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes">{{ message }}</p>
+    <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes" role="status">{{ message }}</p>
 
     <BaseCard v-if="parcelleCible" accentue="danger">
       <p class="font-semibold text-texte">Parcelle : {{ parcelleCible.nup }} — statut actuel : {{ parcelleCible.statut }}</p>
@@ -108,7 +121,7 @@ async function lever(conflitId: string) {
             v-model="motif"
             rows="2"
             placeholder="Ex. double vente alleguee"
-            class="w-full rounded-carte border border-bordure bg-surface px-3.5 py-2.5 text-sm text-texte"
+            class="w-full rounded-carte border border-bordure bg-fond px-3.5 py-2.5 text-sm text-texte"
           />
         </div>
       </div>
@@ -140,10 +153,30 @@ async function lever(conflitId: string) {
             <p class="font-semibold text-texte">{{ conflit.parcelle.nup }} — {{ conflit.parcelle.commune }}</p>
             <p class="mt-0.5 text-sm text-texte-attenue">{{ conflit.motif }} (dossier {{ conflit.referenceDossierJudiciaire }})</p>
             <p class="mt-0.5 text-xs text-texte-attenue">Gele le {{ new Date(conflit.dateGel).toLocaleDateString("fr-FR") }}</p>
-            <BaseButton variant="succes" taille="sm" class="mt-2.5" @click="lever(conflit.id)">
+
+            <BaseButton v-if="conflitEnLevee !== conflit.id" variant="secondaire" taille="sm" class="mt-2.5" @click="conflitEnLevee = conflit.id">
               <Unlock :size="14" aria-hidden="true" />
               Lever le gel
             </BaseButton>
+            <div v-else class="mt-2.5 space-y-2 rounded-carte border border-bordure bg-fond p-3">
+              <div>
+                <label :for="`motif-levee-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">
+                  Motif de la levee (obligatoire)
+                </label>
+                <textarea
+                  :id="`motif-levee-${conflit.id}`"
+                  v-model="motifLeveeParConflit[conflit.id]"
+                  rows="2"
+                  placeholder="Ex. litige resolu par jugement du..."
+                  class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
+                />
+              </div>
+              <p class="text-xs text-texte-attenue">Confirmez-vous la levee du gel sur {{ conflit.parcelle.nup }} ?</p>
+              <div class="flex gap-2">
+                <BaseButton taille="sm" @click="confirmerLevee(conflit.id)">Oui, lever le gel</BaseButton>
+                <BaseButton variant="secondaire" taille="sm" @click="conflitEnLevee = null">Annuler</BaseButton>
+              </div>
+            </div>
           </BaseCard>
         </li>
         <li v-if="conflitsActifs.length === 0" class="text-sm text-texte-attenue">Aucun conflit actif.</li>
