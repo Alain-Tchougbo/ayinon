@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { AdminModule } from "./admin/admin.module";
 import { AndfModule } from "./andf/andf.module";
 import { AuthModule } from "./auth/auth.module";
 import { CessionsModule } from "./cessions/cessions.module";
@@ -35,6 +36,7 @@ import { SyncModule } from "./sync/sync.module";
     CsafModule,
     AndfModule,
     HypothequesModule,
+    AdminModule,
     SyncModule,
   ],
   providers: [

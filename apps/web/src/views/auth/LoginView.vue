@@ -27,6 +27,7 @@ const COMPTES_DEMO = [
   { email: "andf.littoral@ayinon.bj", label: "Agent ANDF" },
   { email: "csaf1@ayinon.bj", label: "Magistrat CSAF" },
   { email: "banque1@ayinon.bj", label: "Agent banque / microfinance" },
+  { email: "admin@ayinon.bj", label: "Administrateur (back-office)" },
 ];
 
 async function seConnecter() {

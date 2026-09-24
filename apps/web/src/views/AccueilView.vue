@@ -8,6 +8,7 @@ import {
   Handshake,
   Inbox,
   Landmark,
+  LayoutDashboard,
   ListClock,
   Map,
   Ruler,
@@ -125,6 +126,14 @@ const raccourcis = computed(() => {
       icone: Banknote,
       titre: "Verifier la solvabilite",
       description: "Titre, gel CSAF, gage existant : verifiez avant credit et inscrivez votre hypotheque.",
+    });
+  }
+  if (auth.role === RoleUtilisateur.ADMIN) {
+    items.push({
+      to: "/admin",
+      icone: LayoutDashboard,
+      titre: "Back-office",
+      description: "Vue d'ensemble, utilisateurs, proprietaires, parcelles et documents.",
     });
   }
   return items;

@@ -92,6 +92,12 @@ const router = createRouter({
         titre: "Verification de solvabilite",
       },
     },
+    {
+      path: "/admin",
+      name: "admin",
+      component: () => import("../views/admin/AdminView.vue"),
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.ADMIN], titre: "Back-office" },
+    },
     { path: "/:pathMatch(.*)*", name: "introuvable", component: () => import("../views/IntrouvableView.vue"), meta: { titre: "Page introuvable" } },
   ],
 });

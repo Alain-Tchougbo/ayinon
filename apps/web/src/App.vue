@@ -41,7 +41,7 @@ const liensNav = computed(() => {
   }
   if (auth.role === RoleUtilisateur.AGENT_ANDF || auth.role === RoleUtilisateur.ADMIN) {
     items.push({ to: "/andf", label: "Console des poles" });
-    items.push({ to: "/andf/cessions", label: "Cessions a valider" });
+    items.push({ to: "/andf/cessions", label: "Cessions" });
   }
   if (auth.role === RoleUtilisateur.MAGISTRAT_CSAF) {
     items.push({ to: "/andf", label: "Console des poles" });
@@ -49,6 +49,9 @@ const liensNav = computed(() => {
   }
   if (auth.role === RoleUtilisateur.AGENT_BANQUE) {
     items.push({ to: "/banque/solvabilite", label: "Solvabilite" });
+  }
+  if (auth.role === RoleUtilisateur.ADMIN) {
+    items.push({ to: "/admin", label: "Back-office" });
   }
   return items;
 });

@@ -94,4 +94,8 @@ export const PHRASES = {
     id: "solvabilite-intro",
     texteFr: "Verifiez si une parcelle est titree, non gelee et libre de gage avant un credit, ou inscrivez votre hypotheque.",
   },
+  adminIntro: {
+    id: "admin-intro",
+    texteFr: "Consultez la vue d'ensemble de la plateforme et gerez les utilisateurs, proprietaires, parcelles et documents.",
+  },
 } as const satisfies Record<string, PhraseVocale>;
