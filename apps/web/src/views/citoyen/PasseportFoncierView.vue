@@ -23,7 +23,7 @@ const erreur = ref<string | null>(null);
 const enCours = ref(false);
 
 onMounted(async () => {
-  definirPhraseCourante(PHRASES.bienvenue);
+  definirPhraseCourante(PHRASES.passeportIntro);
   await parcelles.chargerToutes();
 });
 

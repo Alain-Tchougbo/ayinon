@@ -10,6 +10,7 @@ export const RoleUtilisateur = {
   MANDATAIRE_FAMILIAL: "MANDATAIRE_FAMILIAL",
   AGENT_ANDF: "AGENT_ANDF",
   MAGISTRAT_CSAF: "MAGISTRAT_CSAF",
+  AGENT_BANQUE: "AGENT_BANQUE",
   ADMIN: "ADMIN",
 } as const;
 export type RoleUtilisateur = (typeof RoleUtilisateur)[keyof typeof RoleUtilisateur];
@@ -84,8 +85,32 @@ export const TypeOperationAudit = {
   CLOTURE_BAN: "CLOTURE_BAN",
   GEL_CSAF: "GEL_CSAF",
   LEVEE_GEL_CSAF: "LEVEE_GEL_CSAF",
+  PROPOSITION_CESSION: "PROPOSITION_CESSION",
+  ACCEPTATION_CESSION: "ACCEPTATION_CESSION",
+  REJET_CESSION: "REJET_CESSION",
+  VALIDATION_CESSION: "VALIDATION_CESSION",
+  DELIVRANCE_TITRE: "DELIVRANCE_TITRE",
+  INSCRIPTION_HYPOTHEQUE: "INSCRIPTION_HYPOTHEQUE",
+  LEVEE_HYPOTHEQUE: "LEVEE_HYPOTHEQUE",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
+
+/** Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
+ * -> VALIDEE par un agent ANDF (genere le Titre et transfere la propriete), ou REJETEE a toute etape
+ * avant validation (par l'acquereur ou par l'ANDF). */
+export const StatutCession = {
+  PROPOSEE: "PROPOSEE",
+  ACCEPTEE: "ACCEPTEE",
+  VALIDEE: "VALIDEE",
+  REJETEE: "REJETEE",
+} as const;
+export type StatutCession = (typeof StatutCession)[keyof typeof StatutCession];
+
+export const StatutHypotheque = {
+  ACTIVE: "ACTIVE",
+  LEVEE: "LEVEE",
+} as const;
+export type StatutHypotheque = (typeof StatutHypotheque)[keyof typeof StatutHypotheque];
 
 /**
  * Six poles territoriaux (regroupement des 12 departements du Benin), reference structurante

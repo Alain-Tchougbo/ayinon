@@ -1,12 +1,24 @@
 <script setup lang="ts">
-import { Gavel, Lock, Search, Unlock } from "@lucide/vue";
+import { Download, FileText, Gavel, Lock, Search, Unlock } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useParcellesStore } from "../../stores/parcelles.store";
+import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
+import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
+
+interface EntreeAudit {
+  id: string;
+  sequence: number;
+  typeOperation: string;
+  roleActeur: string | null;
+  payload: Record<string, unknown>;
+  hashBloc: string;
+  horodatage: string;
+}
 
 interface ConflitCsaf {
   id: string;
@@ -17,6 +29,7 @@ interface ConflitCsaf {
 }
 
 const parcelles = useParcellesStore();
+const { definirPhraseCourante } = useVoiceAssistant();
 const conflitsActifs = ref<ConflitCsaf[]>([]);
 
 const nupRecherche = ref("");
@@ -27,12 +40,20 @@ const message = ref<string | null>(null);
 const erreur = ref<string | null>(null);
 const confirmationRequise = ref(false);
 
+// Dossier de preuves numerique : historique chronologique complet de la parcelle recherchee,
+// pour instruire un dossier judiciaire en quelques minutes (voir CryptoAuditService).
+const historiqueDossier = ref<EntreeAudit[] | null>(null);
+const chargementDossier = ref(false);
+
 // Levee de gel : meme exigence de motif + confirmation explicite que la pose du gel, pour un acte
 // judiciaire tout aussi lourd (voir audit : la levee etait auparavant un simple clic sans motif).
 const conflitEnLevee = ref<string | null>(null);
 const motifLeveeParConflit = ref<Record<string, string>>({});
 
-onMounted(chargerConflits);
+onMounted(() => {
+  definirPhraseCourante(PHRASES.csafIntro);
+  chargerConflits();
+});
 
 async function chargerConflits() {
   conflitsActifs.value = await api.get<ConflitCsaf[]>("/csaf/conflits-actifs");
@@ -40,9 +61,40 @@ async function chargerConflits() {
 
 async function chercherParcelle() {
   erreur.value = null;
+  historiqueDossier.value = null;
   const resultats = await parcelles.rechercher({ nup: nupRecherche.value });
   parcelleCible.value = resultats[0] ?? null;
-  if (!parcelleCible.value) erreur.value = "Aucune parcelle trouvee";
+  if (!parcelleCible.value) {
+    erreur.value = "Aucune parcelle trouvee";
+    return;
+  }
+  await chargerDossier(parcelleCible.value.id);
+}
+
+async function chargerDossier(parcelleId: string) {
+  chargementDossier.value = true;
+  try {
+    historiqueDossier.value = await api.get<EntreeAudit[]>(`/audit/parcelles/${parcelleId}/historique`);
+  } finally {
+    chargementDossier.value = false;
+  }
+}
+
+function telechargerDossier() {
+  if (!parcelleCible.value || !historiqueDossier.value) return;
+  const dossier = {
+    parcelle: parcelleCible.value,
+    genereLe: new Date().toISOString(),
+    nombreEntrees: historiqueDossier.value.length,
+    historique: historiqueDossier.value,
+  };
+  const blob = new Blob([JSON.stringify(dossier, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const lien = document.createElement("a");
+  lien.href = url;
+  lien.download = `dossier-preuves-${parcelleCible.value.nup}.json`;
+  lien.click();
+  URL.revokeObjectURL(url);
 }
 
 async function confirmerGel() {
@@ -100,7 +152,7 @@ async function confirmerLevee(conflitId: string) {
         <Search :size="16" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
         <input
           v-model="nupRecherche"
-          placeholder="NUP de la parcelle a geler"
+          placeholder="NUP de la parcelle (gel et dossier de preuves)"
           class="w-full rounded-carte border border-bordure bg-surface py-2.5 pl-10 pr-3 text-sm text-texte"
         />
       </div>
@@ -143,6 +195,34 @@ async function confirmerLevee(conflitId: string) {
           <BaseButton variant="secondaire" taille="sm" @click="confirmationRequise = false">Annuler</BaseButton>
         </div>
       </div>
+    </BaseCard>
+
+    <BaseCard v-if="parcelleCible">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="flex items-center gap-2 font-semibold text-texte">
+          <FileText :size="18" class="text-primaire" aria-hidden="true" />
+          Dossier de preuves — {{ parcelleCible.nup }}
+        </h2>
+        <BaseButton v-if="historiqueDossier && historiqueDossier.length > 0" taille="sm" variant="secondaire" @click="telechargerDossier">
+          <Download :size="14" aria-hidden="true" />
+          Telecharger (JSON)
+        </BaseButton>
+      </div>
+
+      <p v-if="chargementDossier" class="mt-3 text-sm text-texte-attenue" role="status">Chargement de l'historique…</p>
+      <p v-else-if="historiqueDossier && historiqueDossier.length === 0" class="mt-3 text-sm text-texte-attenue">
+        Aucune operation enregistree sur cette parcelle pour le moment.
+      </p>
+      <ol v-else-if="historiqueDossier" class="mt-3 space-y-2 border-l-2 border-bordure pl-4">
+        <li v-for="entree in historiqueDossier" :key="entree.id" class="text-sm">
+          <p class="font-medium text-texte">{{ entree.typeOperation.replaceAll("_", " ") }}</p>
+          <p class="text-xs text-texte-attenue">
+            {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}
+            <template v-if="entree.roleActeur"> — {{ entree.roleActeur.replaceAll("_", " ") }}</template>
+          </p>
+          <p class="mt-0.5 font-mono text-[0.65rem] text-texte-attenue">hash bloc : {{ entree.hashBloc.slice(0, 24) }}…</p>
+        </li>
+      </ol>
     </BaseCard>
 
     <div>

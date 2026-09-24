@@ -17,8 +17,11 @@ export class GeometreController {
 
   @Roles(RoleUtilisateur.GEOMETRE)
   @Post("bornage")
-  async importerBornage(@Body(new ZodValidationPipe(ImportBornageSchema)) dto: ImportBornageDto) {
-    return this.geometre.importerBornage(dto);
+  async importerBornage(
+    @Body(new ZodValidationPipe(ImportBornageSchema)) dto: ImportBornageDto,
+    @CurrentUser() utilisateur: UtilisateurAuthentifie,
+  ) {
+    return this.geometre.importerBornage(dto, utilisateur);
   }
 
   @Roles(RoleUtilisateur.GEOMETRE)
@@ -28,6 +31,12 @@ export class GeometreController {
     @CurrentUser() utilisateur: UtilisateurAuthentifie,
   ) {
     return this.geometre.signerPlan(dto, utilisateur);
+  }
+
+  @Roles(RoleUtilisateur.GEOMETRE)
+  @Get("mes-imports")
+  async listerMesImports(@CurrentUser() utilisateur: UtilisateurAuthentifie) {
+    return this.geometre.listerMesImports(utilisateur.id);
   }
 
   @Get("parcelles/:id/bornage")

@@ -4,6 +4,7 @@ import { ConfigModule } from "@nestjs/config";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AndfModule } from "./andf/andf.module";
 import { AuthModule } from "./auth/auth.module";
+import { CessionsModule } from "./cessions/cessions.module";
 import { CsrfGuard } from "./common/guards/csrf.guard";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
 import { RolesGuard } from "./common/guards/roles.guard";
@@ -12,6 +13,7 @@ import { CryptoAuditModule } from "./crypto-audit/crypto-audit.module";
 import { CsafModule } from "./csaf/csaf.module";
 import { FamillesModule } from "./familles/familles.module";
 import { GeometreModule } from "./geometre/geometre.module";
+import { HypothequesModule } from "./hypotheques/hypotheques.module";
 import { OtpModule } from "./otp/otp.module";
 import { ParcellesModule } from "./parcelles/parcelles.module";
 import { PrismaModule } from "./prisma/prisma.module";
@@ -27,10 +29,12 @@ import { SyncModule } from "./sync/sync.module";
     ParcellesModule,
     CryptoAuditModule,
     ConventionsModule,
+    CessionsModule,
     GeometreModule,
     FamillesModule,
     CsafModule,
     AndfModule,
+    HypothequesModule,
     SyncModule,
   ],
   providers: [

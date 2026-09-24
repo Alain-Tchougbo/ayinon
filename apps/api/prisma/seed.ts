@@ -103,6 +103,7 @@ async function main() {
       poleTerritorial: PoleTerritorial.LITTORAL_ATLANTIQUE,
     },
     { email: "csaf1@ayinon.bj", role: RoleUtilisateur.MAGISTRAT_CSAF, nomComplet: "Magistrat CSAF — Cour Speciale des Affaires Foncieres" },
+    { email: "banque1@ayinon.bj", role: RoleUtilisateur.AGENT_BANQUE, nomComplet: "Agent Credit — Microfinance ALAFIA" },
     { email: "admin@ayinon.bj", role: RoleUtilisateur.ADMIN, nomComplet: "Administrateur plateforme AYINON" },
   ];
   for (const compte of comptes) {

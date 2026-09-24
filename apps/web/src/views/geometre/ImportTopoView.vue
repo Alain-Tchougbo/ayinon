@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { CircleCheck, PenLine, Ruler, TriangleAlert, Upload } from "@lucide/vue";
+import { CircleCheck, ListClock, PenLine, Ruler, TriangleAlert, Upload } from "@lucide/vue";
 import type { GeoJsonPolygon } from "@ayinon/shared";
 import { area as calculerAireTurf, polygon as polygoneTurf } from "@turf/turf";
 import { computed, onMounted, ref } from "vue";
 import { detecterChevauchementLocal, type ConflitLocal } from "../../composables/useOverlapDetection";
+import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { ApiError, api } from "../../services/api";
 import { useParcellesStore } from "../../stores/parcelles.store";
+import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
@@ -16,9 +18,35 @@ interface ReponseImport {
   chevauchementDetecte: boolean;
   parcellesEnConflit: Array<{ id: string; nup: string; aireIntersectionM2: number }>;
 }
+interface MonImport {
+  id: string;
+  referenceDossier: string;
+  chevauchementDetecte: boolean;
+  numeroOrdreOgeb: string | null;
+  signeParId: string | null;
+  createdAt: string;
+  parcelle: { id: string; nup: string; commune: string };
+}
 
 const parcelles = useParcellesStore();
-onMounted(() => parcelles.chargerToutes());
+const { definirPhraseCourante } = useVoiceAssistant();
+const mesImports = ref<MonImport[]>([]);
+const chargementMesImports = ref(false);
+
+async function chargerMesImports() {
+  chargementMesImports.value = true;
+  try {
+    mesImports.value = await api.get<MonImport[]>("/geometre/mes-imports");
+  } finally {
+    chargementMesImports.value = false;
+  }
+}
+
+onMounted(() => {
+  definirPhraseCourante(PHRASES.geometreIntro);
+  parcelles.chargerToutes();
+  chargerMesImports();
+});
 
 const enDev = import.meta.env.DEV;
 
@@ -124,6 +152,7 @@ async function importerBornage() {
       referenceDossier: referenceDossier.value,
       geometrie,
     });
+    await chargerMesImports();
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Import impossible";
   } finally {
@@ -140,6 +169,7 @@ async function signerPlan() {
       numeroOrdreOgeb: numeroOrdreOgeb.value,
     });
     planSigne.value = true;
+    await chargerMesImports();
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Signature refusee";
   }
@@ -154,6 +184,38 @@ async function signerPlan() {
     >
       <template #icone><Ruler :size="22" class="text-primaire" aria-hidden="true" /></template>
     </PageHeader>
+
+    <BaseCard>
+      <p class="mb-3 flex items-center gap-2 font-semibold text-texte">
+        <ListClock :size="18" class="text-primaire" aria-hidden="true" />
+        Vos imports recents
+      </p>
+      <p v-if="chargementMesImports" class="text-sm text-texte-attenue" role="status">Chargement…</p>
+      <p v-else-if="mesImports.length === 0" class="text-sm text-texte-attenue">
+        Aucun plan de bornage importe pour le moment — le premier apparaitra ici.
+      </p>
+      <ul v-else class="space-y-2">
+        <li
+          v-for="i in mesImports"
+          :key="i.id"
+          class="flex items-center justify-between gap-2 rounded-carte border border-bordure bg-surface p-3 text-sm"
+        >
+          <div>
+            <p class="font-medium text-texte">{{ i.parcelle.nup }} — {{ i.parcelle.commune }}</p>
+            <p class="text-xs text-texte-attenue">
+              Dossier {{ i.referenceDossier }} · {{ new Date(i.createdAt).toLocaleDateString("fr-FR") }}
+            </p>
+          </div>
+          <span
+            class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+            :class="i.chevauchementDetecte ? 'bg-danger/10 text-danger' : i.signeParId ? 'bg-succes/10 text-succes' : 'bg-accent/10 text-accent'"
+          >
+            <component :is="i.chevauchementDetecte ? TriangleAlert : CircleCheck" :size="12" aria-hidden="true" />
+            {{ i.chevauchementDetecte ? "Chevauchement" : i.signeParId ? "Signe" : "A signer" }}
+          </span>
+        </li>
+      </ul>
+    </BaseCard>
 
     <BaseCard>
       <form class="space-y-4" @submit.prevent="importerBornage">
