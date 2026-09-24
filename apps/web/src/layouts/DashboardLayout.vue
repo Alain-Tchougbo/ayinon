@@ -165,14 +165,14 @@ function rechercherRapide() {
     <!-- Sidebar desktop : nav verticale, plus aucune contrainte de largeur horizontale a gerer
          role par role (fini les calculs de debordement d'une barre horizontale). -->
     <aside class="hidden w-64 shrink-0 flex-col border-r border-bordure bg-surface lg:flex" aria-label="Navigation principale">
-      <RouterLink to="/" class="flex items-center gap-2.5 px-5 py-5 text-base font-bold tracking-tight text-primaire">
+      <RouterLink to="/" class="flex h-16 shrink-0 items-center gap-2.5 border-b border-bordure px-5 text-base font-bold tracking-tight text-primaire">
         <span class="flex h-9 w-9 items-center justify-center rounded-carte bg-primaire text-primaire-contraste">
           <Shield :size="20" :stroke-width="2.25" aria-hidden="true" />
         </span>
         AYINON
       </RouterLink>
 
-      <nav class="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
+      <nav class="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
         <RouterLink
           v-for="lien in liensNav"
           :key="lien.to"
@@ -291,10 +291,10 @@ function rechercherRapide() {
     </div>
 
     <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
-      <header class="flex shrink-0 items-center justify-between gap-3 border-b border-bordure bg-surface px-4 py-3 sm:px-6">
+      <header class="flex h-16 shrink-0 items-center gap-4 bg-fond px-4 sm:px-6">
         <button
           type="button"
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-carte text-texte hover:bg-fond lg:hidden"
+          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-carte text-texte hover:bg-fond lg:hidden"
           aria-label="Ouvrir le menu"
           @click="menuMobileOuvert = true"
         >
@@ -303,59 +303,61 @@ function rechercherRapide() {
 
         <form class="hidden max-w-sm flex-1 sm:block" @submit.prevent="rechercherRapide">
           <label for="recherche-rapide" class="sr-only">Rechercher une parcelle par NUP</label>
-          <div class="relative">
-            <Search :size="16" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
+          <div class="relative flex h-11 items-center">
+            <Search :size="16" class="pointer-events-none absolute left-3.5 text-texte-attenue" aria-hidden="true" />
             <input
               id="recherche-rapide"
               ref="champRecherche"
               v-model="rechercheRapide"
               placeholder="Rechercher une parcelle (NUP)…"
-              class="w-full rounded-full border border-bordure bg-fond py-2 pl-9 pr-14 text-sm text-texte"
+              class="h-11 w-full rounded-full border border-bordure bg-surface pl-9 pr-14 text-sm text-texte"
             />
             <kbd
-              class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-bordure bg-surface px-1.5 py-0.5 text-[0.65rem] font-semibold text-texte-attenue"
+              class="pointer-events-none absolute right-2.5 rounded border border-bordure bg-fond px-1.5 py-1 text-[0.65rem] font-semibold leading-none text-texte-attenue"
             >
               Ctrl K
             </kbd>
           </div>
         </form>
 
-        <div class="ml-auto flex shrink-0 items-center gap-1">
-          <span
-            class="flex h-9 w-9 items-center justify-center rounded-full"
-            :class="enLigne ? 'text-succes' : 'text-danger'"
-            :title="
-              enLigne
-                ? 'Connexion active : vos actions sont enregistrees immediatement.'
-                : 'Hors-ligne : vos actions sont mises en file et synchronisees au retour du reseau.'
-            "
-          >
-            <Wifi v-if="enLigne" :size="18" aria-hidden="true" />
-            <WifiOff v-else :size="18" aria-hidden="true" />
-            <span class="sr-only">{{ enLigne ? "En ligne" : "Hors-ligne" }}</span>
-          </span>
-
-          <RouterLink
-            v-if="notifications.lien.value"
-            :to="notifications.lien.value"
-            class="relative flex h-10 w-10 items-center justify-center rounded-full text-texte-attenue hover:bg-fond hover:text-texte"
-            :aria-label="`${notifications.compte.value} ${notifications.libelle.value}`"
-            :title="`${notifications.compte.value} ${notifications.libelle.value}`"
-          >
-            <Bell :size="18" aria-hidden="true" />
+        <div class="ml-auto flex shrink-0 items-center">
+          <div class="flex items-center gap-1 border-r border-bordure pr-3">
             <span
-              v-if="notifications.compte.value > 0"
-              class="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[0.6rem] font-bold text-white"
+              class="flex h-11 w-11 items-center justify-center rounded-full"
+              :class="enLigne ? 'text-succes' : 'text-danger'"
+              :title="
+                enLigne
+                  ? 'Connexion active : vos actions sont enregistrees immediatement.'
+                  : 'Hors-ligne : vos actions sont mises en file et synchronisees au retour du reseau.'
+              "
             >
-              {{ notifications.compte.value }}
+              <Wifi v-if="enLigne" :size="18" aria-hidden="true" />
+              <WifiOff v-else :size="18" aria-hidden="true" />
+              <span class="sr-only">{{ enLigne ? "En ligne" : "Hors-ligne" }}</span>
             </span>
-          </RouterLink>
 
-          <div class="relative">
+            <RouterLink
+              v-if="notifications.lien.value"
+              :to="notifications.lien.value"
+              class="relative flex h-11 w-11 items-center justify-center rounded-full text-texte-attenue hover:bg-fond hover:text-texte"
+              :aria-label="`${notifications.compte.value} ${notifications.libelle.value}`"
+              :title="`${notifications.compte.value} ${notifications.libelle.value}`"
+            >
+              <Bell :size="18" aria-hidden="true" />
+              <span
+                v-if="notifications.compte.value > 0"
+                class="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[0.6rem] font-bold text-white"
+              >
+                {{ notifications.compte.value }}
+              </span>
+            </RouterLink>
+          </div>
+
+          <div class="relative ml-3">
             <div v-if="menuProfilOuvert" class="fixed inset-0 z-10" @click="menuProfilOuvert = false" />
             <button
               type="button"
-              class="relative z-20 flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-fond"
+              class="relative z-20 flex h-11 items-center gap-2 rounded-full py-1 pl-1 pr-3 hover:bg-fond"
               :aria-expanded="menuProfilOuvert"
               aria-haspopup="true"
               @click="menuProfilOuvert = !menuProfilOuvert"
