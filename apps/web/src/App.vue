@@ -3,7 +3,7 @@ import { ChevronDown, Languages, LogIn, LogOut, Menu, Shield, SunMoon, Wifi, Wif
 import { LangueAssistantVocal, RoleUtilisateur } from "@ayinon/shared";
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
-import VoiceAssistantBar from "./components/accessibility/VoiceAssistantBar.vue";
+import VoiceAssistantButton from "./components/accessibility/VoiceAssistantButton.vue";
 import BaseButton from "./components/ui/BaseButton.vue";
 import { useOnlineStatus } from "./composables/useOnlineStatus";
 import { useVoiceAssistant } from "./composables/useVoiceAssistant";
@@ -252,9 +252,9 @@ async function seDeconnecter() {
       <RouterView />
     </main>
 
-    <VoiceAssistantBar />
+    <VoiceAssistantButton />
 
-    <footer class="border-t border-bordure bg-surface py-4 text-center text-xs text-texte-attenue">
+    <footer class="border-t border-bordure bg-surface px-4 py-4 pb-20 text-center text-xs text-texte-attenue sm:pb-4">
       AYINON — Le Gardien Numerique de la Terre · Republique du Benin
     </footer>
   </div>
