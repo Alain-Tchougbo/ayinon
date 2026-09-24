@@ -69,6 +69,10 @@ const chargementEspace = ref(false);
 
 const mesParcelles = computed(() => parcelles.parcelles.filter((p) => p.proprietaireId === auth.utilisateur?.proprietaireId));
 
+// Prenom seul : le nom complet et le role sont deja affiches en permanence dans l'en-tete du
+// tableau de bord, inutile de les repeter integralement ici.
+const prenom = computed(() => auth.utilisateur?.nomComplet.trim().split(/\s+/)[0] ?? "");
+
 onMounted(async () => {
   definirPhraseCourante(PHRASES.bienvenue);
   if (!auth.estConnecte) return;
@@ -167,10 +171,11 @@ const raccourcis = computed(() => {
       </form>
     </section>
 
-    <!-- Connecte : espace personnalise, different pour chaque role. -->
+    <!-- Connecte : espace personnalise, different pour chaque role. Le nom complet et le role
+         sont deja visibles en permanence dans l'en-tete : pas la peine de les repeter ici. -->
     <section v-else class="rounded-carte bg-primaire px-6 py-8 text-primaire-contraste shadow-flottant">
-      <p class="text-sm text-primaire-contraste/80">Bonjour,</p>
-      <h1 class="text-2xl font-bold">{{ auth.utilisateur?.nomComplet }}</h1>
+      <h1 class="text-2xl font-bold">Bonjour {{ prenom }}</h1>
+      <p class="mt-1 text-sm text-primaire-contraste/80">Voici l'etat de votre espace AYINON aujourd'hui.</p>
     </section>
 
     <!-- CITOYEN : propositions de cession recues, mises en avant comme les signatures familiales en attente. -->

@@ -112,6 +112,13 @@ router.beforeEach(async (to) => {
     return { name: "connexion", query: { redirection: to.fullPath } };
   }
 
+  // Un utilisateur deja connecte n'a rien a faire sur l'ecran de connexion (favori, bouton
+  // precedent) : y rester l'afficherait dans le chrome "tableau de bord" avec, absurdement, un
+  // formulaire lui redemandant de se connecter alors que son identite est deja visible partout.
+  if (to.name === "connexion" && auth.estConnecte) {
+    return { name: "accueil" };
+  }
+
   if (to.meta.rolesAutorises && (!auth.role || !to.meta.rolesAutorises.includes(auth.role))) {
     return { name: "accueil" };
   }
