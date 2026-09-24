@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { CircleCheck, ScanLine, TriangleAlert } from "@lucide/vue";
 import { VerifierConventionSchema, type VerifierConventionDto } from "@ayinon/shared";
 import jsQR from "jsqr";
 import { onBeforeUnmount, onMounted, ref } from "vue";
@@ -6,6 +7,9 @@ import { ApiError, api } from "../../services/api";
 import { verifierSignatureLocale } from "../../services/edVerify";
 import { PHRASES } from "../../voice/phrases";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
+import BaseButton from "../ui/BaseButton.vue";
+import BaseCard from "../ui/BaseCard.vue";
+import PageHeader from "../ui/PageHeader.vue";
 
 interface ResultatVerification {
   authentique: boolean;
@@ -117,6 +121,11 @@ async function verifier(donneesBrutes: unknown) {
   }
 }
 
+function relancer() {
+  resultat.value = null;
+  demarrerCamera();
+}
+
 onMounted(() => {
   lire(PHRASES.scannerIntro);
 });
@@ -124,63 +133,56 @@ onBeforeUnmount(arreterCamera);
 </script>
 
 <template>
-  <div class="mx-auto max-w-xl space-y-4 p-4">
-    <h1 class="text-xl font-bold text-primaire">Scanner Anti-Fraude</h1>
-    <p class="text-sm text-texte-attenue">
-      Scannez le QR code appose sur une convention de vente papier pour verifier instantanement, hors ligne ou en
-      ligne, si le document est authentique.
-    </p>
+  <div class="mx-auto max-w-xl space-y-5 p-4 sm:p-6">
+    <PageHeader
+      titre="Scanner Anti-Fraude"
+      description="Scannez le QR code appose sur une convention de vente papier pour verifier instantanement, hors ligne ou en ligne, si le document est authentique."
+    >
+      <template #icone><ScanLine :size="22" class="text-primaire" aria-hidden="true" /></template>
+    </PageHeader>
 
-    <div class="overflow-hidden rounded-carte border border-bordure bg-black">
+    <div class="relative overflow-hidden rounded-carte border border-bordure bg-neutral-900">
       <video ref="video" class="aspect-video w-full object-cover" muted playsinline />
       <canvas ref="canvas" class="hidden" />
+      <div v-if="enCoursDeScan" class="pointer-events-none absolute inset-8 rounded-2xl border-2 border-white/70" aria-hidden="true" />
+      <p v-if="!enCoursDeScan" class="absolute inset-0 flex items-center justify-center text-sm text-white/70">
+        Camera en attente
+      </p>
     </div>
 
     <div class="flex gap-2">
-      <button
-        v-if="!enCoursDeScan"
-        type="button"
-        class="rounded-carte bg-primaire px-4 py-2 text-sm font-semibold text-primaire-contraste"
-        @click="demarrerCamera"
-      >
-        📷 Activer la camera
-      </button>
-      <button v-else type="button" class="rounded-carte bg-fond px-4 py-2 text-sm font-semibold" @click="arreterCamera">
-        Arreter
-      </button>
+      <BaseButton v-if="!enCoursDeScan" @click="demarrerCamera">
+        <ScanLine :size="18" aria-hidden="true" />
+        Activer la camera
+      </BaseButton>
+      <BaseButton v-else variant="secondaire" @click="arreterCamera">Arreter</BaseButton>
     </div>
 
-    <p v-if="erreurCamera" class="rounded-carte bg-accent/10 p-3 text-sm text-texte">{{ erreurCamera }}</p>
+    <p v-if="erreurCamera" class="rounded-carte border border-accent/30 bg-accent/10 p-3 text-sm text-texte">
+      {{ erreurCamera }}
+    </p>
 
-    <details class="rounded-carte border border-bordure p-3 text-sm">
-      <summary class="cursor-pointer font-medium">Saisie manuelle (sans camera)</summary>
+    <details class="rounded-carte border border-bordure bg-surface p-3.5 text-sm">
+      <summary class="cursor-pointer font-medium text-texte">Saisie manuelle (sans camera)</summary>
       <textarea
         v-model="saisieManuelle"
         rows="4"
-        class="mt-2 w-full rounded-carte border border-bordure bg-surface p-2 text-xs"
+        class="mt-2.5 w-full rounded-carte border border-bordure bg-fond p-2.5 text-xs"
         placeholder='{"payload":{...},"signatureEd25519":"..."}'
       />
-      <button
-        type="button"
-        class="mt-2 rounded-carte bg-fond px-3 py-2 text-xs font-semibold"
-        :disabled="enVerification"
-        @click="verifierSaisieManuelle"
-      >
+      <BaseButton taille="sm" variant="secondaire" class="mt-2.5" :disabled="enVerification" @click="verifierSaisieManuelle">
         Verifier
-      </button>
+      </BaseButton>
     </details>
 
-    <div
-      v-if="resultat"
-      class="rounded-carte border p-4"
-      :class="resultat.authentique ? 'border-succes bg-succes/10' : 'border-danger bg-danger/10'"
-      role="alert"
-    >
-      <p class="text-lg font-bold" :class="resultat.authentique ? 'text-succes' : 'text-danger'">
-        {{ resultat.authentique ? "✅ Document authentique" : "⚠️ Document non authentifie" }}
+    <BaseCard v-if="resultat" :accentue="resultat.authentique ? 'succes' : 'danger'" role="alert">
+      <p class="flex items-center gap-2 text-lg font-bold" :class="resultat.authentique ? 'text-succes' : 'text-danger'">
+        <CircleCheck v-if="resultat.authentique" :size="22" aria-hidden="true" />
+        <TriangleAlert v-else :size="22" aria-hidden="true" />
+        {{ resultat.authentique ? "Document authentique" : "Document non authentifie" }}
       </p>
-      <p v-if="resultat.motif" class="mt-1 text-sm">{{ resultat.motif }}</p>
-      <dl v-if="resultat.convention" class="mt-2 space-y-1 text-sm">
+      <p v-if="resultat.motif" class="mt-1 text-sm text-texte">{{ resultat.motif }}</p>
+      <dl v-if="resultat.convention" class="mt-3 space-y-1 text-sm">
         <div><dt class="inline font-medium">Vendeur :</dt> <dd class="inline">{{ resultat.convention.vendeurNom }}</dd></div>
         <div><dt class="inline font-medium">Acquereur :</dt> <dd class="inline">{{ resultat.convention.acquereurNom }}</dd></div>
         <div>
@@ -188,16 +190,7 @@ onBeforeUnmount(arreterCamera);
           <dd class="inline">{{ resultat.convention.montantFcfa.toLocaleString("fr-FR") }} FCFA</dd>
         </div>
       </dl>
-      <button
-        type="button"
-        class="mt-3 rounded-carte bg-surface px-3 py-2 text-xs font-semibold"
-        @click="
-          resultat = null;
-          demarrerCamera();
-        "
-      >
-        Scanner un autre document
-      </button>
-    </div>
+      <BaseButton taille="sm" variant="secondaire" class="mt-3.5" @click="relancer">Scanner un autre document</BaseButton>
+    </BaseCard>
   </div>
 </template>

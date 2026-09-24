@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { COULEUR_STATUT_PARCELLE } from "@ayinon/shared";
+import { COULEUR_STATUT_PARCELLE, type StatutParcelle } from "@ayinon/shared";
 import { bbox } from "@turf/turf";
 import maplibregl, { type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -10,6 +10,41 @@ const props = defineProps<{ parcelles: ParcelleCache[] }>();
 const emit = defineEmits<{ selection: [ParcelleCache] }>();
 
 const SOURCE_ID = "parcelles";
+
+const LIBELLE_STATUT: Record<StatutParcelle, string> = {
+  TITREE: "Titree et securisee",
+  EN_COURS: "En cours de securisation",
+  GEL_CSAF: "Gel conservatoire (CSAF)",
+  DOMAINE_PUBLIC: "Domaine public",
+};
+
+/** Icone cadenas minimale (glyphe Lucide), inlinee car le popup MapLibre est du HTML brut, hors rendu Vue. */
+const SVG_CADENAS =
+  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" ' +
+  'stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="11" width="18" ' +
+  'height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+
+function construirePopupHtml(parcelle: ParcelleCache): string {
+  const couleurStatut = COULEUR_STATUT_PARCELLE[parcelle.statut];
+  return `
+    <div style="font-family:system-ui,sans-serif;font-size:13px;line-height:1.6;min-width:200px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:2px">${parcelle.nup}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="width:9px;height:9px;border-radius:999px;background:${couleurStatut};display:inline-block"></span>
+        <span>${LIBELLE_STATUT[parcelle.statut]}</span>
+      </div>
+      <div style="color:#435449">
+        ${parcelle.commune}${parcelle.arrondissement ? " — " + parcelle.arrondissement : ""}<br/>
+        Superficie : ${parcelle.superficieM2.toLocaleString("fr-FR")} m²<br/>
+        Proprietaire : ${parcelle.proprietaireNom ?? "Non renseigne"}
+      </div>
+      ${
+        parcelle.verrouAntiVente
+          ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:5px;background:#15803d1a;color:#15803d;padding:3px 8px;border-radius:999px;font-weight:600;font-size:12px">${SVG_CADENAS} Verrou anti-vente actif</div>`
+          : ""
+      }
+    </div>`;
+}
 
 /** Fond OSM raster (aucune cle requise) — a remplacer par des tuiles vectorielles officielles en production. */
 const STYLE_FOND: StyleSpecification = {
@@ -132,15 +167,7 @@ onMounted(() => {
       popup?.remove();
       popup = new maplibregl.Popup({ closeButton: true, maxWidth: "280px" })
         .setLngLat(evenement.lngLat)
-        .setHTML(
-          `<div style="font-family:sans-serif;font-size:13px;line-height:1.5">
-            <strong>${parcelle.nup}</strong><br/>
-            ${parcelle.commune}${parcelle.arrondissement ? " — " + parcelle.arrondissement : ""}<br/>
-            Superficie : ${parcelle.superficieM2.toLocaleString("fr-FR")} m²<br/>
-            Proprietaire : ${parcelle.proprietaireNom ?? "Non renseigne"}<br/>
-            ${parcelle.verrouAntiVente ? "🔒 Verrou anti-vente actif" : ""}
-          </div>`,
-        )
+        .setHTML(construirePopupHtml(parcelle))
         .addTo(carte!);
 
       emit("selection", parcelle);

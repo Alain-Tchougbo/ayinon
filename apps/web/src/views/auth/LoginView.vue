@@ -1,6 +1,10 @@
 <script setup lang="ts">
+import { LogIn, Shield } from "@lucide/vue";
 import { ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import BaseButton from "../../components/ui/BaseButton.vue";
+import BaseCard from "../../components/ui/BaseCard.vue";
+import BaseInput from "../../components/ui/BaseInput.vue";
 import { useAuthStore } from "../../stores/auth.store";
 
 const auth = useAuthStore();
@@ -31,45 +35,31 @@ async function seConnecter() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-md px-4 py-12">
-    <h1 class="text-xl font-bold text-primaire">Connexion</h1>
+  <div class="mx-auto max-w-md px-4 py-14">
+    <div class="mb-6 flex flex-col items-center text-center">
+      <span class="flex h-12 w-12 items-center justify-center rounded-carte bg-primaire text-primaire-contraste">
+        <Shield :size="24" aria-hidden="true" />
+      </span>
+      <h1 class="mt-3 text-xl font-bold text-texte">Connexion</h1>
+    </div>
 
-    <form class="mt-6 space-y-4 rounded-carte border border-bordure bg-surface p-5" @submit.prevent="seConnecter">
-      <div>
-        <label for="email" class="block text-sm font-medium">Adresse e-mail</label>
-        <input
-          id="email"
-          v-model="email"
-          type="email"
-          required
-          class="mt-1 w-full rounded-carte border border-bordure bg-fond px-3 py-2"
-        />
-      </div>
-      <div>
-        <label for="mdp" class="block text-sm font-medium">Mot de passe</label>
-        <input
-          id="mdp"
-          v-model="motDePasse"
-          type="password"
-          required
-          class="mt-1 w-full rounded-carte border border-bordure bg-fond px-3 py-2"
-        />
-      </div>
-      <p v-if="auth.erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger">{{ auth.erreur }}</p>
-      <button
-        type="submit"
-        class="w-full rounded-carte bg-primaire px-4 py-2 text-sm font-semibold text-primaire-contraste"
-        :disabled="enCours"
-      >
-        Se connecter
-      </button>
-    </form>
+    <BaseCard>
+      <form class="space-y-4" @submit.prevent="seConnecter">
+        <BaseInput id="email" v-model="email" label="Adresse e-mail" type="email" required />
+        <BaseInput id="mdp" v-model="motDePasse" label="Mot de passe" type="password" required />
+        <p v-if="auth.erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ auth.erreur }}</p>
+        <BaseButton type="submit" class="w-full" :disabled="enCours">
+          <LogIn :size="18" aria-hidden="true" />
+          Se connecter
+        </BaseButton>
+      </form>
+    </BaseCard>
 
     <div class="mt-6 rounded-carte border border-dashed border-bordure p-4 text-xs text-texte-attenue">
-      <p class="mb-2 font-semibold">Comptes de demonstration (mot de passe : Ayinon@2026)</p>
-      <ul class="space-y-1">
+      <p class="mb-2 font-semibold text-texte">Comptes de demonstration (mot de passe : Ayinon@2026)</p>
+      <ul class="space-y-1.5">
         <li v-for="compte in COMPTES_DEMO" :key="compte.email">
-          <button type="button" class="text-primaire underline" @click="email = compte.email">
+          <button type="button" class="min-h-0 font-medium text-primaire underline underline-offset-2" @click="email = compte.email">
             {{ compte.email }}
           </button>
           — {{ compte.label }}
