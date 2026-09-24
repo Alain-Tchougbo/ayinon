@@ -18,6 +18,10 @@ export const PHRASES = {
     id: "recherche-parcelle",
     texteFr: "Entrez le numero de votre parcelle, ou votre nom, pour verifier votre terre.",
   },
+  carteIntro: {
+    id: "carte-intro",
+    texteFr: "Voici la carte de toutes les parcelles. Touchez une parcelle coloree pour connaitre son statut.",
+  },
   parcelleTitree: {
     id: "parcelle-titree",
     texteFr: "Cette parcelle est titree et securisee. Elle est affichee en vert.",
@@ -49,5 +53,33 @@ export const PHRASES = {
   verrouActive: {
     id: "verrou-active",
     texteFr: "Votre parcelle est maintenant verrouillee. Aucune vente ne peut se faire sans votre accord.",
+  },
+  connexionIntro: {
+    id: "connexion-intro",
+    texteFr: "Connectez-vous avec votre adresse e-mail et votre mot de passe pour acceder a votre espace.",
+  },
+  simulateurIntro: {
+    id: "simulateur-intro",
+    texteFr: "Calculez a l'avance les frais reels d'une transaction fonciere, pour eviter les rackets des demarcheurs.",
+  },
+  passeportIntro: {
+    id: "passeport-intro",
+    texteFr: "Consultez vos parcelles et verrouillez-les pour empecher toute vente faite sans votre accord.",
+  },
+  familleIntro: {
+    id: "famille-intro",
+    texteFr: "Consultez et signez les demandes de vente d'une terre familiale qui vous sont soumises.",
+  },
+  geometreIntro: {
+    id: "geometre-intro",
+    texteFr: "Importez un plan de bornage pour verifier automatiquement les chevauchements avec les parcelles voisines.",
+  },
+  csafIntro: {
+    id: "csaf-intro",
+    texteFr: "Placez une parcelle contestee sous gel conservatoire judiciaire, ou levez un gel existant.",
+  },
+  consolePolesIntro: {
+    id: "console-poles-intro",
+    texteFr: "Consultez la repartition et l'integrite du foncier par pole territorial.",
   },
 } as const satisfies Record<string, PhraseVocale>;

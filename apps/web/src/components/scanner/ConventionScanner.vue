@@ -17,7 +17,7 @@ interface ResultatVerification {
   convention?: { vendeurNom: string; acquereurNom: string; montantFcfa: number; creeLe: string };
 }
 
-const { lire } = useVoiceAssistant();
+const { lire, definirPhraseCourante } = useVoiceAssistant();
 
 const video = ref<HTMLVideoElement>();
 const canvas = ref<HTMLCanvasElement>();
@@ -127,7 +127,9 @@ function relancer() {
 }
 
 onMounted(() => {
-  lire(PHRASES.scannerIntro);
+  // Pas de lecture automatique : seule l'action explicite ("Ecouter cette page", ou le resultat
+  // d'un scan que l'utilisateur vient de declencher) doit faire parler l'assistant.
+  definirPhraseCourante(PHRASES.scannerIntro);
 });
 onBeforeUnmount(arreterCamera);
 </script>

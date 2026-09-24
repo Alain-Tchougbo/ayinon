@@ -2,6 +2,8 @@
 import { Landmark, TriangleAlert } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { api } from "../../services/api";
+import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
+import { PHRASES } from "../../voice/phrases";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
@@ -14,6 +16,7 @@ interface StatistiquesPole {
   conflitsCsafActifs: number;
 }
 
+const { definirPhraseCourante } = useVoiceAssistant();
 const stats = ref<StatistiquesPole[]>([]);
 const chargement = ref(true);
 
@@ -25,6 +28,7 @@ const REPARTITION = [
 ];
 
 onMounted(async () => {
+  definirPhraseCourante(PHRASES.consolePolesIntro);
   stats.value = await api.get<StatistiquesPole[]>("/andf/statistiques-poles");
   chargement.value = false;
 });

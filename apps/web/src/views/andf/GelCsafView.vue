@@ -3,6 +3,8 @@ import { Gavel, Lock, Search, Unlock } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useParcellesStore } from "../../stores/parcelles.store";
+import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
+import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
@@ -17,6 +19,7 @@ interface ConflitCsaf {
 }
 
 const parcelles = useParcellesStore();
+const { definirPhraseCourante } = useVoiceAssistant();
 const conflitsActifs = ref<ConflitCsaf[]>([]);
 
 const nupRecherche = ref("");
@@ -32,7 +35,10 @@ const confirmationRequise = ref(false);
 const conflitEnLevee = ref<string | null>(null);
 const motifLeveeParConflit = ref<Record<string, string>>({});
 
-onMounted(chargerConflits);
+onMounted(() => {
+  definirPhraseCourante(PHRASES.csafIntro);
+  chargerConflits();
+});
 
 async function chargerConflits() {
   conflitsActifs.value = await api.get<ConflitCsaf[]>("/csaf/conflits-actifs");

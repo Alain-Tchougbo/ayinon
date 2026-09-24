@@ -1,17 +1,26 @@
 <script setup lang="ts">
-import { LogIn, LogOut, Menu, Shield, SunMoon, Wifi, WifiOff, X } from "@lucide/vue";
-import { RoleUtilisateur } from "@ayinon/shared";
-import { computed, onMounted, ref, watch } from "vue";
+import { Languages, LogIn, LogOut, Menu, Shield, SunMoon, Wifi, WifiOff, X } from "@lucide/vue";
+import { LangueAssistantVocal } from "@ayinon/shared";
+import { onMounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import VoiceAssistantBar from "./components/accessibility/VoiceAssistantBar.vue";
 import BaseButton from "./components/ui/BaseButton.vue";
 import { useOnlineStatus } from "./composables/useOnlineStatus";
+import { useVoiceAssistant } from "./composables/useVoiceAssistant";
 import { useAuthStore } from "./stores/auth.store";
 
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 const { enLigne } = useOnlineStatus();
+const { languePreferee, definirLangue } = useVoiceAssistant();
+
+const LANGUES: Array<{ valeur: LangueAssistantVocal; label: string }> = [
+  { valeur: LangueAssistantVocal.FR, label: "Francais" },
+  { valeur: LangueAssistantVocal.FON, label: "Fɔngbe" },
+  { valeur: LangueAssistantVocal.YORUBA, label: "Yorùbá" },
+  { valeur: LangueAssistantVocal.BARIBA, label: "Bariba" },
+];
 
 type Theme = "clair" | "sombre" | "contraste-eleve";
 const theme = ref<Theme>((localStorage.getItem("ayinon_theme") as Theme | null) ?? "clair");
@@ -33,35 +42,6 @@ onMounted(() => {
 // Ferme le panneau mobile a chaque changement de page (evite un menu ouvert qui persiste apres navigation).
 watch(() => route.fullPath, () => (menuMobileOuvert.value = false));
 
-// La nav reflete le meme filtrage par role que les raccourcis de l'accueil personnalise :
-// pas de liens citoyens (scanner, simulateur) pour un role professionnel qui n'en a pas l'usage.
-const liensRole = computed(() => {
-  const liens: Array<{ to: string; label: string }> = [{ to: "/carte", label: "Carte cadastrale" }];
-
-  if (!auth.estConnecte || auth.role === RoleUtilisateur.CITOYEN) {
-    liens.push({ to: "/scanner", label: "Scanner anti-fraude" });
-    liens.push({ to: "/simulateur-frais", label: "Simulateur de frais" });
-  }
-  if (auth.role === RoleUtilisateur.CITOYEN) {
-    liens.push({ to: "/passeport-foncier", label: "Passeport foncier" });
-    liens.push({ to: "/famille", label: "Terre familiale" });
-  }
-  if (auth.role === RoleUtilisateur.MANDATAIRE_FAMILIAL) {
-    liens.push({ to: "/famille", label: "Mes mandats familiaux" });
-  }
-  if (auth.role === RoleUtilisateur.GEOMETRE) {
-    liens.push({ to: "/geometre", label: "Bornage & chevauchement" });
-  }
-  if (auth.role === RoleUtilisateur.AGENT_ANDF || auth.role === RoleUtilisateur.ADMIN) {
-    liens.push({ to: "/andf", label: "Console des poles" });
-  }
-  if (auth.role === RoleUtilisateur.MAGISTRAT_CSAF) {
-    liens.push({ to: "/andf", label: "Console des poles" });
-    liens.push({ to: "/csaf", label: "Gel CSAF" });
-  }
-  return liens;
-});
-
 async function seDeconnecter() {
   await auth.deconnexion();
   router.push({ name: "accueil" });
@@ -81,16 +61,16 @@ async function seDeconnecter() {
           <span class="hidden sm:inline">AYINON</span>
         </RouterLink>
 
-        <!-- Ligne unique des lg (>=1024px) : nav + compte tiennent toujours sans retour a la ligne. -->
-        <nav class="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto text-sm lg:flex" aria-label="Navigation principale">
+        <!-- Nav volontairement minimale : l'accueil (logo) sert de tableau de bord complet et
+             personnalise par role. Un seul lien partage evite tout risque de debordement,
+             quel que soit le role connecte ou la largeur d'ecran. -->
+        <nav class="hidden lg:block" aria-label="Navigation principale">
           <RouterLink
-            v-for="lien in liensRole"
-            :key="lien.to"
-            :to="lien.to"
-            class="min-h-0 shrink-0 whitespace-nowrap rounded-carte px-3 py-2 font-medium text-texte-attenue transition-colors hover:bg-fond hover:text-texte"
+            to="/carte"
+            class="min-h-0 whitespace-nowrap rounded-carte px-3 py-2 text-sm font-medium text-texte-attenue transition-colors hover:bg-fond hover:text-texte"
             active-class="!bg-primaire !text-primaire-contraste"
           >
-            {{ lien.label }}
+            Carte cadastrale
           </RouterLink>
         </nav>
 
@@ -103,6 +83,18 @@ async function seDeconnecter() {
             <WifiOff v-else :size="14" aria-hidden="true" />
             {{ enLigne ? "En ligne" : "Hors-ligne" }}
           </span>
+
+          <div class="relative">
+            <Languages :size="14" class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
+            <select
+              :value="languePreferee"
+              aria-label="Langue de l'assistant vocal"
+              class="min-h-0 rounded-carte border border-bordure bg-surface py-1.5 pl-7 pr-2 text-xs font-medium text-texte"
+              @change="definirLangue(($event.target as HTMLSelectElement).value as LangueAssistantVocal)"
+            >
+              <option v-for="l in LANGUES" :key="l.valeur" :value="l.valeur">{{ l.label }}</option>
+            </select>
+          </div>
 
           <div class="relative">
             <SunMoon :size="14" class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
@@ -146,17 +138,13 @@ async function seDeconnecter() {
       </div>
 
       <div id="menu-mobile" v-if="menuMobileOuvert" class="border-t border-bordure bg-surface px-4 py-3 lg:hidden">
-        <nav class="flex flex-col gap-1" aria-label="Navigation principale (mobile)">
-          <RouterLink
-            v-for="lien in liensRole"
-            :key="lien.to"
-            :to="lien.to"
-            class="rounded-carte px-3 py-2.5 font-medium text-texte hover:bg-fond"
-            active-class="!bg-primaire !text-primaire-contraste"
-          >
-            {{ lien.label }}
-          </RouterLink>
-        </nav>
+        <RouterLink
+          to="/carte"
+          class="block rounded-carte px-3 py-2.5 font-medium text-texte hover:bg-fond"
+          active-class="!bg-primaire !text-primaire-contraste"
+        >
+          Carte cadastrale
+        </RouterLink>
 
         <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-bordure pt-3">
           <span
@@ -167,6 +155,17 @@ async function seDeconnecter() {
             <WifiOff v-else :size="14" aria-hidden="true" />
             {{ enLigne ? "En ligne" : "Hors-ligne" }}
           </span>
+          <div class="relative">
+            <Languages :size="14" class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
+            <select
+              :value="languePreferee"
+              aria-label="Langue de l'assistant vocal"
+              class="rounded-carte border border-bordure bg-surface py-1.5 pl-7 pr-2 text-xs font-medium text-texte"
+              @change="definirLangue(($event.target as HTMLSelectElement).value as LangueAssistantVocal)"
+            >
+              <option v-for="l in LANGUES" :key="l.valeur" :value="l.valeur">{{ l.label }}</option>
+            </select>
+          </div>
           <div class="relative">
             <SunMoon :size="14" class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
             <select

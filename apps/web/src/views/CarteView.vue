@@ -12,7 +12,7 @@ const parcelles = useParcellesStore();
 const { definirPhraseCourante, lire } = useVoiceAssistant();
 
 onMounted(async () => {
-  definirPhraseCourante(PHRASES.rechercheParcelle);
+  definirPhraseCourante(PHRASES.carteIntro);
   await parcelles.chargerToutes();
 });
 

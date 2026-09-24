@@ -47,7 +47,7 @@ interface ConflitCsaf {
 
 const router = useRouter();
 const auth = useAuthStore();
-const { lire, definirPhraseCourante } = useVoiceAssistant();
+const { definirPhraseCourante } = useVoiceAssistant();
 const parcelles = useParcellesStore();
 const nup = ref("");
 
@@ -60,8 +60,6 @@ const mesParcelles = computed(() => parcelles.parcelles.filter((p) => p.propriet
 
 onMounted(async () => {
   definirPhraseCourante(PHRASES.bienvenue);
-  lire(PHRASES.bienvenue);
-
   if (!auth.estConnecte) return;
   chargementEspace.value = true;
   try {

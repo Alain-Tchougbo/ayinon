@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { LogIn, Shield } from "@lucide/vue";
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
+import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { useAuthStore } from "../../stores/auth.store";
+import { PHRASES } from "../../voice/phrases";
 
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
+const { definirPhraseCourante } = useVoiceAssistant();
+
+onMounted(() => definirPhraseCourante(PHRASES.connexionIntro));
 
 const email = ref("");
 const motDePasse = ref("Ayinon@2026");

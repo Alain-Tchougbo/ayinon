@@ -8,6 +8,8 @@ import { ApiError, api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth.store";
 import { useParcellesStore } from "../../stores/parcelles.store";
 import { useOnlineStatus } from "../../composables/useOnlineStatus";
+import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
+import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
@@ -41,6 +43,7 @@ const auth = useAuthStore();
 const route = useRoute();
 const parcelles = useParcellesStore();
 const { enLigne } = useOnlineStatus();
+const { definirPhraseCourante } = useVoiceAssistant();
 
 const mesSignaturesEnAttente = ref<SignatureEnAttente[]>([]);
 const chargementMesSignatures = ref(false);
@@ -59,6 +62,7 @@ const opposantContact = ref("");
 const motifOpposition = ref("");
 
 onMounted(async () => {
+  definirPhraseCourante(PHRASES.familleIntro);
   parcelles.chargerToutes();
 
   if (auth.role === RoleUtilisateur.MANDATAIRE_FAMILIAL) {

@@ -17,7 +17,7 @@ interface ResultatSimulation {
 }
 
 const { definirPhraseCourante } = useVoiceAssistant();
-onMounted(() => definirPhraseCourante(PHRASES.bienvenue));
+onMounted(() => definirPhraseCourante(PHRASES.simulateurIntro));
 
 const valeurDeclareeFcfa = ref(5_000_000);
 const superficieM2 = ref(300);

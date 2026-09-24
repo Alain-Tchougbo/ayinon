@@ -4,8 +4,10 @@ import type { GeoJsonPolygon } from "@ayinon/shared";
 import { area as calculerAireTurf, polygon as polygoneTurf } from "@turf/turf";
 import { computed, onMounted, ref } from "vue";
 import { detecterChevauchementLocal, type ConflitLocal } from "../../composables/useOverlapDetection";
+import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { ApiError, api } from "../../services/api";
 import { useParcellesStore } from "../../stores/parcelles.store";
+import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
@@ -27,6 +29,7 @@ interface MonImport {
 }
 
 const parcelles = useParcellesStore();
+const { definirPhraseCourante } = useVoiceAssistant();
 const mesImports = ref<MonImport[]>([]);
 const chargementMesImports = ref(false);
 
@@ -40,6 +43,7 @@ async function chargerMesImports() {
 }
 
 onMounted(() => {
+  definirPhraseCourante(PHRASES.geometreIntro);
   parcelles.chargerToutes();
   chargerMesImports();
 });
