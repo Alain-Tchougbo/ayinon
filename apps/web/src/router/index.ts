@@ -92,6 +92,12 @@ const router = createRouter({
         titre: "Verification de solvabilite",
       },
     },
+    {
+      path: "/admin",
+      name: "admin",
+      component: () => import("../views/admin/AdminView.vue"),
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.ADMIN], titre: "Back-office" },
+    },
     { path: "/:pathMatch(.*)*", name: "introuvable", component: () => import("../views/IntrouvableView.vue"), meta: { titre: "Page introuvable" } },
   ],
 });
@@ -104,6 +110,13 @@ router.beforeEach(async (to) => {
 
   if (to.meta.necessiteAuth && !auth.estConnecte) {
     return { name: "connexion", query: { redirection: to.fullPath } };
+  }
+
+  // Un utilisateur deja connecte n'a rien a faire sur l'ecran de connexion (favori, bouton
+  // precedent) : y rester l'afficherait dans le chrome "tableau de bord" avec, absurdement, un
+  // formulaire lui redemandant de se connecter alors que son identite est deja visible partout.
+  if (to.name === "connexion" && auth.estConnecte) {
+    return { name: "accueil" };
   }
 
   if (to.meta.rolesAutorises && (!auth.role || !to.meta.rolesAutorises.includes(auth.role))) {

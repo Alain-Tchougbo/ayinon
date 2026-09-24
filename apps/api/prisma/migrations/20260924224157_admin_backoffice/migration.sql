@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "TypeOperationAudit" ADD VALUE 'MODIFICATION_ADMIN_PARCELLE';
+

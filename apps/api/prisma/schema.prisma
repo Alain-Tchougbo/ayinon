@@ -90,6 +90,7 @@ enum TypeOperationAudit {
   DELIVRANCE_TITRE
   INSCRIPTION_HYPOTHEQUE
   LEVEE_HYPOTHEQUE
+  MODIFICATION_ADMIN_PARCELLE
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur

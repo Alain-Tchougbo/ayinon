@@ -92,6 +92,7 @@ export const TypeOperationAudit = {
   DELIVRANCE_TITRE: "DELIVRANCE_TITRE",
   INSCRIPTION_HYPOTHEQUE: "INSCRIPTION_HYPOTHEQUE",
   LEVEE_HYPOTHEQUE: "LEVEE_HYPOTHEQUE",
+  MODIFICATION_ADMIN_PARCELLE: "MODIFICATION_ADMIN_PARCELLE",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
 
