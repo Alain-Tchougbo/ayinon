@@ -88,13 +88,9 @@ onMounted(async () => {
   }
 });
 
-async function rechercherEtOuvrirCarte() {
-  if (!nup.value.trim()) {
-    router.push({ name: "carte" });
-    return;
-  }
-  await parcelles.rechercher({ nup: nup.value.trim() });
-  router.push({ name: "carte" });
+function rechercherEtOuvrirCarte() {
+  const valeur = nup.value.trim();
+  router.push({ name: "carte", query: valeur ? { nup: valeur } : undefined });
 }
 
 /** Raccourcis affiches : varient reellement selon le role connecte, pas un menu generique identique pour tous. */
