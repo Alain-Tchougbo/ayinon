@@ -1,0 +1,28 @@
+import { z } from "zod";
+
+/**
+ * Enregistrement d'une convention de vente (le fichier binaire est envoye en multipart a part).
+ * montantFcfa utilise z.coerce : en multipart/form-data, tous les champs arrivent en chaines.
+ */
+export const EnregistrerConventionSchema = z.object({
+  parcelleId: z.string().uuid(),
+  vendeurNom: z.string().trim().min(2),
+  acquereurNom: z.string().trim().min(2),
+  montantFcfa: z.coerce.number().positive(),
+});
+export type EnregistrerConventionDto = z.infer<typeof EnregistrerConventionSchema>;
+
+/** Payload encode dans le QR code appose sur la convention papier. */
+export const QrConventionPayloadSchema = z.object({
+  conventionId: z.string().uuid(),
+  hashSha256: z.string().length(64),
+  horodatage: z.string().datetime(),
+});
+export type QrConventionPayload = z.infer<typeof QrConventionPayloadSchema>;
+
+/** Verification d'authenticite via le scanner : le QR fournit le payload + sa signature Ed25519. */
+export const VerifierConventionSchema = z.object({
+  payload: QrConventionPayloadSchema,
+  signatureEd25519: z.string().min(1),
+});
+export type VerifierConventionDto = z.infer<typeof VerifierConventionSchema>;

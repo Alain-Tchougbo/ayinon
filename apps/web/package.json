@@ -1,0 +1,39 @@
+{
+  "name": "@ayinon/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prebuild": "pnpm --filter @ayinon/shared build",
+    "predev": "pnpm --filter @ayinon/shared build",
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "vue-tsc -b --noEmit"
+  },
+  "dependencies": {
+    "@ayinon/shared": "workspace:*",
+    "@turf/turf": "^7.1.0",
+    "dexie": "^4.0.9",
+    "jsqr": "^1.4.0",
+    "maplibre-gl": "^4.7.1",
+    "pinia": "^2.2.4",
+    "qrcode": "^1.5.4",
+    "vue": "^3.5.10",
+    "vue-router": "^4.4.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.14",
+    "@types/node": "^20.16.5",
+    "@types/qrcode": "^1.5.5",
+    "@vitejs/plugin-vue": "^5.1.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.8",
+    "vite-plugin-pwa": "^0.20.5",
+    "vue-tsc": "^2.1.6"
+  }
+}

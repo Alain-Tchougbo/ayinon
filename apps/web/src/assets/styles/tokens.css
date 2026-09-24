@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-fond: #f4f6f4;
+  --color-surface: #ffffff;
+  --color-surface-haute: #ffffff;
+  --color-texte: #12271a;
+  --color-texte-attenue: #4b5f52;
+  --color-bordure: #d8e0da;
+
+  --color-primaire: #0b3d24;
+  --color-primaire-contraste: #ffffff;
+  --color-accent: #ca8a04;
+
+  --color-statut-titree: #15803d;
+  --color-statut-en-cours: #ca8a04;
+  --color-statut-gel: #dc2626;
+  --color-statut-domaine-public: #1d4ed8;
+
+  --color-danger: #b91c1c;
+  --color-succes: #15803d;
+
+  --taille-cible-tactile: 44px;
+}
+
+[data-theme="sombre"] {
+  --color-fond: #0b1712;
+  --color-surface: #122019;
+  --color-surface-haute: #182b21;
+  --color-texte: #eef4f0;
+  --color-texte-attenue: #9db3a6;
+  --color-bordure: #223b2d;
+
+  --color-primaire: #3fae72;
+  --color-primaire-contraste: #06140d;
+  --color-accent: #f2b90a;
+}
+
+/* Mode plein-soleil / faible litteratie : contrastes maximaux, pas de nuances intermediaires. */
+[data-theme="contraste-eleve"] {
+  --color-fond: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-haute: #ffffff;
+  --color-texte: #000000;
+  --color-texte-attenue: #1a1a1a;
+  --color-bordure: #000000;
+
+  --color-primaire: #003d1f;
+  --color-primaire-contraste: #ffffff;
+  --color-accent: #7a4d00;
+
+  --color-statut-titree: #006622;
+  --color-statut-en-cours: #7a4d00;
+  --color-statut-gel: #b30000;
+  --color-statut-domaine-public: #00308f;
+
+  --taille-cible-tactile: 56px;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-fond);
+  color: var(--color-texte);
+}
+
+/* Cibles tactiles genereuses pour smartphones d'entree de gamme et utilisateurs peu familiers du tactile. */
+button,
+a,
+input,
+select {
+  min-height: var(--taille-cible-tactile);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

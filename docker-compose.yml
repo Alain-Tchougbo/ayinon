@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ayinon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-moi-en-production}
+      POSTGRES_DB: ${POSTGRES_DB:-ayinon}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ayinon_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ayinon} -d ${POSTGRES_DB:-ayinon}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ayinon_db_data:

@@ -1,0 +1,367 @@
+// Schema Prisma — AYINON
+// PostgreSQL + PostGIS. Les colonnes geometriques sont declarees via Unsupported(...)
+// car Prisma ne modelise pas nativement les types spatiaux : toutes les requetes
+// spatiales (ST_Intersects, ST_Area, ST_Distance, ...) passent par $queryRaw
+// dans les services concernes (voir apps/api/src/geometre, apps/api/src/parcelles).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+// ---------------------------------------------------------------------------
+// Enumerations (miroir de packages/shared/src/enums.ts)
+// ---------------------------------------------------------------------------
+
+enum RoleUtilisateur {
+  CITOYEN
+  GEOMETRE
+  NOTAIRE
+  MANDATAIRE_FAMILIAL
+  AGENT_ANDF
+  MAGISTRAT_CSAF
+  ADMIN
+}
+
+enum StatutParcelle {
+  TITREE
+  EN_COURS
+  GEL_CSAF
+  DOMAINE_PUBLIC
+}
+
+enum RoleFamilial {
+  AINE
+  REPRESENTANT_FEMMES
+  CADET
+  AUTRE
+}
+
+enum StatutSignatureFamille {
+  EN_ATTENTE
+  SIGNEE
+  REFUSEE
+}
+
+enum StatutBan {
+  OUVERT
+  CLOS_SANS_OPPOSITION
+  CLOS_AVEC_OPPOSITION
+}
+
+enum StatutOpposition {
+  DEPOSEE
+  EN_EXAMEN
+  RESOLUE
+  REJETEE
+}
+
+enum StatutConflitCsaf {
+  ACTIF
+  LEVE
+}
+
+enum TypeOperationAudit {
+  CREATION_PARCELLE
+  VERROUILLAGE_ANTI_VENTE
+  DEVERROUILLAGE_ANTI_VENTE
+  IMPORT_BORNAGE
+  DETECTION_CHEVAUCHEMENT
+  SIGNATURE_PLAN_BORNAGE
+  ENREGISTREMENT_CONVENTION
+  DEMANDE_MULTISIGNATURE
+  SIGNATURE_FAMILIALE
+  OUVERTURE_BAN
+  OPPOSITION_DEPOSEE
+  CLOTURE_BAN
+  GEL_CSAF
+  LEVEE_GEL_CSAF
+}
+
+enum PoleTerritorial {
+  LITTORAL_ATLANTIQUE
+  OUEME_PLATEAU
+  MONO_COUFFO
+  ZOU_COLLINES
+  BORGOU_ALIBORI
+  ATACORA_DONGA
+}
+
+// ---------------------------------------------------------------------------
+// Identite & acces
+// ---------------------------------------------------------------------------
+
+model Utilisateur {
+  id              String           @id @default(uuid())
+  email           String           @unique
+  motDePasseHash  String
+  role            RoleUtilisateur
+  nomComplet      String
+  telephone       String?
+  poleTerritorial PoleTerritorial?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  proprietaireId String?       @unique
+  proprietaire   Proprietaire? @relation(fields: [proprietaireId], references: [id])
+
+  refreshTokens      RefreshToken[]
+  codesOtp            CodeOtp[]
+  plansBornageSignes  PlanBornage[] @relation("GeometreSignataire")
+  conflitsOuverts     ConflitCsaf[] @relation("MagistratOuvrant")
+
+  @@index([role])
+}
+
+model RefreshToken {
+  id            String    @id @default(uuid())
+  utilisateurId String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  tokenHash     String
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([utilisateurId])
+}
+
+/// OTP generique (verrouillage de parcelle, signature de mandat familial, ...). En dev, le code est journalise au lieu d'etre envoye par SMS.
+model CodeOtp {
+  id            String   @id @default(uuid())
+  utilisateurId String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  code          String
+  contexte      String
+  expiresAt     DateTime
+  utilise       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([utilisateurId, contexte])
+}
+
+// ---------------------------------------------------------------------------
+// Foncier
+// ---------------------------------------------------------------------------
+
+model Proprietaire {
+  id                  String   @id @default(uuid())
+  nomComplet          String
+  telephone           String?
+  email               String?
+  numeroPieceIdentite String?
+  estDiaspora         Boolean  @default(false)
+  paysResidence       String?
+  createdAt           DateTime @default(now())
+
+  utilisateur Utilisateur?
+  parcelles   Parcelle[]
+  mandats     MandataireFamille[]
+}
+
+/// La geometrie (geom) est un polygone PostGIS SRID 4326, manipule via des
+/// requetes SQL brutes ($queryRaw) dans ParcellesService.
+model Parcelle {
+  id              String                         @id @default(uuid())
+  nup             String                         @unique
+  geom            Unsupported("geometry(Polygon, 4326)")
+  superficieM2    Float
+  statut          StatutParcelle                 @default(EN_COURS)
+  poleTerritorial PoleTerritorial
+  commune         String
+  arrondissement  String?
+  verrouAntiVente Boolean                        @default(false)
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+
+  proprietaireId String?
+  proprietaire   Proprietaire? @relation(fields: [proprietaireId], references: [id])
+
+  titres            Titre[]
+  conventions       Convention[]
+  plansBornage      PlanBornage[]
+  signaturesFamille SignatureFamille[]
+  bansOpposition    BanOpposition[]
+  conflitsCsaf      ConflitCsaf[]
+  mutationsAudit    MutationAudit[]
+
+  @@index([statut])
+  @@index([poleTerritorial])
+}
+
+model Titre {
+  id               String   @id @default(uuid())
+  parcelleId       String
+  parcelle         Parcelle @relation(fields: [parcelleId], references: [id])
+  numeroTitre      String   @unique
+  dateDelivrance   DateTime
+  hashSha256       String
+  signatureEd25519 String
+  createdAt        DateTime @default(now())
+
+  @@index([parcelleId])
+}
+
+/// Convention de vente numerisee : scellee par hash SHA-256 + signature Ed25519,
+/// le QR appose sur le document papier encode qrPayload et est verifie hors-ligne
+/// par le Scanner Anti-Fraude cote citoyen (voir apps/api/src/conventions).
+model Convention {
+  id               String   @id @default(uuid())
+  parcelleId       String
+  parcelle         Parcelle @relation(fields: [parcelleId], references: [id])
+  vendeurNom       String
+  acquereurNom     String
+  montantFcfa      Float
+  cheminFichier    String?
+  hashSha256       String
+  signatureEd25519 String
+  qrPayload        Json
+  valide           Boolean  @default(true)
+  creeParId        String?
+  createdAt        DateTime @default(now())
+
+  @@index([parcelleId])
+}
+
+/// Plan de bornage televerse par un geometre-expert. chevauchementDetecte et
+/// parcellesEnConflit sont calcules par GeometreService via ST_Intersects/ST_Area.
+model PlanBornage {
+  id                   String   @id @default(uuid())
+  parcelleId           String
+  parcelle             Parcelle @relation(fields: [parcelleId], references: [id])
+  geometrie            Unsupported("geometry(Polygon, 4326)")
+  referenceDossier     String
+  chevauchementDetecte Boolean  @default(false)
+  parcellesEnConflit   String[]
+  numeroOrdreOgeb      String?
+  hashSha256           String
+  signatureEd25519     String?
+  createdAt            DateTime @default(now())
+
+  signeParId String?
+  signePar   Utilisateur? @relation("GeometreSignataire", fields: [signeParId], references: [id])
+
+  @@index([parcelleId])
+}
+
+// ---------------------------------------------------------------------------
+// Gouvernance familiale (multi-signature + ban d'opposition)
+// ---------------------------------------------------------------------------
+
+model MandataireFamille {
+  id             String       @id @default(uuid())
+  proprietaireId String
+  proprietaire   Proprietaire @relation(fields: [proprietaireId], references: [id])
+  role           RoleFamilial
+  createdAt      DateTime     @default(now())
+
+  signatures SignatureFamille[]
+
+  @@index([proprietaireId])
+}
+
+model SignatureFamille {
+  id           String                 @id @default(uuid())
+  parcelleId   String
+  parcelle     Parcelle               @relation(fields: [parcelleId], references: [id])
+  mandataireId String
+  mandataire   MandataireFamille      @relation(fields: [mandataireId], references: [id])
+  role         RoleFamilial
+  statut       StatutSignatureFamille @default(EN_ATTENTE)
+  signeLe      DateTime?
+  hashSha256   String?
+  createdAt    DateTime               @default(now())
+
+  @@unique([parcelleId, mandataireId])
+}
+
+/// Affichage de Ban Numerique : periode legale de 15 jours (DUREE_BAN_OPPOSITION_JOURS)
+/// ouvrant droit d'opposition aux voisins avant signature definitive de la mutation.
+model BanOpposition {
+  id         String       @id @default(uuid())
+  parcelleId String
+  parcelle   Parcelle     @relation(fields: [parcelleId], references: [id])
+  dateDebut  DateTime     @default(now())
+  dateFin    DateTime
+  statut     StatutBan    @default(OUVERT)
+  createdAt  DateTime     @default(now())
+
+  oppositions Opposition[]
+
+  @@index([parcelleId])
+}
+
+model Opposition {
+  id              String           @id @default(uuid())
+  banId           String
+  ban             BanOpposition    @relation(fields: [banId], references: [id])
+  opposantNom     String
+  opposantContact String
+  motif           String
+  statut          StatutOpposition @default(DEPOSEE)
+  createdAt       DateTime         @default(now())
+
+  @@index([banId])
+}
+
+// ---------------------------------------------------------------------------
+// Justice — CSAF
+// ---------------------------------------------------------------------------
+
+/// Gel conservatoire judiciaire : des qu'un ConflitCsaf ACTIF existe pour une
+/// parcelle, son statut passe a GEL_CSAF (rouge) et toute mutation est bloquee
+/// (voir CsafGuard dans apps/api/src/csaf).
+model ConflitCsaf {
+  id                         String            @id @default(uuid())
+  parcelleId                 String
+  parcelle                   Parcelle          @relation(fields: [parcelleId], references: [id])
+  motif                      String
+  referenceDossierJudiciaire String
+  statut                     StatutConflitCsaf @default(ACTIF)
+  /// Statut cadastral de la parcelle juste avant le gel, restaure automatiquement a la levee.
+  statutParcelleAvantGel     StatutParcelle
+  dateGel                    DateTime          @default(now())
+  dateLevee                  DateTime?
+  motifLevee                 String?
+  createdAt                  DateTime          @default(now())
+
+  ouvertParId String
+  ouvertPar   Utilisateur @relation("MagistratOuvrant", fields: [ouvertParId], references: [id])
+
+  @@index([parcelleId])
+  @@index([statut])
+}
+
+// ---------------------------------------------------------------------------
+// Registre d'audit cryptographique (ledger chaine, portee nationale)
+// ---------------------------------------------------------------------------
+
+/// Chaque entree contient hashBloc = SHA256(hashBlocPrecedent + hashPayload + horodatage),
+/// formant une chaine append-only verifiable via CryptoAuditService.verifierIntegriteRegistre().
+/// Toute alteration retroactive d'une entree casse la chaine a partir de ce point.
+model MutationAudit {
+  id                String              @id @default(uuid())
+  /// Compteur strictement croissant servant a determiner sans ambiguite le bloc precedent
+  /// (l'horodatage seul ne suffit pas : deux ecritures rapprochees peuvent partager la
+  /// meme milliseconde, ce qui casserait l'ordre du chainage si on triait uniquement dessus).
+  sequence          Int                 @unique @default(autoincrement())
+  parcelleId        String?
+  parcelle          Parcelle?           @relation(fields: [parcelleId], references: [id])
+  typeOperation      TypeOperationAudit
+  acteurId           String?
+  roleActeur         RoleUtilisateur?
+  payload            Json
+  hashPayload        String
+  hashBlocPrecedent  String
+  hashBloc           String
+  signatureEd25519   String
+  horodatage         DateTime            @default(now())
+
+  @@index([parcelleId])
+  @@index([horodatage])
+}

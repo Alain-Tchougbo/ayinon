@@ -1,0 +1,31 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.local
+.DS_Store
+Thumbs.db
+
+# Nest
+apps/api/dist/
+
+# Vite / PWA
+apps/web/dist/
+apps/web/dev-dist/
+
+# Prisma
+apps/api/prisma/migrations/dev.db
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea/

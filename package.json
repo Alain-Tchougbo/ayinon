@@ -1,0 +1,23 @@
+{
+  "name": "ayinon",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AYINON — Le Gardien Numerique de la Terre. Plateforme de securisation et gouvernance fonciere pour la Republique du Benin.",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@12.3.4",
+  "scripts": {
+    "build:shared": "pnpm --filter @ayinon/shared build",
+    "dev:api": "pnpm --filter @ayinon/api start:dev",
+    "dev:web": "pnpm --filter @ayinon/web dev",
+    "build": "pnpm build:shared && pnpm --filter @ayinon/api build && pnpm --filter @ayinon/web build",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "prisma:migrate": "pnpm --filter @ayinon/api exec prisma migrate dev",
+    "prisma:generate": "pnpm --filter @ayinon/api exec prisma generate",
+    "test:api": "pnpm --filter @ayinon/api test",
+    "seed": "pnpm --filter @ayinon/api run seed",
+    "lint": "pnpm -r --if-present run lint"
+  }
+}
