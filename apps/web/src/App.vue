@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ChevronDown, Languages, LogIn, LogOut, Menu, Shield, SunMoon, Wifi, WifiOff, X } from "@lucide/vue";
-import { LangueAssistantVocal, RoleUtilisateur } from "@ayinon/shared";
+import { RoleUtilisateur, type LangueAssistantVocal } from "@ayinon/shared";
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import VoiceAssistantButton from "./components/accessibility/VoiceAssistantButton.vue";
@@ -8,19 +8,13 @@ import BaseButton from "./components/ui/BaseButton.vue";
 import { useOnlineStatus } from "./composables/useOnlineStatus";
 import { useVoiceAssistant } from "./composables/useVoiceAssistant";
 import { useAuthStore } from "./stores/auth.store";
+import { LANGUES } from "./voice/langues";
 
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 const { enLigne } = useOnlineStatus();
 const { languePreferee, definirLangue } = useVoiceAssistant();
-
-const LANGUES: Array<{ valeur: LangueAssistantVocal; label: string }> = [
-  { valeur: LangueAssistantVocal.FR, label: "Francais" },
-  { valeur: LangueAssistantVocal.FON, label: "Fɔngbe" },
-  { valeur: LangueAssistantVocal.YORUBA, label: "Yorùbá" },
-  { valeur: LangueAssistantVocal.BARIBA, label: "Bariba" },
-];
 
 type Theme = "clair" | "sombre" | "contraste-eleve";
 const theme = ref<Theme>((localStorage.getItem("ayinon_theme") as Theme | null) ?? "clair");
@@ -143,7 +137,7 @@ async function seDeconnecter() {
               class="min-h-0 w-[7rem] appearance-none overflow-hidden text-ellipsis whitespace-nowrap rounded-full border-0 bg-transparent py-1.5 pl-7 pr-6 text-sm font-medium text-texte-attenue transition-colors hover:bg-fond hover:text-texte"
               @change="definirLangue(($event.target as HTMLSelectElement).value as LangueAssistantVocal)"
             >
-              <option v-for="l in LANGUES" :key="l.valeur" :value="l.valeur">{{ l.label }}</option>
+              <option v-for="l in LANGUES" :key="l.valeur" :value="l.valeur">{{ l.label }}{{ l.audioDisponible ? "" : " (bientot)" }}</option>
             </select>
             <ChevronDown :size="12" class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
           </div>
@@ -230,7 +224,7 @@ async function seDeconnecter() {
               class="rounded-carte border border-bordure bg-surface py-1.5 pl-7 pr-2 text-xs font-medium text-texte"
               @change="definirLangue(($event.target as HTMLSelectElement).value as LangueAssistantVocal)"
             >
-              <option v-for="l in LANGUES" :key="l.valeur" :value="l.valeur">{{ l.label }}</option>
+              <option v-for="l in LANGUES" :key="l.valeur" :value="l.valeur">{{ l.label }}{{ l.audioDisponible ? "" : " (bientot)" }}</option>
             </select>
           </div>
           <div class="relative">
