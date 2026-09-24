@@ -10,6 +10,7 @@ export const RoleUtilisateur = {
   MANDATAIRE_FAMILIAL: "MANDATAIRE_FAMILIAL",
   AGENT_ANDF: "AGENT_ANDF",
   MAGISTRAT_CSAF: "MAGISTRAT_CSAF",
+  AGENT_BANQUE: "AGENT_BANQUE",
   ADMIN: "ADMIN",
 } as const;
 export type RoleUtilisateur = (typeof RoleUtilisateur)[keyof typeof RoleUtilisateur];
@@ -89,6 +90,8 @@ export const TypeOperationAudit = {
   REJET_CESSION: "REJET_CESSION",
   VALIDATION_CESSION: "VALIDATION_CESSION",
   DELIVRANCE_TITRE: "DELIVRANCE_TITRE",
+  INSCRIPTION_HYPOTHEQUE: "INSCRIPTION_HYPOTHEQUE",
+  LEVEE_HYPOTHEQUE: "LEVEE_HYPOTHEQUE",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
 
@@ -102,6 +105,12 @@ export const StatutCession = {
   REJETEE: "REJETEE",
 } as const;
 export type StatutCession = (typeof StatutCession)[keyof typeof StatutCession];
+
+export const StatutHypotheque = {
+  ACTIVE: "ACTIVE",
+  LEVEE: "LEVEE",
+} as const;
+export type StatutHypotheque = (typeof StatutHypotheque)[keyof typeof StatutHypotheque];
 
 /**
  * Six poles territoriaux (regroupement des 12 departements du Benin), reference structurante

@@ -90,4 +90,8 @@ export const PHRASES = {
     id: "validation-cessions-intro",
     texteFr: "Validez les cessions acceptees par l'acquereur : la validation delivre le titre foncier et transfere la propriete.",
   },
+  solvabiliteIntro: {
+    id: "solvabilite-intro",
+    texteFr: "Verifiez si une parcelle est titree, non gelee et libre de gage avant un credit, ou inscrivez votre hypotheque.",
+  },
 } as const satisfies Record<string, PhraseVocale>;

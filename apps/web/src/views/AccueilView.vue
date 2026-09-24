@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  Banknote,
   Calculator,
   CircleCheck,
   Clock,
@@ -121,6 +122,14 @@ const raccourcis = computed(() => {
   if (auth.role === RoleUtilisateur.MAGISTRAT_CSAF) {
     items.push({ to: "/andf", icone: Landmark, titre: "Console des poles", description: "Vue d'ensemble nationale du zonage foncier." });
     items.push({ to: "/csaf", icone: Gavel, titre: "Gel conservatoire", description: "Placer une parcelle contestee sous sequestre judiciaire." });
+  }
+  if (auth.role === RoleUtilisateur.AGENT_BANQUE) {
+    items.push({
+      to: "/banque/solvabilite",
+      icone: Banknote,
+      titre: "Verifier la solvabilite",
+      description: "Titre, gel CSAF, gage existant : verifiez avant credit et inscrivez votre hypotheque.",
+    });
   }
   return items;
 });

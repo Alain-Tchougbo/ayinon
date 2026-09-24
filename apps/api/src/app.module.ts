@@ -13,6 +13,7 @@ import { CryptoAuditModule } from "./crypto-audit/crypto-audit.module";
 import { CsafModule } from "./csaf/csaf.module";
 import { FamillesModule } from "./familles/familles.module";
 import { GeometreModule } from "./geometre/geometre.module";
+import { HypothequesModule } from "./hypotheques/hypotheques.module";
 import { OtpModule } from "./otp/otp.module";
 import { ParcellesModule } from "./parcelles/parcelles.module";
 import { PrismaModule } from "./prisma/prisma.module";
@@ -33,6 +34,7 @@ import { SyncModule } from "./sync/sync.module";
     FamillesModule,
     CsafModule,
     AndfModule,
+    HypothequesModule,
     SyncModule,
   ],
   providers: [

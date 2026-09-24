@@ -82,6 +82,16 @@ const router = createRouter({
       component: () => import("../views/andf/GelCsafView.vue"),
       meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.MAGISTRAT_CSAF], titre: "Gel conservatoire CSAF" },
     },
+    {
+      path: "/banque/solvabilite",
+      name: "banque-solvabilite",
+      component: () => import("../views/banque/SolvabiliteView.vue"),
+      meta: {
+        necessiteAuth: true,
+        rolesAutorises: [RoleUtilisateur.AGENT_BANQUE, RoleUtilisateur.ADMIN],
+        titre: "Verification de solvabilite",
+      },
+    },
     { path: "/:pathMatch(.*)*", name: "introuvable", component: () => import("../views/IntrouvableView.vue"), meta: { titre: "Page introuvable" } },
   ],
 });

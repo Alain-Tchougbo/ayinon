@@ -47,6 +47,9 @@ const liensNav = computed(() => {
     items.push({ to: "/andf", label: "Console des poles" });
     items.push({ to: "/csaf", label: "Gel conservatoire" });
   }
+  if (auth.role === RoleUtilisateur.AGENT_BANQUE) {
+    items.push({ to: "/banque/solvabilite", label: "Solvabilite" });
+  }
   return items;
 });
 

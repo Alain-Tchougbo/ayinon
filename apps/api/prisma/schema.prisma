@@ -26,6 +26,7 @@ enum RoleUtilisateur {
   MANDATAIRE_FAMILIAL
   AGENT_ANDF
   MAGISTRAT_CSAF
+  AGENT_BANQUE
   ADMIN
 }
 
@@ -87,6 +88,8 @@ enum TypeOperationAudit {
   REJET_CESSION
   VALIDATION_CESSION
   DELIVRANCE_TITRE
+  INSCRIPTION_HYPOTHEQUE
+  LEVEE_HYPOTHEQUE
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
@@ -97,6 +100,11 @@ enum StatutCession {
   ACCEPTEE
   VALIDEE
   REJETEE
+}
+
+enum StatutHypotheque {
+  ACTIVE
+  LEVEE
 }
 
 enum PoleTerritorial {
@@ -132,6 +140,8 @@ model Utilisateur {
   plansBornageImportes PlanBornage[]  @relation("GeometreImportateur")
   conflitsOuverts      ConflitCsaf[]  @relation("MagistratOuvrant")
   cessionsAcquises     Convention[]   @relation("CessionAcquereur")
+  hypothequesInscrites Hypotheque[]   @relation("HypothequeInscripteur")
+  hypothequesLevees    Hypotheque[]   @relation("HypothequeLeveur")
   cessionsValidees     Convention[]   @relation("CessionValidateur")
 
   @@index([role])
@@ -206,6 +216,7 @@ model Parcelle {
   signaturesFamille SignatureFamille[]
   bansOpposition    BanOpposition[]
   conflitsCsaf      ConflitCsaf[]
+  hypotheques       Hypotheque[]
   mutationsAudit    MutationAudit[]
 
   @@index([statut])
@@ -266,6 +277,29 @@ model Convention {
 
   @@index([parcelleId])
   @@index([statutCession])
+}
+
+/// Gage bancaire inscrit sur une parcelle titree : tant qu'une hypotheque ACTIVE existe, la
+/// parcelle n'est pas consideree "libre de charge" par la verification de solvabilite (voir
+/// apps/api/src/hypotheques). Une parcelle ne peut porter qu'une seule hypotheque active a la fois.
+model Hypotheque {
+  id                 String           @id @default(uuid())
+  parcelleId         String
+  parcelle           Parcelle         @relation(fields: [parcelleId], references: [id])
+  banqueNom          String
+  montantGarantiFcfa Float
+  statut             StatutHypotheque @default(ACTIVE)
+  dateInscription    DateTime         @default(now())
+  dateLevee          DateTime?
+  motifLevee         String?
+
+  inscriteParId String
+  inscritePar   Utilisateur  @relation("HypothequeInscripteur", fields: [inscriteParId], references: [id])
+  leveeParId    String?
+  leveePar      Utilisateur? @relation("HypothequeLeveur", fields: [leveeParId], references: [id])
+
+  @@index([parcelleId])
+  @@index([statut])
 }
 
 /// Plan de bornage televerse par un geometre-expert. chevauchementDetecte et
