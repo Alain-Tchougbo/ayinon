@@ -197,7 +197,7 @@ async function seDeconnecter() {
       </div>
     </header>
 
-    <main id="contenu-principal" class="min-h-0 flex-1">
+    <main id="contenu-principal" class="flex min-h-0 flex-1 flex-col">
       <RouterView />
     </main>
 
