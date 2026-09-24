@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { CircleCheck, Clock, Search, Send, Users, X } from "@lucide/vue";
+import { CircleCheck, Clock, Search, Send, Signature, Users, X } from "@lucide/vue";
 import { RoleFamilial, RoleUtilisateur, type ActionEnAttenteDto } from "@ayinon/shared";
 import { computed, onMounted, ref } from "vue";
+import { useRoute } from "vue-router";
 import { mettreEnFileAction } from "../../services/syncService";
 import { ApiError, api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth.store";
@@ -30,10 +31,19 @@ interface EtatParcelle {
   quorumAtteint: boolean;
   bans: BanOpposition[];
 }
+interface SignatureEnAttente {
+  id: string;
+  role: string;
+  parcelle: { id: string; nup: string; commune: string };
+}
 
 const auth = useAuthStore();
+const route = useRoute();
 const parcelles = useParcellesStore();
 const { enLigne } = useOnlineStatus();
+
+const mesSignaturesEnAttente = ref<SignatureEnAttente[]>([]);
+const chargementMesSignatures = ref(false);
 
 const nupRecherche = ref("");
 const parcelleId = ref<string | null>(null);
@@ -48,7 +58,31 @@ const opposantNom = ref("");
 const opposantContact = ref("");
 const motifOpposition = ref("");
 
-onMounted(() => parcelles.chargerToutes());
+onMounted(async () => {
+  parcelles.chargerToutes();
+
+  if (auth.role === RoleUtilisateur.MANDATAIRE_FAMILIAL) {
+    chargementMesSignatures.value = true;
+    try {
+      mesSignaturesEnAttente.value = await api.get<SignatureEnAttente[]>("/familles/mes-signatures-en-attente");
+    } finally {
+      chargementMesSignatures.value = false;
+    }
+  }
+
+  // Lien direct depuis l'accueil personnalise (?parcelle=<id>) : ouvre directement l'etat, sans recherche NUP.
+  const parcelleDepuisLien = route.query.parcelle;
+  if (typeof parcelleDepuisLien === "string") {
+    parcelleId.value = parcelleDepuisLien;
+    await chargerEtat();
+  }
+});
+
+async function ouvrirDepuisSignatureEnAttente(signature: SignatureEnAttente) {
+  parcelleId.value = signature.parcelle.id;
+  nupRecherche.value = signature.parcelle.nup;
+  await chargerEtat();
+}
 
 async function chercherParcelle() {
   erreur.value = null;
@@ -86,11 +120,16 @@ async function demanderOtp() {
   codeOtpDebug.value = reponse.codeDebug ?? null;
 }
 
+async function retirerDeMesSignatures(signatureFamilleId: string) {
+  mesSignaturesEnAttente.value = mesSignaturesEnAttente.value.filter((s) => s.id !== signatureFamilleId);
+}
+
 async function signer(accepte: boolean) {
   if (!maSignatureEnAttente.value) return;
   erreur.value = null;
   try {
     await api.post("/familles/signer", { signatureFamilleId: maSignatureEnAttente.value.id, accepte, codeOtp: codeOtp.value });
+    await retirerDeMesSignatures(maSignatureEnAttente.value.id);
     codeOtp.value = "";
     await chargerEtat();
   } catch (e) {
@@ -133,18 +172,46 @@ async function deposerOpposition() {
       <template #icone><Users :size="22" class="text-primaire" aria-hidden="true" /></template>
     </PageHeader>
 
-    <form class="flex gap-2" @submit.prevent="chercherParcelle">
-      <div class="relative flex-1">
-        <Search :size="16" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
-        <input
-          v-model="nupRecherche"
-          type="text"
-          placeholder="NUP de la parcelle familiale"
-          class="w-full rounded-carte border border-bordure bg-surface py-2.5 pl-10 pr-3 text-sm text-texte"
-        />
-      </div>
-      <BaseButton type="submit" variant="secondaire">Rechercher</BaseButton>
-    </form>
+    <!-- Ce qui vous attend concretement : pas besoin de connaitre un NUP pour savoir qu'on attend votre signature. -->
+    <BaseCard v-if="auth.role === RoleUtilisateur.MANDATAIRE_FAMILIAL" accentue="accent">
+      <p class="mb-3 flex items-center gap-2 font-semibold text-texte">
+        <Signature :size="18" class="text-accent" aria-hidden="true" />
+        Vos signatures en attente
+      </p>
+      <p v-if="chargementMesSignatures" class="text-sm text-texte-attenue" role="status">Chargement…</p>
+      <p v-else-if="mesSignaturesEnAttente.length === 0" class="text-sm text-texte-attenue">
+        Aucune signature ne vous est demandee pour le moment.
+      </p>
+      <ul v-else class="space-y-2">
+        <li
+          v-for="s in mesSignaturesEnAttente"
+          :key="s.id"
+          class="flex items-center justify-between gap-2 rounded-carte border border-bordure bg-surface p-3"
+        >
+          <div class="text-sm">
+            <p class="font-medium text-texte">{{ s.parcelle.nup }} — {{ s.parcelle.commune }}</p>
+            <p class="text-xs text-texte-attenue">En tant que {{ s.role }}</p>
+          </div>
+          <BaseButton taille="sm" @click="ouvrirDepuisSignatureEnAttente(s)">Voir et signer</BaseButton>
+        </li>
+      </ul>
+    </BaseCard>
+
+    <details class="rounded-carte border border-bordure bg-surface p-3.5">
+      <summary class="cursor-pointer text-sm font-medium text-texte">Rechercher une autre parcelle par NUP</summary>
+      <form class="mt-3 flex gap-2" @submit.prevent="chercherParcelle">
+        <div class="relative flex-1">
+          <Search :size="16" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
+          <input
+            v-model="nupRecherche"
+            type="text"
+            placeholder="NUP de la parcelle familiale"
+            class="w-full rounded-carte border border-bordure bg-fond py-2.5 pl-10 pr-3 text-sm text-texte"
+          />
+        </div>
+        <BaseButton type="submit" variant="secondaire">Rechercher</BaseButton>
+      </form>
+    </details>
 
     <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ erreur }}</p>
     <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes" role="status">{{ message }}</p>

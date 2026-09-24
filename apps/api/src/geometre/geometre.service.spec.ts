@@ -2,6 +2,8 @@ import { BadRequestException } from "@nestjs/common";
 import type { GeoJsonPolygon } from "@ayinon/shared";
 import { GeometreService } from "./geometre.service";
 
+const GEOMETRE_TEST = { id: "geometre-1", email: "g@ayinon.bj", role: "GEOMETRE", proprietaireId: null } as any;
+
 const POLYGONE_EXEMPLE: GeoJsonPolygon = {
   type: "Polygon",
   coordinates: [
@@ -54,11 +56,14 @@ describe("GeometreService — detection de chevauchement geometrique", () => {
   it("marque le plan comme conforme quand aucune parcelle mitoyenne n'intersecte", async () => {
     const { service, auditAppels } = creerServiceAvecConflits([]);
 
-    const resultat = await service.importerBornage({
-      parcelleId: "parcelle-1",
-      geometrie: POLYGONE_EXEMPLE,
-      referenceDossier: "DOSSIER-001",
-    });
+    const resultat = await service.importerBornage(
+      {
+        parcelleId: "parcelle-1",
+        geometrie: POLYGONE_EXEMPLE,
+        referenceDossier: "DOSSIER-001",
+      },
+      GEOMETRE_TEST,
+    );
 
     expect(resultat.chevauchementDetecte).toBe(false);
     expect(resultat.parcellesEnConflit).toHaveLength(0);
@@ -71,11 +76,14 @@ describe("GeometreService — detection de chevauchement geometrique", () => {
       { id: "parcelle-voisine", nup: "BJ-0002", aireIntersectionM2: 12.5 },
     ]);
 
-    const resultat = await service.importerBornage({
-      parcelleId: "parcelle-1",
-      geometrie: POLYGONE_EXEMPLE,
-      referenceDossier: "DOSSIER-002",
-    });
+    const resultat = await service.importerBornage(
+      {
+        parcelleId: "parcelle-1",
+        geometrie: POLYGONE_EXEMPLE,
+        referenceDossier: "DOSSIER-002",
+      },
+      GEOMETRE_TEST,
+    );
 
     expect(resultat.chevauchementDetecte).toBe(true);
     expect(resultat.parcellesEnConflit).toEqual([{ id: "parcelle-voisine", nup: "BJ-0002", aireIntersectionM2: 12.5 }]);
@@ -86,10 +94,7 @@ describe("GeometreService — detection de chevauchement geometrique", () => {
     const { service } = creerServiceAvecConflits([]);
 
     await expect(
-      service.signerPlan(
-        { planBornageId: "plan-avec-conflit", numeroOrdreOgeb: "OGEB-123" },
-        { id: "geometre-1", email: "g@ayinon.bj", role: "GEOMETRE", proprietaireId: null } as any,
-      ),
+      service.signerPlan({ planBornageId: "plan-avec-conflit", numeroOrdreOgeb: "OGEB-123" }, GEOMETRE_TEST),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

@@ -33,10 +33,15 @@ onMounted(() => {
 // Ferme le panneau mobile a chaque changement de page (evite un menu ouvert qui persiste apres navigation).
 watch(() => route.fullPath, () => (menuMobileOuvert.value = false));
 
+// La nav reflete le meme filtrage par role que les raccourcis de l'accueil personnalise :
+// pas de liens citoyens (scanner, simulateur) pour un role professionnel qui n'en a pas l'usage.
 const liensRole = computed(() => {
   const liens: Array<{ to: string; label: string }> = [{ to: "/carte", label: "Carte cadastrale" }];
-  liens.push({ to: "/scanner", label: "Scanner anti-fraude" });
-  liens.push({ to: "/simulateur-frais", label: "Simulateur de frais" });
+
+  if (!auth.estConnecte || auth.role === RoleUtilisateur.CITOYEN) {
+    liens.push({ to: "/scanner", label: "Scanner anti-fraude" });
+    liens.push({ to: "/simulateur-frais", label: "Simulateur de frais" });
+  }
   if (auth.role === RoleUtilisateur.CITOYEN) {
     liens.push({ to: "/passeport-foncier", label: "Passeport foncier" });
     liens.push({ to: "/famille", label: "Terre familiale" });
@@ -52,7 +57,7 @@ const liensRole = computed(() => {
   }
   if (auth.role === RoleUtilisateur.MAGISTRAT_CSAF) {
     liens.push({ to: "/andf", label: "Console des poles" });
-    liens.push({ to: "/csaf", label: "Gel conservatoire CSAF" });
+    liens.push({ to: "/csaf", label: "Gel CSAF" });
   }
   return liens;
 });

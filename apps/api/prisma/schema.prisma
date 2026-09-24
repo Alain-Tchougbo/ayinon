@@ -114,6 +114,7 @@ model Utilisateur {
   refreshTokens      RefreshToken[]
   codesOtp            CodeOtp[]
   plansBornageSignes  PlanBornage[] @relation("GeometreSignataire")
+  plansBornageImportes PlanBornage[] @relation("GeometreImportateur")
   conflitsOuverts     ConflitCsaf[] @relation("MagistratOuvrant")
 
   @@index([role])
@@ -246,7 +247,13 @@ model PlanBornage {
   signeParId String?
   signePar   Utilisateur? @relation("GeometreSignataire", fields: [signeParId], references: [id])
 
+  /// Geometre ayant televerse le plan (distinct du signataire : un plan peut etre importe puis
+  /// signe plus tard, ou par un confrere). Alimente le tableau "mes imports recents" du geometre.
+  importeParId String?
+  importePar   Utilisateur? @relation("GeometreImportateur", fields: [importeParId], references: [id])
+
   @@index([parcelleId])
+  @@index([importeParId])
 }
 
 // ---------------------------------------------------------------------------
