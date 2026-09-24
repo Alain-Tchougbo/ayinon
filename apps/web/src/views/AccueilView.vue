@@ -2,6 +2,8 @@
 import { Calculator, Map, ScanLine, Search, ShieldCheck } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import BaseButton from "../components/ui/BaseButton.vue";
+import BaseCard from "../components/ui/BaseCard.vue";
 import { useVoiceAssistant } from "../composables/useVoiceAssistant";
 import { useParcellesStore } from "../stores/parcelles.store";
 import { PHRASES } from "../voice/phrases";
@@ -55,25 +57,18 @@ const FONCTIONNALITES = [
             class="w-full rounded-carte border-0 py-3 pl-10 pr-4 text-sm text-texte"
           />
         </div>
-        <button type="submit" class="shrink-0 rounded-carte bg-accent px-5 py-3 text-sm font-bold text-accent-contraste hover:brightness-110">
-          Verifier
-        </button>
+        <BaseButton type="submit" variant="accent" class="shrink-0">Verifier</BaseButton>
       </form>
     </section>
 
     <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <RouterLink
-        v-for="fonctionnalite in FONCTIONNALITES"
-        :key="fonctionnalite.to"
-        :to="fonctionnalite.to"
-        class="group rounded-carte border border-bordure bg-surface p-5 shadow-carte transition hover:-translate-y-0.5 hover:border-primaire hover:shadow-flottant"
-      >
+      <BaseCard v-for="fonctionnalite in FONCTIONNALITES" :key="fonctionnalite.to" :to="fonctionnalite.to">
         <span class="flex h-11 w-11 items-center justify-center rounded-carte bg-primaire/10 text-primaire transition-colors group-hover:bg-primaire group-hover:text-primaire-contraste">
           <component :is="fonctionnalite.icone" :size="22" aria-hidden="true" />
         </span>
         <h2 class="mt-3.5 font-semibold text-texte">{{ fonctionnalite.titre }}</h2>
         <p class="mt-1 text-sm text-texte-attenue">{{ fonctionnalite.description }}</p>
-      </RouterLink>
+      </BaseCard>
     </section>
   </div>
 </template>

@@ -143,11 +143,11 @@ async function deposerOpposition() {
           class="w-full rounded-carte border border-bordure bg-surface py-2.5 pl-10 pr-3 text-sm text-texte"
         />
       </div>
-      <BaseButton type="submit">Rechercher</BaseButton>
+      <BaseButton type="submit" variant="secondaire">Rechercher</BaseButton>
     </form>
 
     <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ erreur }}</p>
-    <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes">{{ message }}</p>
+    <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes" role="status">{{ message }}</p>
 
     <div v-if="etat" class="space-y-4">
       <BaseCard>
@@ -198,10 +198,10 @@ async function deposerOpposition() {
               v-model="motifOpposition"
               required
               rows="2"
-              class="w-full rounded-carte border border-bordure bg-surface px-3.5 py-2.5 text-sm text-texte"
+              class="w-full rounded-carte border border-bordure bg-fond px-3.5 py-2.5 text-sm text-texte"
             />
           </div>
-          <BaseButton type="submit" variant="danger">
+          <BaseButton type="submit" variant="secondaire">
             <Send :size="15" aria-hidden="true" />
             Deposer une opposition
           </BaseButton>

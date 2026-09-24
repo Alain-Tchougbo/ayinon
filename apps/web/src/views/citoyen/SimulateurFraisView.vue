@@ -78,7 +78,7 @@ const CHAMP_NUMERIQUE = "mt-1 w-full rounded-carte border border-bordure bg-fond
 
     <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ erreur }}</p>
 
-    <BaseCard v-if="resultat">
+    <BaseCard v-if="resultat" role="status">
       <div class="space-y-2.5">
         <div class="flex justify-between text-sm">
           <span class="text-texte-attenue">Droits d'enregistrement (DGI)</span>

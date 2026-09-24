@@ -141,7 +141,7 @@ onBeforeUnmount(arreterCamera);
       <template #icone><ScanLine :size="22" class="text-primaire" aria-hidden="true" /></template>
     </PageHeader>
 
-    <div class="relative overflow-hidden rounded-carte border border-bordure bg-neutral-900">
+    <div class="relative overflow-hidden rounded-carte border border-bordure bg-neutral-900 shadow-carte">
       <video ref="video" class="aspect-video w-full object-cover" muted playsinline />
       <canvas ref="canvas" class="hidden" />
       <div v-if="enCoursDeScan" class="pointer-events-none absolute inset-8 rounded-2xl border-2 border-white/70" aria-hidden="true" />
@@ -158,16 +158,16 @@ onBeforeUnmount(arreterCamera);
       <BaseButton v-else variant="secondaire" @click="arreterCamera">Arreter</BaseButton>
     </div>
 
-    <p v-if="erreurCamera" class="rounded-carte border border-accent/30 bg-accent/10 p-3 text-sm text-texte">
+    <p v-if="erreurCamera" class="rounded-carte border border-accent/30 bg-accent/10 p-3 text-sm text-texte" role="status">
       {{ erreurCamera }}
     </p>
 
-    <details class="rounded-carte border border-bordure bg-surface p-3.5 text-sm">
+    <details class="rounded-carte border border-bordure bg-surface p-3.5 text-sm shadow-carte">
       <summary class="cursor-pointer font-medium text-texte">Saisie manuelle (sans camera)</summary>
       <textarea
         v-model="saisieManuelle"
         rows="4"
-        class="mt-2.5 w-full rounded-carte border border-bordure bg-fond p-2.5 text-xs"
+        class="mt-2.5 w-full rounded-carte border border-bordure bg-fond px-3.5 py-2.5 font-mono text-xs text-texte"
         placeholder='{"payload":{...},"signatureEd25519":"..."}'
       />
       <BaseButton taille="sm" variant="secondaire" class="mt-2.5" :disabled="enVerification" @click="verifierSaisieManuelle">

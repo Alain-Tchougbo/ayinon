@@ -93,15 +93,26 @@ async function basculerVerrou(parcelleId: string, verrouActuel: boolean) {
             <div class="w-40">
               <BaseInput id="code-otp" v-model="codeOtp" label="Code a 6 chiffres" :maxlength="6" placeholder="000000" />
             </div>
-            <BaseButton taille="sm" :disabled="enCours || codeOtp.length !== 6" @click="basculerVerrou(parcelle.id, parcelle.verrouAntiVente)">
+            <BaseButton
+              taille="sm"
+              :variant="parcelle.verrouAntiVente ? 'danger' : 'primaire'"
+              :disabled="enCours || codeOtp.length !== 6"
+              @click="basculerVerrou(parcelle.id, parcelle.verrouAntiVente)"
+            >
               Confirmer
             </BaseButton>
             <span v-if="codeOtpDemande" class="text-xs text-texte-attenue">(demo : code = {{ codeOtpDemande }})</span>
           </div>
-          <BaseButton v-else taille="sm" variant="secondaire" class="mt-4" @click="demanderOtp(parcelle.id)">
+          <BaseButton
+            v-else
+            taille="sm"
+            :variant="parcelle.verrouAntiVente ? 'danger' : 'secondaire'"
+            class="mt-4"
+            @click="demanderOtp(parcelle.id)"
+          >
             {{ parcelle.verrouAntiVente ? "Deverrouiller" : "Verrouiller" }} cette parcelle
           </BaseButton>
-          <p v-if="parcelleActive === parcelle.id && message" class="mt-2 text-xs text-texte-attenue">{{ message }}</p>
+          <p v-if="parcelleActive === parcelle.id && message" class="mt-2 text-xs text-texte-attenue" role="status">{{ message }}</p>
         </BaseCard>
       </li>
       <li v-if="mesParcelles.length === 0" class="text-sm text-texte-attenue">
