@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Map } from "@lucide/vue";
 import { onMounted } from "vue";
 import LegendeStatuts from "../components/map/LegendeStatuts.vue";
 import MapCadastral from "../components/map/MapCadastral.vue";
@@ -30,7 +31,10 @@ function surSelection(parcelle: { statut: string }) {
 <template>
   <div class="mx-auto flex h-[calc(100vh-220px)] max-w-7xl flex-col gap-3 px-4 py-4">
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <h1 class="text-lg font-bold text-primaire">Carte cadastrale nationale</h1>
+      <h1 class="flex items-center gap-2 text-lg font-bold text-primaire">
+        <Map :size="20" aria-hidden="true" />
+        Carte cadastrale nationale
+      </h1>
       <span v-if="parcelles.horsLigne" class="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
         Donnees issues du cache local (hors-ligne)
       </span>

@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import { Gavel, Lock, Search, Unlock } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useParcellesStore } from "../../stores/parcelles.store";
+import BaseButton from "../../components/ui/BaseButton.vue";
+import BaseCard from "../../components/ui/BaseCard.vue";
+import BaseInput from "../../components/ui/BaseInput.vue";
+import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface ConflitCsaf {
   id: string;
@@ -69,60 +74,77 @@ async function lever(conflitId: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl space-y-6 p-4">
-    <div>
-      <h1 class="text-xl font-bold text-danger">Bouton de gel conservatoire judiciaire</h1>
-      <p class="mt-1 text-sm text-texte-attenue">
-        En un clic, place une parcelle contestee sous sequestre : statut ROUGE immediat sur tout le territoire,
-        blocage de toute vente.
-      </p>
-    </div>
+  <div class="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
+    <PageHeader
+      titre="Bouton de gel conservatoire judiciaire"
+      description="En un clic, place une parcelle contestee sous sequestre : statut ROUGE immediat sur tout le territoire, blocage de toute vente."
+    >
+      <template #icone><Gavel :size="22" class="text-danger" aria-hidden="true" /></template>
+    </PageHeader>
 
     <form class="flex gap-2" @submit.prevent="chercherParcelle">
-      <input v-model="nupRecherche" placeholder="NUP de la parcelle a geler" class="flex-1 rounded-carte border border-bordure bg-surface px-3 py-2 text-sm" />
-      <button type="submit" class="rounded-carte bg-fond px-4 py-2 text-sm font-semibold">Rechercher</button>
+      <div class="relative flex-1">
+        <Search :size="16" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
+        <input
+          v-model="nupRecherche"
+          placeholder="NUP de la parcelle a geler"
+          class="w-full rounded-carte border border-bordure bg-surface py-2.5 pl-10 pr-3 text-sm text-texte"
+        />
+      </div>
+      <BaseButton type="submit" variant="secondaire">Rechercher</BaseButton>
     </form>
 
-    <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger">{{ erreur }}</p>
+    <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ erreur }}</p>
     <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes">{{ message }}</p>
 
-    <div v-if="parcelleCible" class="space-y-3 rounded-carte border-2 border-danger bg-danger/5 p-4">
-      <p class="font-semibold">Parcelle : {{ parcelleCible.nup }} — statut actuel : {{ parcelleCible.statut }}</p>
-      <input v-model="referenceDossierJudiciaire" placeholder="Reference du dossier judiciaire" class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-sm" />
-      <textarea v-model="motif" rows="2" placeholder="Motif du gel (ex. double vente alleguee)" class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-sm" />
+    <BaseCard v-if="parcelleCible" accentue="danger">
+      <p class="font-semibold text-texte">Parcelle : {{ parcelleCible.nup }} — statut actuel : {{ parcelleCible.statut }}</p>
+      <div class="mt-3 space-y-2.5">
+        <BaseInput id="dossier-judiciaire" v-model="referenceDossierJudiciaire" label="Reference du dossier judiciaire" />
+        <div>
+          <label for="motif-gel" class="mb-1 block text-sm font-medium text-texte">Motif du gel</label>
+          <textarea
+            id="motif-gel"
+            v-model="motif"
+            rows="2"
+            placeholder="Ex. double vente alleguee"
+            class="w-full rounded-carte border border-bordure bg-surface px-3.5 py-2.5 text-sm text-texte"
+          />
+        </div>
+      </div>
 
-      <button
+      <BaseButton
         v-if="!confirmationRequise"
-        type="button"
-        class="rounded-carte bg-danger px-4 py-2 text-sm font-bold text-white"
+        variant="danger"
+        class="mt-3.5"
         :disabled="!motif || !referenceDossierJudiciaire"
         @click="confirmationRequise = true"
       >
-        🔒 Geler cette parcelle
-      </button>
-      <div v-else class="rounded-carte border border-danger p-3">
+        <Lock :size="16" aria-hidden="true" />
+        Geler cette parcelle
+      </BaseButton>
+      <div v-else class="mt-3.5 rounded-carte border border-danger p-3.5">
         <p class="text-sm font-semibold text-danger">Confirmez-vous le gel conservatoire de {{ parcelleCible.nup }} ?</p>
-        <div class="mt-2 flex gap-2">
-          <button type="button" class="rounded-carte bg-danger px-4 py-2 text-sm font-bold text-white" @click="confirmerGel">
-            Oui, confirmer le gel
-          </button>
-          <button type="button" class="rounded-carte bg-fond px-4 py-2 text-sm font-semibold" @click="confirmationRequise = false">
-            Annuler
-          </button>
+        <div class="mt-2.5 flex gap-2">
+          <BaseButton variant="danger" taille="sm" @click="confirmerGel">Oui, confirmer le gel</BaseButton>
+          <BaseButton variant="secondaire" taille="sm" @click="confirmationRequise = false">Annuler</BaseButton>
         </div>
       </div>
-    </div>
+    </BaseCard>
 
     <div>
-      <h2 class="mb-2 font-semibold">Conflits CSAF actifs ({{ conflitsActifs.length }})</h2>
-      <ul class="space-y-2">
-        <li v-for="conflit in conflitsActifs" :key="conflit.id" class="rounded-carte border border-danger/40 bg-danger/5 p-3 text-sm">
-          <p class="font-semibold">{{ conflit.parcelle.nup }} — {{ conflit.parcelle.commune }}</p>
-          <p class="text-texte-attenue">{{ conflit.motif }} (dossier {{ conflit.referenceDossierJudiciaire }})</p>
-          <p class="text-xs text-texte-attenue">Gele le {{ new Date(conflit.dateGel).toLocaleDateString("fr-FR") }}</p>
-          <button type="button" class="mt-2 rounded-carte bg-succes px-3 py-1.5 text-xs font-semibold text-white" @click="lever(conflit.id)">
-            Lever le gel
-          </button>
+      <h2 class="mb-3 font-semibold text-texte">Conflits CSAF actifs ({{ conflitsActifs.length }})</h2>
+      <ul class="space-y-2.5">
+        <li v-for="conflit in conflitsActifs" :key="conflit.id">
+          <BaseCard accentue="danger" rembourrage="sm">
+            <p class="font-semibold text-texte">{{ conflit.parcelle.nup }} — {{ conflit.parcelle.commune }}</p>
+            <p class="mt-0.5 text-sm text-texte-attenue">{{ conflit.motif }} (dossier {{ conflit.referenceDossierJudiciaire }})</p>
+            <p class="mt-0.5 text-xs text-texte-attenue">Gele le {{ new Date(conflit.dateGel).toLocaleDateString("fr-FR") }}</p>
+            <BaseButton variant="succes" taille="sm" class="mt-2.5" @click="lever(conflit.id)">
+              <Unlock :size="14" aria-hidden="true" />
+              Lever le gel
+            </BaseButton>
+          </BaseCard>
         </li>
         <li v-if="conflitsActifs.length === 0" class="text-sm text-texte-attenue">Aucun conflit actif.</li>
       </ul>

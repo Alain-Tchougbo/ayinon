@@ -7,20 +7,27 @@
   --color-surface: #ffffff;
   --color-surface-haute: #ffffff;
   --color-texte: #12271a;
-  --color-texte-attenue: #4b5f52;
+  --color-texte-attenue: #435449;
   --color-bordure: #d8e0da;
 
   --color-primaire: #0b3d24;
+  --color-primaire-hover: #0f4d2e;
   --color-primaire-contraste: #ffffff;
-  --color-accent: #ca8a04;
+  --color-accent: #96620a;
+  --color-accent-contraste: #ffffff;
 
   --color-statut-titree: #15803d;
-  --color-statut-en-cours: #ca8a04;
+  --color-statut-en-cours: #96620a;
   --color-statut-gel: #dc2626;
   --color-statut-domaine-public: #1d4ed8;
 
   --color-danger: #b91c1c;
   --color-succes: #15803d;
+
+  --color-anneau-focus: #96620a;
+
+  --ombre-carte: 0 1px 2px rgba(18, 39, 26, 0.06), 0 1px 3px rgba(18, 39, 26, 0.08);
+  --ombre-flottante: 0 4px 12px rgba(18, 39, 26, 0.12), 0 2px 4px rgba(18, 39, 26, 0.08);
 
   --taille-cible-tactile: 44px;
 }
@@ -30,12 +37,19 @@
   --color-surface: #122019;
   --color-surface-haute: #182b21;
   --color-texte: #eef4f0;
-  --color-texte-attenue: #9db3a6;
-  --color-bordure: #223b2d;
+  --color-texte-attenue: #a8beb0;
+  --color-bordure: #26402f;
 
-  --color-primaire: #3fae72;
+  --color-primaire: #48bd7e;
+  --color-primaire-hover: #5ccc90;
   --color-primaire-contraste: #06140d;
   --color-accent: #f2b90a;
+  --color-accent-contraste: #221900;
+
+  --color-anneau-focus: #f2b90a;
+
+  --ombre-carte: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --ombre-flottante: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 /* Mode plein-soleil / faible litteratie : contrastes maximaux, pas de nuances intermediaires. */
@@ -44,17 +58,24 @@
   --color-surface: #ffffff;
   --color-surface-haute: #ffffff;
   --color-texte: #000000;
-  --color-texte-attenue: #1a1a1a;
+  --color-texte-attenue: #000000;
   --color-bordure: #000000;
 
   --color-primaire: #003d1f;
+  --color-primaire-hover: #002914;
   --color-primaire-contraste: #ffffff;
-  --color-accent: #7a4d00;
+  --color-accent: #6b3e00;
+  --color-accent-contraste: #ffffff;
 
   --color-statut-titree: #006622;
-  --color-statut-en-cours: #7a4d00;
+  --color-statut-en-cours: #6b3e00;
   --color-statut-gel: #b30000;
   --color-statut-domaine-public: #00308f;
+
+  --color-anneau-focus: #000000;
+
+  --ombre-carte: none;
+  --ombre-flottante: 0 0 0 2px #000000;
 
   --taille-cible-tactile: 56px;
 }
@@ -68,14 +89,45 @@ body,
 body {
   background-color: var(--color-fond);
   color: var(--color-texte);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  text-rendering: optimizeLegibility;
 }
 
 /* Cibles tactiles genereuses pour smartphones d'entree de gamme et utilisateurs peu familiers du tactile. */
 button,
 a,
 input,
-select {
+select,
+textarea {
   min-height: var(--taille-cible-tactile);
+}
+
+textarea {
+  min-height: 6rem;
+}
+
+/* Indicateur de focus clavier unique et tres visible, coherent sur les 3 themes (essentiel en plein soleil). */
+:focus-visible {
+  outline: 3px solid var(--color-anneau-focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Lien d'evitement : premier element focusable de la page, invisible tant qu'il n'est pas actif au clavier. */
+.lien-evitement {
+  position: absolute;
+  left: 1rem;
+  top: -100%;
+  z-index: 100;
+  background-color: var(--color-primaire);
+  color: var(--color-primaire-contraste);
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: top 0.15s ease;
+}
+.lien-evitement:focus-visible {
+  top: 1rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

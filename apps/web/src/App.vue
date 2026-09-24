@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LogOut, Shield, SunMoon, Wifi, WifiOff } from "@lucide/vue";
 import { RoleUtilisateur } from "@ayinon/shared";
 import { computed, onMounted, ref } from "vue";
 import { RouterLink, RouterView, useRouter } from "vue-router";
@@ -58,10 +59,14 @@ async function seDeconnecter() {
 
 <template>
   <div class="flex min-h-full flex-col bg-fond text-texte">
-    <header class="border-b border-bordure bg-surface">
+    <a href="#contenu-principal" class="lien-evitement">Aller au contenu principal</a>
+
+    <header class="sticky top-0 z-30 border-b border-bordure bg-surface/95 backdrop-blur">
       <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <RouterLink to="/" class="flex items-center gap-2 text-lg font-bold text-primaire">
-          <span aria-hidden="true">🛡️</span>
+        <RouterLink to="/" class="flex items-center gap-2.5 text-base font-bold tracking-tight text-primaire">
+          <span class="flex h-9 w-9 items-center justify-center rounded-carte bg-primaire text-primaire-contraste">
+            <Shield :size="20" :stroke-width="2.25" aria-hidden="true" />
+          </span>
           AYINON
         </RouterLink>
 
@@ -70,8 +75,8 @@ async function seDeconnecter() {
             v-for="lien in liensRole"
             :key="lien.to"
             :to="lien.to"
-            class="rounded-carte px-3 py-2 font-medium text-texte hover:bg-fond"
-            active-class="bg-primaire text-primaire-contraste hover:bg-primaire"
+            class="rounded-carte px-3 py-2 font-medium text-texte-attenue transition-colors hover:bg-fond hover:text-texte"
+            active-class="!bg-primaire !text-primaire-contraste"
           >
             {{ lien.label }}
           </RouterLink>
@@ -79,36 +84,42 @@ async function seDeconnecter() {
 
         <div class="flex items-center gap-2">
           <span
-            class="rounded-full px-2 py-1 text-xs font-semibold"
+            class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
             :class="enLigne ? 'bg-succes/10 text-succes' : 'bg-danger/10 text-danger'"
           >
+            <Wifi v-if="enLigne" :size="14" aria-hidden="true" />
+            <WifiOff v-else :size="14" aria-hidden="true" />
             {{ enLigne ? "En ligne" : "Hors-ligne" }}
           </span>
 
-          <select
-            v-model="theme"
-            aria-label="Theme d'affichage"
-            class="rounded-carte border border-bordure bg-surface px-2 py-1 text-xs"
-            @change="appliquerTheme(theme)"
-          >
-            <option value="clair">Clair</option>
-            <option value="sombre">Sombre</option>
-            <option value="contraste-eleve">Plein-soleil</option>
-          </select>
+          <div class="relative">
+            <SunMoon :size="14" class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
+            <select
+              v-model="theme"
+              aria-label="Theme d'affichage"
+              class="min-h-0 rounded-carte border border-bordure bg-surface py-1.5 pl-7 pr-2 text-xs font-medium text-texte"
+              @change="appliquerTheme(theme)"
+            >
+              <option value="clair">Clair</option>
+              <option value="sombre">Sombre</option>
+              <option value="contraste-eleve">Plein-soleil</option>
+            </select>
+          </div>
 
           <template v-if="auth.estConnecte">
             <span class="hidden text-xs text-texte-attenue sm:inline">{{ auth.utilisateur?.nomComplet }}</span>
             <button
-              class="rounded-carte bg-fond px-3 py-2 text-xs font-semibold text-texte hover:bg-bordure"
+              class="inline-flex min-h-0 items-center gap-1.5 rounded-carte bg-fond px-3 py-2 text-xs font-semibold text-texte hover:bg-bordure"
               @click="seDeconnecter"
             >
+              <LogOut :size="14" aria-hidden="true" />
               Se deconnecter
             </button>
           </template>
           <RouterLink
             v-else
             to="/connexion"
-            class="rounded-carte bg-primaire px-3 py-2 text-xs font-semibold text-primaire-contraste"
+            class="inline-flex min-h-0 items-center rounded-carte bg-primaire px-3 py-2 text-xs font-semibold text-primaire-contraste hover:bg-primaire-hover"
           >
             Se connecter
           </RouterLink>
@@ -116,7 +127,7 @@ async function seDeconnecter() {
       </div>
     </header>
 
-    <main class="flex-1">
+    <main id="contenu-principal" class="flex-1">
       <RouterView />
     </main>
 

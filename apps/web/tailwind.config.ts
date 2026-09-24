@@ -19,9 +19,13 @@ export default {
         bordure: "var(--color-bordure)",
         primaire: {
           DEFAULT: "var(--color-primaire)",
+          hover: "var(--color-primaire-hover)",
           contraste: "var(--color-primaire-contraste)",
         },
-        accent: "var(--color-accent)",
+        accent: {
+          DEFAULT: "var(--color-accent)",
+          contraste: "var(--color-accent-contraste)",
+        },
         statut: {
           titree: "var(--color-statut-titree)",
           "en-cours": "var(--color-statut-en-cours)",
@@ -30,12 +34,25 @@ export default {
         },
         danger: "var(--color-danger)",
         succes: "var(--color-succes)",
+        "anneau-focus": "var(--color-anneau-focus)",
       },
       fontFamily: {
-        sans: ["'Inter'", "system-ui", "sans-serif"],
+        sans: [
+          "system-ui",
+          "-apple-system",
+          "'Segoe UI'",
+          "Roboto",
+          "'Helvetica Neue'",
+          "Arial",
+          "sans-serif",
+        ],
       },
       borderRadius: {
         carte: "1rem",
+      },
+      boxShadow: {
+        carte: "var(--ombre-carte)",
+        flottant: "var(--ombre-flottante)",
       },
     },
   },

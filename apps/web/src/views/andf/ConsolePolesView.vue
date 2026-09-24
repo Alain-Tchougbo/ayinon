@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { Landmark, TriangleAlert } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { api } from "../../services/api";
+import BaseCard from "../../components/ui/BaseCard.vue";
+import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface StatistiquesPole {
   pole: string;
@@ -14,6 +17,13 @@ interface StatistiquesPole {
 const stats = ref<StatistiquesPole[]>([]);
 const chargement = ref(true);
 
+const REPARTITION = [
+  { cle: "TITREE", label: "Titrees", couleur: "bg-statut-titree" },
+  { cle: "EN_COURS", label: "En cours", couleur: "bg-statut-en-cours" },
+  { cle: "GEL_CSAF", label: "Gel CSAF", couleur: "bg-statut-gel" },
+  { cle: "DOMAINE_PUBLIC", label: "Domaine public", couleur: "bg-statut-domaine-public" },
+];
+
 onMounted(async () => {
   stats.value = await api.get<StatistiquesPole[]>("/andf/statistiques-poles");
   chargement.value = false;
@@ -21,31 +31,34 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl space-y-6 p-4">
-    <div>
-      <h1 class="text-xl font-bold text-primaire">Console de pilotage decentralisee</h1>
-      <p class="mt-1 text-sm text-texte-attenue">Six poles territoriaux — suivi du zonage et de l'integrite fonciere.</p>
-    </div>
+  <div class="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
+    <PageHeader titre="Console de pilotage decentralisee" description="Six poles territoriaux — suivi du zonage et de l'integrite fonciere.">
+      <template #icone><Landmark :size="22" class="text-primaire" aria-hidden="true" /></template>
+    </PageHeader>
 
     <p v-if="chargement" class="text-sm text-texte-attenue">Chargement...</p>
 
     <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div v-for="pole in stats" :key="pole.pole" class="rounded-carte border border-bordure bg-surface p-4">
-        <h2 class="font-semibold">{{ pole.libelle }}</h2>
-        <p class="mt-1 text-2xl font-bold text-primaire">{{ pole.totalParcelles }}</p>
+      <BaseCard v-for="pole in stats" :key="pole.pole">
+        <h2 class="font-semibold text-texte">{{ pole.libelle }}</h2>
+        <p class="mt-1.5 text-2xl font-bold text-primaire">{{ pole.totalParcelles }}</p>
         <p class="text-xs text-texte-attenue">parcelles enregistrees — {{ Math.round(pole.superficieTotaleM2).toLocaleString("fr-FR") }} m²</p>
 
-        <ul class="mt-3 space-y-1 text-xs">
-          <li class="flex justify-between"><span>🟢 Titrees</span><span>{{ pole.parStatut.TITREE ?? 0 }}</span></li>
-          <li class="flex justify-between"><span>🟡 En cours</span><span>{{ pole.parStatut.EN_COURS ?? 0 }}</span></li>
-          <li class="flex justify-between"><span>🔴 Gel CSAF</span><span>{{ pole.parStatut.GEL_CSAF ?? 0 }}</span></li>
-          <li class="flex justify-between"><span>🔵 Domaine public</span><span>{{ pole.parStatut.DOMAINE_PUBLIC ?? 0 }}</span></li>
+        <ul class="mt-3.5 space-y-1.5 border-t border-bordure pt-3 text-xs">
+          <li v-for="ligne in REPARTITION" :key="ligne.cle" class="flex items-center justify-between">
+            <span class="flex items-center gap-1.5 text-texte-attenue">
+              <span class="h-2 w-2 rounded-full" :class="ligne.couleur" aria-hidden="true" />
+              {{ ligne.label }}
+            </span>
+            <span class="font-medium text-texte">{{ pole.parStatut[ligne.cle] ?? 0 }}</span>
+          </li>
         </ul>
 
-        <p v-if="pole.conflitsCsafActifs > 0" class="mt-3 rounded-carte bg-danger/10 px-2 py-1 text-xs font-semibold text-danger">
+        <p v-if="pole.conflitsCsafActifs > 0" class="mt-3.5 flex items-center gap-1.5 rounded-carte bg-danger/10 px-2.5 py-1.5 text-xs font-semibold text-danger">
+          <TriangleAlert :size="14" aria-hidden="true" />
           {{ pole.conflitsCsafActifs }} conflit(s) CSAF actif(s)
         </p>
-      </div>
+      </BaseCard>
     </div>
   </div>
 </template>
