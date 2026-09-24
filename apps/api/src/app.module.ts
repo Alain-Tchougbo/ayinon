@@ -4,6 +4,7 @@ import { ConfigModule } from "@nestjs/config";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AndfModule } from "./andf/andf.module";
 import { AuthModule } from "./auth/auth.module";
+import { CessionsModule } from "./cessions/cessions.module";
 import { CsrfGuard } from "./common/guards/csrf.guard";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
 import { RolesGuard } from "./common/guards/roles.guard";
@@ -27,6 +28,7 @@ import { SyncModule } from "./sync/sync.module";
     ParcellesModule,
     CryptoAuditModule,
     ConventionsModule,
+    CessionsModule,
     GeometreModule,
     FamillesModule,
     CsafModule,

@@ -26,3 +26,25 @@ export const VerifierConventionSchema = z.object({
   signatureEd25519: z.string().min(1),
 });
 export type VerifierConventionDto = z.infer<typeof VerifierConventionSchema>;
+
+/** Le vendeur (proprietaire actuel) propose la cession de l'une de ses parcelles a un acquereur identifie par email. */
+export const ProposerCessionSchema = z.object({
+  parcelleId: z.string().uuid(),
+  acquereurEmail: z.string().trim().toLowerCase().email(),
+  montantFcfa: z.coerce.number().positive(),
+});
+export type ProposerCessionDto = z.infer<typeof ProposerCessionSchema>;
+
+/** Reponse de l'acquereur a une proposition de cession. */
+export const RepondreCessionSchema = z.object({
+  accepter: z.boolean(),
+  motifRefus: z.string().trim().min(10).optional(),
+});
+export type RepondreCessionDto = z.infer<typeof RepondreCessionSchema>;
+
+/** Validation (ou rejet) par un agent ANDF : declenche la delivrance du titre et le transfert de propriete. */
+export const ValiderCessionSchema = z.object({
+  approuver: z.boolean(),
+  motifRejet: z.string().trim().min(10).optional(),
+});
+export type ValiderCessionDto = z.infer<typeof ValiderCessionSchema>;

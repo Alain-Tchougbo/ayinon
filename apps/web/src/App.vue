@@ -30,13 +30,14 @@ const menuMobileOuvert = ref(false);
 const liensNav = computed(() => {
   const items: Array<{ to: string; label: string }> = [{ to: "/carte", label: "Carte cadastrale" }];
   if (!auth.estConnecte || auth.role === RoleUtilisateur.CITOYEN) {
-    items.push({ to: "/scanner", label: "Scanner anti-fraude" });
+    items.push({ to: "/scanner", label: "Scanner" });
   }
   if (!auth.estConnecte) {
-    items.push({ to: "/simulateur-frais", label: "Simulateur de frais" });
+    items.push({ to: "/simulateur-frais", label: "Simulateur" });
   }
   if (auth.role === RoleUtilisateur.CITOYEN) {
     items.push({ to: "/passeport-foncier", label: "Passeport foncier" });
+    items.push({ to: "/cession", label: "Ceder un terrain" });
   }
   if (auth.role === RoleUtilisateur.MANDATAIRE_FAMILIAL) {
     items.push({ to: "/famille", label: "Mes mandats" });
@@ -46,6 +47,7 @@ const liensNav = computed(() => {
   }
   if (auth.role === RoleUtilisateur.AGENT_ANDF || auth.role === RoleUtilisateur.ADMIN) {
     items.push({ to: "/andf", label: "Console des poles" });
+    items.push({ to: "/andf/cessions", label: "Cessions a valider" });
   }
   if (auth.role === RoleUtilisateur.MAGISTRAT_CSAF) {
     items.push({ to: "/andf", label: "Console des poles" });

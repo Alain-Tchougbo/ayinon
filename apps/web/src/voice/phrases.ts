@@ -82,4 +82,12 @@ export const PHRASES = {
     id: "console-poles-intro",
     texteFr: "Consultez la repartition et l'integrite du foncier par pole territorial.",
   },
+  cessionIntro: {
+    id: "cession-intro",
+    texteFr: "Proposez la cession d'une parcelle que vous possedez, ou repondez a une proposition d'achat qui vous est adressee.",
+  },
+  validationCessionsIntro: {
+    id: "validation-cessions-intro",
+    texteFr: "Validez les cessions acceptees par l'acquereur : la validation delivre le titre foncier et transfere la propriete.",
+  },
 } as const satisfies Record<string, PhraseVocale>;
