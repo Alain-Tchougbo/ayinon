@@ -72,6 +72,20 @@ onMounted(() => {
 // Ferme le panneau mobile a chaque changement de page (evite un menu ouvert qui persiste apres navigation).
 watch(() => route.fullPath, () => (menuMobileOuvert.value = false));
 
+// Filet de securite reactif : si la session est perdue (deconnexion, expiration) pendant qu'on est
+// deja sur une page protegee, l'en-tete se met a jour immediatement (reactif) mais la navigation vers
+// une page publique peut prendre un instant, laissant transitoirement le contenu protege affiche sous
+// un en-tete "deconnecte". On force ici la sortie de toute route necessitant une authentification des
+// que la session tombe, sans attendre un appel explicite a router.push ailleurs.
+watch(
+  () => auth.estConnecte,
+  (connecte) => {
+    if (!connecte && route.meta.necessiteAuth) {
+      router.push({ name: "connexion", query: { redirection: route.fullPath } });
+    }
+  },
+);
+
 async function seDeconnecter() {
   await auth.deconnexion();
   router.push({ name: "accueil" });
