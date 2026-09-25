@@ -158,6 +158,22 @@ limite a la note moyenne, au nombre d'avis et au nombre de ventes conclues (`Con
 + `statutCession: VALIDEE`) — pas de page de profil dediee ni de liste paginee des avis, juste un
 resume affiche sur la fiche d'annonce.
 
+## Decision definitive CSAF (E8.8)
+
+La levee d'un gel porte desormais la decision definitive du magistrat, avec trois effets
+possibles : LEVEE_SIMPLE (restaure le statut anterieur, comportement historique), ANNULATION_VENTE
+(rejette en plus toute cession `PROPOSEE`/`ACCEPTEE` en cours sur la parcelle et retire ses
+annonces actives), TRANSFERT_FORCE (meme effet qu'ANNULATION_VENTE, et reassigne directement
+`Parcelle.proprietaireId` au nom designe par la decision — cree un nouveau `Proprietaire` si
+necessaire, exactement comme `CessionsService.valider()` le fait deja pour un acquereur sans
+compte proprietaire prealable). Le document de la decision est optionnel et, comme celui deja
+accepte par le Scanner Anti-Fraude (`ConventionsService`), stocke reellement sur disque (hash
+SHA-256 dans le nom de fichier) mais **non servi par une route de telechargement** dans cette
+iteration — limitation deja existante avant ce changement, non introduite ici.
+
+Pas de notaire implique dans l'instruction de la decision (role hors perimetre, voir plus haut) :
+le magistrat CSAF agit seul, coherent avec E8.7 ou lui seul peut deja ordonner un gel.
+
 ## Demandes de visite (E3.5/E3.6)
 
 Cycle simplifie : l'acheteur propose un creneau (date/heure + mode presentiel/video), le vendeur

@@ -72,6 +72,14 @@ export const StatutConflitCsaf = {
 } as const;
 export type StatutConflitCsaf = (typeof StatutConflitCsaf)[keyof typeof StatutConflitCsaf];
 
+/** Effet applique par la decision definitive du magistrat CSAF (E8.8) au moment de la levee. */
+export const TypeDecisionCsaf = {
+  LEVEE_SIMPLE: "LEVEE_SIMPLE",
+  ANNULATION_VENTE: "ANNULATION_VENTE",
+  TRANSFERT_FORCE: "TRANSFERT_FORCE",
+} as const;
+export type TypeDecisionCsaf = (typeof TypeDecisionCsaf)[keyof typeof TypeDecisionCsaf];
+
 export const TypeOperationAudit = {
   CREATION_PARCELLE: "CREATION_PARCELLE",
   VERROUILLAGE_ANTI_VENTE: "VERROUILLAGE_ANTI_VENTE",
@@ -113,6 +121,8 @@ export const TypeOperationAudit = {
   REJET_COMPTE_PRO: "REJET_COMPTE_PRO",
   DEMANDE_VISITE: "DEMANDE_VISITE",
   REPONSE_VISITE: "REPONSE_VISITE",
+  DECISION_CSAF_ANNULATION_VENTE: "DECISION_CSAF_ANNULATION_VENTE",
+  DECISION_CSAF_TRANSFERT_FORCE: "DECISION_CSAF_TRANSFERT_FORCE",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
 

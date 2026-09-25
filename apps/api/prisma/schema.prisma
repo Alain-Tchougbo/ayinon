@@ -70,6 +70,16 @@ enum StatutConflitCsaf {
   LEVE
 }
 
+/// Effet applique par la decision definitive du magistrat CSAF (E8.8) au moment de la levee du
+/// gel. LEVEE_SIMPLE restaure le statut anterieur de la parcelle (comportement historique).
+/// ANNULATION_VENTE et TRANSFERT_FORCE annulent en plus toute cession/annonce en cours sur la
+/// parcelle ; TRANSFERT_FORCE reassigne directement la propriete au nom designe par la decision.
+enum TypeDecisionCsaf {
+  LEVEE_SIMPLE
+  ANNULATION_VENTE
+  TRANSFERT_FORCE
+}
+
 enum TypeOperationAudit {
   CREATION_PARCELLE
   VERROUILLAGE_ANTI_VENTE
@@ -111,6 +121,8 @@ enum TypeOperationAudit {
   REJET_COMPTE_PRO
   DEMANDE_VISITE
   REPONSE_VISITE
+  DECISION_CSAF_ANNULATION_VENTE
+  DECISION_CSAF_TRANSFERT_FORCE
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
@@ -620,6 +632,10 @@ model ConflitCsaf {
   dateGel                    DateTime          @default(now())
   dateLevee                  DateTime?
   motifLevee                 String?
+  /// E8.8 : effet applique par la decision definitive, et chemin du document televerse le cas
+  /// echeant (renseignes uniquement a la levee, jamais a l'ouverture du gel).
+  typeDecision               TypeDecisionCsaf?
+  cheminDecision             String?
   createdAt                  DateTime          @default(now())
 
   ouvertParId String

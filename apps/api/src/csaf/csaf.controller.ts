@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Post } from "@nestjs/common";
+import { Body, Controller, Get, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { GelConservatoireSchema, LeveeGelSchema, RoleUtilisateur, type GelConservatoireDto, type LeveeGelDto } from "@ayinon/shared";
 import { CurrentUser, type UtilisateurAuthentifie } from "../common/decorators/current-user.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
@@ -18,13 +19,16 @@ export class CsafController {
     return this.csaf.gelerParcelle(dto, magistrat);
   }
 
+  /** E8.8 : la decision definitive (document televerse en option) porte les effets appliques. */
   @Roles(RoleUtilisateur.MAGISTRAT_CSAF)
   @Post("levee")
+  @UseInterceptors(FileInterceptor("fichierDecision"))
   async leverGel(
     @Body(new ZodValidationPipe(LeveeGelSchema)) dto: LeveeGelDto,
+    @UploadedFile() fichierDecision: Express.Multer.File | undefined,
     @CurrentUser() magistrat: UtilisateurAuthentifie,
   ) {
-    return this.csaf.leverGel(dto, magistrat);
+    return this.csaf.leverGel(dto, fichierDecision, magistrat);
   }
 
   @Roles(RoleUtilisateur.MAGISTRAT_CSAF, RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.ADMIN)
