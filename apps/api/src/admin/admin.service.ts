@@ -60,6 +60,28 @@ export class AdminService {
     });
   }
 
+  /** E3.9 : detection de comptes potentiellement lies. Seul le critere "meme numero de telephone
+   * sur plusieurs comptes" est verifiable ici : `telephone` n'est pas contraint unique (a la
+   * difference de `email`), donc un meme numero peut legitimement se retrouver sur plusieurs
+   * comptes sans qu'aucune regle metier ne l'empeche aujourd'hui. Purement une liste a revoir,
+   * en lecture seule : aucune action de fusion/suspension de compte n'existe sur la plateforme,
+   * pour aucun role, pas seulement ici (voir docs/decisions.md). */
+  async comptesLiesParTelephone() {
+    const comptes = await this.prisma.utilisateur.findMany({
+      where: { telephone: { not: null } },
+      select: { id: true, email: true, nomComplet: true, role: true, telephone: true, createdAt: true },
+      orderBy: { telephone: "asc" },
+    });
+
+    const groupes = new Map<string, typeof comptes>();
+    for (const compte of comptes) {
+      const groupe = groupes.get(compte.telephone!) ?? [];
+      groupe.push(compte);
+      groupes.set(compte.telephone!, groupe);
+    }
+    return [...groupes.entries()].filter(([, comptesLies]) => comptesLies.length > 1).map(([telephone, comptesLies]) => ({ telephone, comptes: comptesLies }));
+  }
+
   async listerProprietaires() {
     const proprietaires = await this.prisma.proprietaire.findMany({
       select: {

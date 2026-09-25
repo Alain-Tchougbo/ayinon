@@ -28,6 +28,12 @@ export class AdminController {
     return this.admin.listerUtilisateurs();
   }
 
+  /** E3.9 : comptes partageant le meme numero de telephone, a revoir manuellement. */
+  @Get("comptes-lies")
+  async comptesLies() {
+    return this.admin.comptesLiesParTelephone();
+  }
+
   @Get("proprietaires")
   async listerProprietaires() {
     return this.admin.listerProprietaires();

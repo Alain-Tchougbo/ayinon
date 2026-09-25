@@ -8,6 +8,7 @@ function creerService(options: {
   annoncesActives?: Array<Record<string, unknown>>;
   conventionsParCommune?: Record<string, Array<{ montantFcfa: number; parcelle: { superficieM2: number } }>>;
   annonce?: Record<string, unknown> | null;
+  tousLesComptes?: Array<Record<string, unknown>>;
 } = {}) {
   let utilisateur: Record<string, unknown> | null =
     options.utilisateur === null ? null : { id: "compte-1", statutValidationPro: "EN_ATTENTE", role: "GEOMETRE", ...options.utilisateur };
@@ -17,6 +18,7 @@ function creerService(options: {
   const prisma = {
     utilisateur: {
       findUnique: async () => utilisateur,
+      findMany: async ({ where }: any) => (where?.telephone?.not === null ? (options.tousLesComptes ?? []) : []),
       update: async ({ data }: any) => {
         utilisateur = { ...(utilisateur as Record<string, unknown>), ...data };
         return utilisateur;
@@ -163,5 +165,32 @@ describe("AdminService.suspendreAnnonce — moderation de contenu (E1.14)", () =
     expect((obtenirAnnonce() as any).statut).toBe("RETIREE");
     expect(auditAppels).toHaveLength(1);
     expect((auditAppels[0] as any).typeOperation).toBe("SUSPENSION_ADMIN_ANNONCE");
+  });
+});
+
+describe("AdminService.comptesLiesParTelephone — detection de comptes multiples (E3.9)", () => {
+  it("regroupe les comptes partageant le meme numero de telephone", async () => {
+    const { service } = creerService({
+      tousLesComptes: [
+        { id: "compte-1", email: "a@test.bj", nomComplet: "A", role: "ACHETEUR", telephone: "+229 90 00 00 01", createdAt: new Date() },
+        { id: "compte-2", email: "b@test.bj", nomComplet: "B", role: "VENDEUR", telephone: "+229 90 00 00 01", createdAt: new Date() },
+        { id: "compte-3", email: "c@test.bj", nomComplet: "C", role: "CITOYEN", telephone: "+229 90 00 00 02", createdAt: new Date() },
+      ],
+    });
+    const groupes = await service.comptesLiesParTelephone();
+    expect(groupes).toHaveLength(1);
+    expect(groupes[0]!.telephone).toBe("+229 90 00 00 01");
+    expect(groupes[0]!.comptes).toHaveLength(2);
+  });
+
+  it("ne signale rien quand aucun numero n'est partage", async () => {
+    const { service } = creerService({
+      tousLesComptes: [
+        { id: "compte-1", email: "a@test.bj", nomComplet: "A", role: "ACHETEUR", telephone: "+229 90 00 00 01", createdAt: new Date() },
+        { id: "compte-2", email: "b@test.bj", nomComplet: "B", role: "VENDEUR", telephone: "+229 90 00 00 02", createdAt: new Date() },
+      ],
+    });
+    const groupes = await service.comptesLiesParTelephone();
+    expect(groupes).toHaveLength(0);
   });
 });

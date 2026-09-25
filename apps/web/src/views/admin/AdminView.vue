@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BadgeCheck, Check, FileStack, Flag, History, LayoutDashboard, MapPin, Pencil, TriangleAlert, Users, X } from "@lucide/vue";
+import { BadgeCheck, Check, FileStack, Flag, History, LayoutDashboard, MapPin, Pencil, TriangleAlert, UserRoundSearch, Users, X } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
@@ -56,6 +56,10 @@ interface DemandePro {
   numeroAgrement: string | null;
   createdAt: string;
 }
+interface GroupeComptesLies {
+  telephone: string;
+  comptes: Array<{ id: string; email: string; nomComplet: string; role: string; createdAt: string }>;
+}
 interface EntreeAudit {
   id: string;
   sequence: number;
@@ -105,6 +109,7 @@ const ongletActif = ref<Onglet>("vue-ensemble");
 
 const vueEnsemble = ref<VueEnsemble | null>(null);
 const utilisateurs = ref<Utilisateur[]>([]);
+const comptesLies = ref<GroupeComptesLies[]>([]);
 const proprietaires = ref<Proprietaire[]>([]);
 const parcelles = ref<ParcelleAdmin[]>([]);
 const documents = ref<Documents | null>(null);
@@ -146,7 +151,12 @@ async function charger(onglet: Onglet) {
   try {
     if (onglet === "vue-ensemble") vueEnsemble.value = await api.get<VueEnsemble>("/admin/vue-ensemble");
     else if (onglet === "demandes-pro") demandesPro.value = await api.get<DemandePro[]>("/admin/demandes-professionnelles");
-    else if (onglet === "utilisateurs") utilisateurs.value = await api.get<Utilisateur[]>("/admin/utilisateurs");
+    else if (onglet === "utilisateurs") {
+      [utilisateurs.value, comptesLies.value] = await Promise.all([
+        api.get<Utilisateur[]>("/admin/utilisateurs"),
+        api.get<GroupeComptesLies[]>("/admin/comptes-lies"),
+      ]);
+    }
     else if (onglet === "proprietaires") proprietaires.value = await api.get<Proprietaire[]>("/admin/proprietaires");
     else if (onglet === "parcelles") parcelles.value = await api.get<ParcelleAdmin[]>("/admin/parcelles");
     else if (onglet === "documents") documents.value = await api.get<Documents>("/admin/documents");
@@ -365,25 +375,47 @@ async function suspendreAnnonce(id: string) {
     </ul>
 
     <!-- Utilisateurs -->
-    <div v-if="!chargement && ongletActif === 'utilisateurs'" class="overflow-x-auto rounded-carte border border-bordure bg-surface">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-bordure text-left text-xs text-texte-attenue">
-            <th class="px-3.5 py-2.5">Nom</th>
-            <th class="px-3.5 py-2.5">Email</th>
-            <th class="px-3.5 py-2.5">Role</th>
-            <th class="px-3.5 py-2.5">Pole</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="u in utilisateurs" :key="u.id" class="border-b border-bordure last:border-0">
-            <td class="px-3.5 py-2.5 font-medium text-texte">{{ u.nomComplet }}</td>
-            <td class="px-3.5 py-2.5 text-texte-attenue">{{ u.email }}</td>
-            <td class="px-3.5 py-2.5 text-texte-attenue">{{ u.role.replaceAll("_", " ") }}</td>
-            <td class="px-3.5 py-2.5 text-texte-attenue">{{ u.poleTerritorial?.replaceAll("_", " ") ?? "—" }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-if="!chargement && ongletActif === 'utilisateurs'" class="space-y-4">
+      <!-- E3.9 : detection de comptes multiples, seul critere verifiable dans ce modele de
+           donnees (voir docs/decisions.md). Lecture seule : aucune fusion/suspension de compte
+           n'existe sur la plateforme. -->
+      <BaseCard v-if="comptesLies.length > 0" accentue="accent" rembourrage="sm">
+        <h2 class="mb-2 flex items-center gap-2 text-sm font-semibold text-texte">
+          <UserRoundSearch :size="15" class="text-accent" aria-hidden="true" />
+          Comptes partageant un numero de telephone ({{ comptesLies.length }})
+        </h2>
+        <ul class="space-y-2.5">
+          <li v-for="g in comptesLies" :key="g.telephone" class="text-sm">
+            <p class="font-mono text-xs text-texte-attenue">{{ g.telephone }}</p>
+            <p class="text-texte">
+              <span v-for="(c, index) in g.comptes" :key="c.id">
+                {{ c.nomComplet }} ({{ c.role.replaceAll("_", " ") }})<span v-if="index < g.comptes.length - 1">, </span>
+              </span>
+            </p>
+          </li>
+        </ul>
+      </BaseCard>
+
+      <div class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-bordure text-left text-xs text-texte-attenue">
+              <th class="px-3.5 py-2.5">Nom</th>
+              <th class="px-3.5 py-2.5">Email</th>
+              <th class="px-3.5 py-2.5">Role</th>
+              <th class="px-3.5 py-2.5">Pole</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="u in utilisateurs" :key="u.id" class="border-b border-bordure last:border-0">
+              <td class="px-3.5 py-2.5 font-medium text-texte">{{ u.nomComplet }}</td>
+              <td class="px-3.5 py-2.5 text-texte-attenue">{{ u.email }}</td>
+              <td class="px-3.5 py-2.5 text-texte-attenue">{{ u.role.replaceAll("_", " ") }}</td>
+              <td class="px-3.5 py-2.5 text-texte-attenue">{{ u.poleTerritorial?.replaceAll("_", " ") ?? "—" }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Proprietaires -->

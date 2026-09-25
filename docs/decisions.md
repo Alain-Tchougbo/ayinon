@@ -386,3 +386,18 @@ plus haut), ces coordonnees sont explicitement etiquetees dans l'interface elle-
 coordonnees de demonstration, non connectees a une veritable boite mail ou ligne — l'honnetete de
 la simplification est visible par l'utilisateur final, pas seulement documentee ici. Pas de chat
 en direct ni d'integration WhatsApp reelle, coherent avec la meme decision.
+
+## Detection de comptes multiples (E3.9)
+
+Des deux criteres suggeres par le CA (comptes multiples, tentative de contact hors plateforme),
+seul le premier est verifiable ici. "Tentative de contact hors plateforme" supposerait d'analyser
+des echanges — hors de portee puisque la messagerie (ET.2) n'est pas construite (voir plus haut) :
+rien a scanner. "Comptes multiples" est implemente en reliant les comptes qui partagent le meme
+numero de telephone : `Utilisateur.telephone` n'est pas contraint unique (contrairement a
+`email`), donc rien n'empeche aujourd'hui un meme numero de se retrouver sur plusieurs comptes.
+Nouvelle section dans l'onglet "Utilisateurs" du back-office, purement en lecture (`GET
+/admin/comptes-lies`) : aucune action de fusion ou de suspension de compte n'existe sur la
+plateforme, pour aucun role — construire cette capacite uniquement pour cette detection
+secondaire aurait ete disproportionne. L'admin peut deja agir via les canaux existants (ex.
+rejeter une demande professionnelle, retirer/suspendre une annonce) si l'examen manuel le
+justifie.
