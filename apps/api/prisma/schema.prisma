@@ -21,6 +21,8 @@ datasource db {
 
 enum RoleUtilisateur {
   CITOYEN
+  VENDEUR
+  ACHETEUR
   GEOMETRE
   NOTAIRE
   MANDATAIRE_FAMILIAL
@@ -91,6 +93,12 @@ enum TypeOperationAudit {
   INSCRIPTION_HYPOTHEQUE
   LEVEE_HYPOTHEQUE
   MODIFICATION_ADMIN_PARCELLE
+  PUBLICATION_ANNONCE
+  RETRAIT_ANNONCE
+  MANIFESTATION_INTERET
+  RETENUE_INTERET
+  VERIFICATION_ANDF_ANNONCE
+  CREATION_COMPTE
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
@@ -106,6 +114,30 @@ enum StatutCession {
 enum StatutHypotheque {
   ACTIVE
   LEVEE
+}
+
+/// Cycle de vie d'une annonce (vitrine publique) : ACTIVE tant que le vendeur cherche un
+/// acquereur, RETIREE si le vendeur l'annule, VENDUE des qu'une cession issue de cette annonce
+/// est validee (voir apps/api/src/annonces).
+enum StatutAnnonce {
+  ACTIVE
+  RETIREE
+  VENDUE
+}
+
+enum StatutInteret {
+  EN_ATTENTE
+  RETENU
+  DECLINE
+}
+
+/// Statut declare par un vendeur (E0.3) : adapte les pieces attendues lors de la publication
+/// d'une annonce (ex. un mandataire doit joindre son mandat, un heritier son acte de succession).
+enum StatutDeclarantVendeur {
+  PROPRIETAIRE
+  HERITIER
+  MANDATAIRE
+  AGENCE
 }
 
 enum PoleTerritorial {
@@ -129,6 +161,9 @@ model Utilisateur {
   nomComplet      String
   telephone       String?
   poleTerritorial PoleTerritorial?
+  /// false pour un compte issu de l'inscription en libre-service (E0.1) tant que l'OTP n'est pas
+  /// confirme ; toujours true pour un compte cree par un admin (E0.6, E0.7) ou par le seed.
+  emailValide     Boolean          @default(true)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
@@ -144,6 +179,12 @@ model Utilisateur {
   hypothequesInscrites Hypotheque[]   @relation("HypothequeInscripteur")
   hypothequesLevees    Hypotheque[]   @relation("HypothequeLeveur")
   cessionsValidees     Convention[]   @relation("CessionValidateur")
+  annoncesPubliees     Annonce[]      @relation("AnnoncePubliee")
+  annoncesVerifiees    Annonce[]      @relation("AnnonceVerifieeAndf")
+  interetsExprimes     InteretAchat[] @relation("InteretAcheteur")
+
+  /// Declare uniquement par un VENDEUR (E0.3) : adapte les pieces demandees lors de la publication.
+  statutDeclarant StatutDeclarantVendeur?
 
   @@index([role])
 }
@@ -219,6 +260,7 @@ model Parcelle {
   conflitsCsaf      ConflitCsaf[]
   hypotheques       Hypotheque[]
   mutationsAudit    MutationAudit[]
+  annonces          Annonce[]
 
   @@index([statut])
   @@index([poleTerritorial])
@@ -276,8 +318,62 @@ model Convention {
 
   titre Titre?
 
+  /// Annonce ayant donne lieu a cette cession, le cas echeant (une cession peut aussi naitre d'un
+  /// accord direct hors vitrine, auquel cas ce champ reste vide).
+  annonceId String?
+  annonce   Annonce? @relation(fields: [annonceId], references: [id])
+
   @@index([parcelleId])
   @@index([statutCession])
+}
+
+/// Annonce publique : un VENDEUR publie une parcelle qu'il possede sur la vitrine (visible sans
+/// compte, comme la carte cadastrale), un ACHETEUR manifeste son interet, le vendeur choisit un
+/// interet retenu et cela demarre une Convention/cession classique (voir apps/api/src/annonces).
+model Annonce {
+  id                String        @id @default(uuid())
+  parcelleId        String
+  parcelle          Parcelle      @relation(fields: [parcelleId], references: [id])
+  prixIndicatifFcfa Float?
+  description       String?
+  statut            StatutAnnonce @default(ACTIVE)
+  createdAt         DateTime      @default(now())
+  retireeLe         DateTime?
+
+  publieeParId String
+  publieePar   Utilisateur @relation("AnnoncePubliee", fields: [publieeParId], references: [id])
+
+  /// Badge "situation fonciere controlee" (E2.2) : pose par un agent ANDF apres verification du
+  /// titre/statut de la parcelle. Le badge "limites certifiees" (E2.3) n'est pas stocke ici : il
+  /// se deduit directement de PlanBornage (signe + non conflictuel) pour ne jamais desynchroniser
+  /// un booleen dedie de la realite du plan de bornage.
+  verifieeParAndfId    String?
+  verifieeParAndf      Utilisateur? @relation("AnnonceVerifieeAndf", fields: [verifieeParAndfId], references: [id])
+  dateVerificationAndf DateTime?
+
+  interets InteretAchat[]
+  cessions Convention[]
+
+  @@index([parcelleId])
+  @@index([statut])
+}
+
+/// Manifestation d'interet d'un ACHETEUR sur une annonce : le vendeur voit tous les interets
+/// recus et choisit celui qu'il retient (RETENU), les autres restant EN_ATTENTE ou passant a
+/// DECLINE.
+model InteretAchat {
+  id        String        @id @default(uuid())
+  annonceId String
+  annonce   Annonce       @relation(fields: [annonceId], references: [id])
+  message   String?
+  statut    StatutInteret @default(EN_ATTENTE)
+  createdAt DateTime      @default(now())
+
+  acheteurId String
+  acheteur   Utilisateur @relation("InteretAcheteur", fields: [acheteurId], references: [id])
+
+  @@unique([annonceId, acheteurId])
+  @@index([annonceId])
 }
 
 /// Gage bancaire inscrit sur une parcelle titree : tant qu'une hypotheque ACTIVE existe, la

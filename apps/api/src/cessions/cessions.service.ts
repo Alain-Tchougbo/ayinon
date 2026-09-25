@@ -49,8 +49,8 @@ export class CessionsService {
     await this.csaf.verifierParcelleNonGelee(dto.parcelleId);
 
     const acquereur = await this.prisma.utilisateur.findUnique({ where: { email: dto.acquereurEmail } });
-    if (!acquereur || acquereur.role !== RoleUtilisateur.CITOYEN) {
-      throw new NotFoundException("Aucun compte citoyen trouve pour cet email : l'acquereur doit d'abord creer un compte AYINON");
+    if (!acquereur || acquereur.role !== RoleUtilisateur.ACHETEUR) {
+      throw new NotFoundException("Aucun compte acheteur trouve pour cet email : l'acquereur doit d'abord creer un compte AYINON en tant qu'acheteur");
     }
     if (acquereur.id === vendeur.id) {
       throw new BadRequestException("Vous ne pouvez pas vous proposer une cession a vous-meme");

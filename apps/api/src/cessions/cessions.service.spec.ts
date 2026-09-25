@@ -2,11 +2,11 @@ import { BadRequestException, ForbiddenException, NotFoundException } from "@nes
 import { StatutCession, StatutParcelle } from "@ayinon/shared";
 import { CessionsService } from "./cessions.service";
 
-const VENDEUR = { id: "vendeur-1", email: "vendeur@ayinon.bj", role: "CITOYEN", proprietaireId: "prop-vendeur", nomComplet: "Vendeur Test" } as any;
+const VENDEUR = { id: "vendeur-1", email: "vendeur@ayinon.bj", role: "VENDEUR", proprietaireId: "prop-vendeur", nomComplet: "Vendeur Test" } as any;
 const ACQUEREUR_UTILISATEUR = {
   id: "acquereur-1",
   email: "acquereur@ayinon.bj",
-  role: "CITOYEN",
+  role: "ACHETEUR",
   proprietaireId: null,
   nomComplet: "Acquereur Test",
   telephone: null,
@@ -135,7 +135,7 @@ describe("CessionsService — parcours d'achat/vente citoyen-a-citoyen", () => {
   it("refuse qu'une autre personne que l'acquereur designe reponde a la proposition", async () => {
     const { service } = creerService({ convention: { id: "convention-1", acquereurId: "quelqu-un-dautre", statutCession: StatutCession.PROPOSEE } });
 
-    await expect(service.repondre("convention-1", { accepter: true }, { id: ACQUEREUR_UTILISATEUR.id, role: "CITOYEN" } as any)).rejects.toBeInstanceOf(
+    await expect(service.repondre("convention-1", { accepter: true }, { id: ACQUEREUR_UTILISATEUR.id, role: "ACHETEUR" } as any)).rejects.toBeInstanceOf(
       ForbiddenException,
     );
   });
@@ -146,7 +146,7 @@ describe("CessionsService — parcours d'achat/vente citoyen-a-citoyen", () => {
     });
 
     await expect(
-      service.repondre("convention-1", { accepter: true }, { id: ACQUEREUR_UTILISATEUR.id, role: "CITOYEN" } as any),
+      service.repondre("convention-1", { accepter: true }, { id: ACQUEREUR_UTILISATEUR.id, role: "ACHETEUR" } as any),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -156,7 +156,7 @@ describe("CessionsService — parcours d'achat/vente citoyen-a-citoyen", () => {
     });
 
     await expect(
-      service.repondre("convention-1", { accepter: false }, { id: ACQUEREUR_UTILISATEUR.id, role: "CITOYEN" } as any),
+      service.repondre("convention-1", { accepter: false }, { id: ACQUEREUR_UTILISATEUR.id, role: "ACHETEUR" } as any),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 

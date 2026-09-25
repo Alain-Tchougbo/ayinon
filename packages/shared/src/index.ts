@@ -7,4 +7,5 @@ export * from "./schemas/famille.schema";
 export * from "./schemas/csaf.schema";
 export * from "./schemas/convention.schema";
 export * from "./schemas/hypotheque.schema";
+export * from "./schemas/annonce.schema";
 export * from "./schemas/sync.schema";

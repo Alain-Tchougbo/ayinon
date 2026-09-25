@@ -17,19 +17,19 @@ import { CessionsService } from "./cessions.service";
 export class CessionsController {
   constructor(private readonly cessions: CessionsService) {}
 
-  @Roles(RoleUtilisateur.CITOYEN)
+  @Roles(RoleUtilisateur.VENDEUR)
   @Post()
   async proposer(@Body(new ZodValidationPipe(ProposerCessionSchema)) dto: ProposerCessionDto, @CurrentUser() utilisateur: UtilisateurAuthentifie) {
     return this.cessions.proposer(dto, utilisateur);
   }
 
-  @Roles(RoleUtilisateur.CITOYEN)
+  @Roles(RoleUtilisateur.ACHETEUR)
   @Get("mes-propositions-recues")
   async mesPropositionsRecues(@CurrentUser() utilisateur: UtilisateurAuthentifie) {
     return this.cessions.mesPropositionsRecues(utilisateur.id);
   }
 
-  @Roles(RoleUtilisateur.CITOYEN)
+  @Roles(RoleUtilisateur.VENDEUR)
   @Get("mes-cessions-emises")
   async mesCessionsEmises(@CurrentUser() utilisateur: UtilisateurAuthentifie) {
     return this.cessions.mesCessionsEmises(utilisateur.id);
@@ -41,13 +41,13 @@ export class CessionsController {
     return this.cessions.aValider();
   }
 
-  @Roles(RoleUtilisateur.CITOYEN, RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.MAGISTRAT_CSAF, RoleUtilisateur.ADMIN)
+  @Roles(RoleUtilisateur.VENDEUR, RoleUtilisateur.ACHETEUR, RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.MAGISTRAT_CSAF, RoleUtilisateur.ADMIN)
   @Get(":id")
   async obtenirParId(@Param("id") id: string, @CurrentUser() utilisateur: UtilisateurAuthentifie) {
     return this.cessions.obtenirParId(id, utilisateur);
   }
 
-  @Roles(RoleUtilisateur.CITOYEN)
+  @Roles(RoleUtilisateur.ACHETEUR)
   @Patch(":id/repondre")
   async repondre(
     @Param("id") id: string,

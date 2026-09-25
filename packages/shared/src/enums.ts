@@ -5,6 +5,8 @@
 
 export const RoleUtilisateur = {
   CITOYEN: "CITOYEN",
+  VENDEUR: "VENDEUR",
+  ACHETEUR: "ACHETEUR",
   GEOMETRE: "GEOMETRE",
   NOTAIRE: "NOTAIRE",
   MANDATAIRE_FAMILIAL: "MANDATAIRE_FAMILIAL",
@@ -93,6 +95,12 @@ export const TypeOperationAudit = {
   INSCRIPTION_HYPOTHEQUE: "INSCRIPTION_HYPOTHEQUE",
   LEVEE_HYPOTHEQUE: "LEVEE_HYPOTHEQUE",
   MODIFICATION_ADMIN_PARCELLE: "MODIFICATION_ADMIN_PARCELLE",
+  PUBLICATION_ANNONCE: "PUBLICATION_ANNONCE",
+  RETRAIT_ANNONCE: "RETRAIT_ANNONCE",
+  MANIFESTATION_INTERET: "MANIFESTATION_INTERET",
+  RETENUE_INTERET: "RETENUE_INTERET",
+  VERIFICATION_ANDF_ANNONCE: "VERIFICATION_ANDF_ANNONCE",
+  CREATION_COMPTE: "CREATION_COMPTE",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
 
@@ -144,3 +152,29 @@ export const LangueAssistantVocal = {
   BARIBA: "BARIBA",
 } as const;
 export type LangueAssistantVocal = (typeof LangueAssistantVocal)[keyof typeof LangueAssistantVocal];
+
+/** Cycle de vie d'une annonce (vitrine publique) : ACTIVE tant que le vendeur cherche un
+ * acquereur, RETIREE si le vendeur l'annule, VENDUE des qu'une cession issue de cette annonce
+ * est validee. */
+export const StatutAnnonce = {
+  ACTIVE: "ACTIVE",
+  RETIREE: "RETIREE",
+  VENDUE: "VENDUE",
+} as const;
+export type StatutAnnonce = (typeof StatutAnnonce)[keyof typeof StatutAnnonce];
+
+export const StatutInteret = {
+  EN_ATTENTE: "EN_ATTENTE",
+  RETENU: "RETENU",
+  DECLINE: "DECLINE",
+} as const;
+export type StatutInteret = (typeof StatutInteret)[keyof typeof StatutInteret];
+
+/** Statut declare par un vendeur : adapte les pieces attendues lors de la publication d'une annonce. */
+export const StatutDeclarantVendeur = {
+  PROPRIETAIRE: "PROPRIETAIRE",
+  HERITIER: "HERITIER",
+  MANDATAIRE: "MANDATAIRE",
+  AGENCE: "AGENCE",
+} as const;
+export type StatutDeclarantVendeur = (typeof StatutDeclarantVendeur)[keyof typeof StatutDeclarantVendeur];

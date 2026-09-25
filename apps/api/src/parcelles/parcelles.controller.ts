@@ -42,13 +42,13 @@ export class ParcellesController {
     return this.parcelles.obtenirParId(id);
   }
 
-  @Roles(RoleUtilisateur.CITOYEN)
+  @Roles(RoleUtilisateur.CITOYEN, RoleUtilisateur.VENDEUR)
   @Post("otp-verrou")
   async demanderOtpVerrou(@CurrentUser() utilisateur: UtilisateurAuthentifie) {
     return this.parcelles.demanderOtpVerrou(utilisateur);
   }
 
-  @Roles(RoleUtilisateur.CITOYEN)
+  @Roles(RoleUtilisateur.CITOYEN, RoleUtilisateur.VENDEUR)
   @Post("verrou")
   async definirVerrou(
     @Body(new ZodValidationPipe(DemandeVerrouParcelleSchema)) dto: DemandeVerrouParcelleDto,
