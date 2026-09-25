@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import { PrismaClient, Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
-import { RoleFamilial, RoleUtilisateur, StatutParcelle, PoleTerritorial } from "@ayinon/shared";
+import { RoleFamilial, RoleUtilisateur, StatutCession, StatutDeclarantVendeur, StatutParcelle, PoleTerritorial } from "@ayinon/shared";
 import { hacherMotDePasse } from "../src/auth/password.util";
 
 const prisma = new PrismaClient();
@@ -81,12 +81,30 @@ async function main() {
   });
   const cadet = await prisma.proprietaire.create({ data: { nomComplet: "Fifame DOSSOU", telephone: "+229 97 00 00 05" } });
   const etat = await prisma.proprietaire.create({ data: { nomComplet: "Domaine de l'Etat beninois" } });
+  const roukayath = await prisma.proprietaire.create({
+    data: { nomComplet: "Roukayath ALAO", telephone: "+229 97 00 00 06", numeroPieceIdentite: "BJ-CIP-000107" },
+  });
 
   console.log("Creation des comptes de demonstration...");
   const motDePasseHash = await hacherMotDePasse(MOT_DE_PASSE_DEMO);
-  const comptes: Array<{ email: string; role: RoleUtilisateur; nomComplet: string; proprietaireId?: string; poleTerritorial?: PoleTerritorial }> = [
+  const comptes: Array<{
+    email: string;
+    role: RoleUtilisateur;
+    nomComplet: string;
+    proprietaireId?: string;
+    poleTerritorial?: PoleTerritorial;
+    statutDeclarant?: StatutDeclarantVendeur;
+  }> = [
     { email: "citoyen1@ayinon.bj", role: RoleUtilisateur.CITOYEN, nomComplet: kodjo.nomComplet, proprietaireId: kodjo.id },
     { email: "diaspora1@ayinon.bj", role: RoleUtilisateur.CITOYEN, nomComplet: akouavi.nomComplet, proprietaireId: akouavi.id },
+    {
+      email: "vendeur1@ayinon.bj",
+      role: RoleUtilisateur.VENDEUR,
+      nomComplet: roukayath.nomComplet,
+      proprietaireId: roukayath.id,
+      statutDeclarant: StatutDeclarantVendeur.PROPRIETAIRE,
+    },
+    { email: "acheteur1@ayinon.bj", role: RoleUtilisateur.ACHETEUR, nomComplet: "Ganiou SALIFOU" },
     { email: "geometre1@ayinon.bj", role: RoleUtilisateur.GEOMETRE, nomComplet: "Cyriaque DOSSOU-YOVO (OGEB n.512)" },
     { email: "mandataire.aine@ayinon.bj", role: RoleUtilisateur.MANDATAIRE_FAMILIAL, nomComplet: aine.nomComplet, proprietaireId: aine.id },
     {
@@ -115,6 +133,7 @@ async function main() {
         nomComplet: compte.nomComplet,
         proprietaireId: compte.proprietaireId,
         poleTerritorial: compte.poleTerritorial,
+        statutDeclarant: compte.statutDeclarant,
       },
     });
   }
@@ -201,6 +220,38 @@ async function main() {
     "Centre",
     kodjo.id,
   );
+  const parcelleVendeur = await inserer(
+    "BJ-LIT-COT-0009",
+    [2.3945, 6.3688],
+    StatutParcelle.TITREE,
+    PoleTerritorial.LITTORAL_ATLANTIQUE,
+    "Cotonou",
+    "3e Arrondissement",
+    roukayath.id,
+  );
+  const parcelleVenteHistorique = await inserer(
+    "BJ-LIT-COT-0010",
+    [2.3968, 6.3675],
+    StatutParcelle.TITREE,
+    PoleTerritorial.LITTORAL_ATLANTIQUE,
+    "Cotonou",
+    "3e Arrondissement",
+    kodjo.id,
+  );
+
+  console.log("Insertion d'une cession historique validee (peuple l'estimation de prix par commune)...");
+  await prisma.convention.create({
+    data: {
+      parcelleId: parcelleVenteHistorique,
+      vendeurNom: "Ancien proprietaire (avant AYINON)",
+      acquereurNom: kodjo.nomComplet,
+      montantFcfa: 18_000_000,
+      hashSha256: "0".repeat(64),
+      signatureEd25519: "",
+      qrPayload: {},
+      statutCession: StatutCession.VALIDEE,
+    },
+  });
 
   console.log("Ouverture d'un protocole de multi-signature familiale sur une parcelle hereditaire...");
   await prisma.signatureFamille.createMany({

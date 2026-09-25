@@ -2,8 +2,11 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { createHash } from "node:crypto";
 import {
   RoleUtilisateur,
+  StatutAnnonce,
   StatutCession,
+  StatutInteret,
   StatutParcelle,
+  StatutSequestre,
   TypeOperationAudit,
   type ProposerCessionDto,
   type RepondreCessionDto,
@@ -19,6 +22,9 @@ const INCLUSION_CESSION = {
   acquereur: { select: { id: true, nomComplet: true, email: true } },
   validePar: { select: { id: true, nomComplet: true } },
   titre: true,
+  // Epic 5 : statut du depot de reservation le cas echeant, pour que chaque partie voie son etat
+  // sans requete separee (voir apps/api/src/sequestres).
+  sequestre: true,
 } as const;
 
 /**
@@ -49,8 +55,8 @@ export class CessionsService {
     await this.csaf.verifierParcelleNonGelee(dto.parcelleId);
 
     const acquereur = await this.prisma.utilisateur.findUnique({ where: { email: dto.acquereurEmail } });
-    if (!acquereur || acquereur.role !== RoleUtilisateur.CITOYEN) {
-      throw new NotFoundException("Aucun compte citoyen trouve pour cet email : l'acquereur doit d'abord creer un compte AYINON");
+    if (!acquereur || acquereur.role !== RoleUtilisateur.ACHETEUR) {
+      throw new NotFoundException("Aucun compte acheteur trouve pour cet email : l'acquereur doit d'abord creer un compte AYINON en tant qu'acheteur");
     }
     if (acquereur.id === vendeur.id) {
       throw new BadRequestException("Vous ne pouvez pas vous proposer une cession a vous-meme");
@@ -101,11 +107,30 @@ export class CessionsService {
     });
   }
 
+  /** L'acheteur suit ici les cessions directes deja traitees (acceptees, rejetees, validees) —
+   * celles encore PROPOSEE restent dans mesPropositionsRecues, en attente de sa reponse. */
+  async mesCessionsAcquises(utilisateurId: string) {
+    return this.prisma.convention.findMany({
+      where: { acquereurId: utilisateurId, statutCession: { not: StatutCession.PROPOSEE } },
+      include: INCLUSION_CESSION,
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
   async mesCessionsEmises(utilisateurId: string) {
     return this.prisma.convention.findMany({
       where: { creeParId: utilisateurId },
       include: INCLUSION_CESSION,
       orderBy: { createdAt: "desc" },
+    });
+  }
+
+  /** E7.1 : coffre numerique de l'acquereur — uniquement les titres reellement delivres a son nom. */
+  async mesTitres(utilisateurId: string) {
+    return this.prisma.titre.findMany({
+      where: { convention: { acquereurId: utilisateurId } },
+      include: { parcelle: { select: { nup: true, commune: true, superficieM2: true } }, convention: { select: { montantFcfa: true, vendeurNom: true } } },
+      orderBy: { dateDelivrance: "desc" },
     });
   }
 
@@ -190,6 +215,34 @@ export class CessionsService {
         roleActeur: agent.role as RoleUtilisateur,
         payload: { conventionId: id, motifRejet: dto.motifRejet ?? null },
       });
+
+      // E5.8 : la cession echoue -> le depot declare est automatiquement rembourse (statut
+      // uniquement, aucun argent reel n'a jamais ete deplace, voir docs/decisions.md).
+      const sequestre = await this.prisma.sequestre.findUnique({ where: { conventionId: id } });
+      if (sequestre && sequestre.statut !== StatutSequestre.REMBOURSE) {
+        await this.prisma.sequestre.update({
+          where: { id: sequestre.id },
+          data: { statut: StatutSequestre.REMBOURSE, dateRemboursement: new Date(), motifRemboursement: dto.motifRejet },
+        });
+        await this.cryptoAudit.enregistrer({
+          parcelleId: convention.parcelleId,
+          typeOperation: TypeOperationAudit.REMBOURSEMENT_SEQUESTRE,
+          acteurId: agent.id,
+          roleActeur: agent.role as RoleUtilisateur,
+          payload: { sequestreId: sequestre.id, conventionId: id, motif: dto.motifRejet ?? null },
+        });
+      }
+
+      // Cession issue de la vitrine (E6) : si l'ANDF rejette, l'annonce ne doit pas rester
+      // bloquee indefiniment pour de nouveaux acheteurs — le verrou anti double-vente
+      // (voir AnnoncesService) ne regarde que les interets au statut RETENU.
+      if (convention.annonceId) {
+        await this.prisma.interetAchat.updateMany({
+          where: { annonceId: convention.annonceId, statut: StatutInteret.RETENU },
+          data: { statut: StatutInteret.DECLINE },
+        });
+      }
+
       return rejetee;
     }
 
@@ -198,7 +251,11 @@ export class CessionsService {
       throw new BadRequestException("Cession sans acquereur identifie : impossible de valider");
     }
 
-    const { convention: validee, titre } = await this.prisma.$transaction(async (tx) => {
+    const {
+      convention: validee,
+      titre,
+      sequestreId,
+    } = await this.prisma.$transaction(async (tx) => {
       const acquereur = await tx.utilisateur.findUniqueOrThrow({ where: { id: convention.acquereurId! } });
 
       let proprietaireId = acquereur.proprietaireId;
@@ -232,7 +289,22 @@ export class CessionsService {
         include: INCLUSION_CESSION,
       });
 
-      return { convention: conventionValidee, titre: titreCree };
+      // Cession issue de la vitrine (E6) : l'annonce d'origine ne doit plus apparaitre comme active
+      // une fois la vente actee, sinon d'autres acheteurs pourraient manifester leur interet sur une
+      // parcelle deja transferee.
+      if (convention.annonceId) {
+        await tx.annonce.update({ where: { id: convention.annonceId }, data: { statut: StatutAnnonce.VENDUE } });
+      }
+
+      // E6.7 : liberation du sequestre au vendeur des que la cession est validee (statut
+      // uniquement — voir docs/decisions.md). Aucun notaire dans cette iteration : la validation
+      // ANDF, deja le declencheur du transfert de propriete, sert aussi de declencheur ici.
+      const sequestre = await tx.sequestre.findUnique({ where: { conventionId: id } });
+      if (sequestre && sequestre.statut !== StatutSequestre.LIBERE && sequestre.statut !== StatutSequestre.REMBOURSE) {
+        await tx.sequestre.update({ where: { id: sequestre.id }, data: { statut: StatutSequestre.LIBERE, dateLiberation: dateDelivrance } });
+      }
+
+      return { convention: conventionValidee, titre: titreCree, sequestreId: sequestre?.id ?? null };
     });
 
     await this.cryptoAudit.enregistrer({
@@ -249,6 +321,15 @@ export class CessionsService {
       roleActeur: agent.role as RoleUtilisateur,
       payload: { conventionId: id, titreId: titre.id, numeroTitre: titre.numeroTitre },
     });
+    if (sequestreId) {
+      await this.cryptoAudit.enregistrer({
+        parcelleId: convention.parcelleId,
+        typeOperation: TypeOperationAudit.LIBERATION_SEQUESTRE,
+        acteurId: agent.id,
+        roleActeur: agent.role as RoleUtilisateur,
+        payload: { sequestreId, conventionId: id },
+      });
+    }
 
     return validee;
   }

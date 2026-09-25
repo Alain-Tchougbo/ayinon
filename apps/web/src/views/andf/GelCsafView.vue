@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Download, FileText, Gavel, Lock, Search, Unlock } from "@lucide/vue";
+import { Download, FileText, Flag, Gavel, Lock, Search, Unlock } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useParcellesStore } from "../../stores/parcelles.store";
@@ -27,10 +27,18 @@ interface ConflitCsaf {
   dateGel: string;
   parcelle: { nup: string; commune: string; poleTerritorial: string };
 }
+interface LitigeFonde {
+  id: string;
+  motif: string;
+  descriptif: string | null;
+  decisionMotif: string | null;
+  parcelle: { id: string; nup: string; commune: string };
+}
 
 const parcelles = useParcellesStore();
 const { definirPhraseCourante } = useVoiceAssistant();
 const conflitsActifs = ref<ConflitCsaf[]>([]);
+const litigesFondes = ref<LitigeFonde[]>([]);
 
 const nupRecherche = ref("");
 const parcelleCible = ref<{ id: string; nup: string; statut: string } | null>(null);
@@ -49,14 +57,28 @@ const chargementDossier = ref(false);
 // judiciaire tout aussi lourd (voir audit : la levee etait auparavant un simple clic sans motif).
 const conflitEnLevee = ref<string | null>(null);
 const motifLeveeParConflit = ref<Record<string, string>>({});
+// E8.8 : effet applique par la decision definitive.
+const typeDecisionParConflit = ref<Record<string, "LEVEE_SIMPLE" | "ANNULATION_VENTE" | "TRANSFERT_FORCE">>({});
+const nouveauProprietaireParConflit = ref<Record<string, string>>({});
+const fichierDecisionParConflit = ref<Record<string, File | null>>({});
+
+function surChoixFichierDecision(conflitId: string, evenement: Event) {
+  const fichier = (evenement.target as HTMLInputElement).files?.[0] ?? null;
+  fichierDecisionParConflit.value[conflitId] = fichier;
+}
 
 onMounted(() => {
   definirPhraseCourante(PHRASES.csafIntro);
   chargerConflits();
+  chargerLitiges();
 });
 
 async function chargerConflits() {
   conflitsActifs.value = await api.get<ConflitCsaf[]>("/csaf/conflits-actifs");
+}
+
+async function chargerLitiges() {
+  litigesFondes.value = await api.get<LitigeFonde[]>("/signalements/litiges-fondes");
 }
 
 async function chercherParcelle() {
@@ -69,6 +91,12 @@ async function chercherParcelle() {
     return;
   }
   await chargerDossier(parcelleCible.value.id);
+}
+
+function instruireLitige(litige: LitigeFonde) {
+  nupRecherche.value = litige.parcelle.nup;
+  motif.value = litige.motif;
+  chercherParcelle();
 }
 
 async function chargerDossier(parcelleId: string) {
@@ -126,11 +154,33 @@ async function confirmerLevee(conflitId: string) {
     erreur.value = "Le motif de levee doit compter au moins 10 caracteres";
     return;
   }
+  const typeDecision = typeDecisionParConflit.value[conflitId] ?? "LEVEE_SIMPLE";
+  const nouveauProprietaireNom = nouveauProprietaireParConflit.value[conflitId]?.trim() ?? "";
+  if (typeDecision === "TRANSFERT_FORCE" && nouveauProprietaireNom.length < 2) {
+    erreur.value = "Le nom du nouveau proprietaire designe par la decision est requis pour un transfert force";
+    return;
+  }
   try {
-    await api.post("/csaf/levee", { conflitId, motifLevee });
-    message.value = "Gel conservatoire leve.";
+    const donnees = new FormData();
+    donnees.set("conflitId", conflitId);
+    donnees.set("motifLevee", motifLevee);
+    donnees.set("typeDecision", typeDecision);
+    if (typeDecision === "TRANSFERT_FORCE") donnees.set("nouveauProprietaireNom", nouveauProprietaireNom);
+    const fichier = fichierDecisionParConflit.value[conflitId];
+    if (fichier) donnees.set("fichierDecision", fichier);
+
+    await api.postForm("/csaf/levee", donnees);
+    message.value =
+      typeDecision === "TRANSFERT_FORCE"
+        ? "Gel leve : propriete transferee par decision judiciaire."
+        : typeDecision === "ANNULATION_VENTE"
+          ? "Gel leve : vente(s) en cours annulee(s) par decision judiciaire."
+          : "Gel conservatoire leve.";
     conflitEnLevee.value = null;
     delete motifLeveeParConflit.value[conflitId];
+    delete typeDecisionParConflit.value[conflitId];
+    delete nouveauProprietaireParConflit.value[conflitId];
+    delete fichierDecisionParConflit.value[conflitId];
     await chargerConflits();
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Levee impossible";
@@ -147,6 +197,30 @@ async function confirmerLevee(conflitId: string) {
       <template #icone><Gavel :size="22" class="text-danger" aria-hidden="true" /></template>
     </PageHeader>
 
+    <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ erreur }}</p>
+    <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes" role="status">{{ message }}</p>
+
+    <!-- E8.2 -> E8.7 : litiges qu'un admin a qualifies fondes, en attente d'un gel decide par le
+         magistrat (la qualification admin n'applique jamais elle-meme le gel, voir ET.8). Affichee
+         en tete de page : c'est la file de travail prioritaire du magistrat, avant la recherche
+         manuelle. -->
+    <div v-if="litigesFondes.length > 0">
+      <h2 class="mb-3 flex items-center gap-2 font-semibold text-texte">
+        <Flag :size="16" class="text-accent" aria-hidden="true" />
+        Litiges qualifies fondes, en attente d'instruction ({{ litigesFondes.length }})
+      </h2>
+      <ul class="space-y-2.5">
+        <li v-for="litige in litigesFondes" :key="litige.id">
+          <BaseCard accentue="accent" rembourrage="sm">
+            <p class="font-semibold text-texte">{{ litige.parcelle.nup }} — {{ litige.parcelle.commune }}</p>
+            <p class="mt-0.5 text-sm text-texte-attenue">{{ litige.motif }}</p>
+            <p v-if="litige.decisionMotif" class="mt-0.5 text-xs italic text-texte-attenue">Qualification admin : {{ litige.decisionMotif }}</p>
+            <BaseButton taille="sm" variant="secondaire" class="mt-2.5" @click="instruireLitige(litige)">Instruire ce dossier</BaseButton>
+          </BaseCard>
+        </li>
+      </ul>
+    </div>
+
     <form class="flex gap-2" @submit.prevent="chercherParcelle">
       <div class="relative flex-1">
         <Search :size="16" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
@@ -158,9 +232,6 @@ async function confirmerLevee(conflitId: string) {
       </div>
       <BaseButton type="submit" variant="secondaire">Rechercher</BaseButton>
     </form>
-
-    <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ erreur }}</p>
-    <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes" role="status">{{ message }}</p>
 
     <BaseCard v-if="parcelleCible" accentue="danger">
       <p class="font-semibold text-texte">Parcelle : {{ parcelleCible.nup }} — statut actuel : {{ parcelleCible.statut }}</p>
@@ -234,11 +305,42 @@ async function confirmerLevee(conflitId: string) {
             <p class="mt-0.5 text-sm text-texte-attenue">{{ conflit.motif }} (dossier {{ conflit.referenceDossierJudiciaire }})</p>
             <p class="mt-0.5 text-xs text-texte-attenue">Gele le {{ new Date(conflit.dateGel).toLocaleDateString("fr-FR") }}</p>
 
-            <BaseButton v-if="conflitEnLevee !== conflit.id" variant="secondaire" taille="sm" class="mt-2.5" @click="conflitEnLevee = conflit.id">
+            <BaseButton
+              v-if="conflitEnLevee !== conflit.id"
+              variant="secondaire"
+              taille="sm"
+              class="mt-2.5"
+              @click="
+                conflitEnLevee = conflit.id;
+                typeDecisionParConflit[conflit.id] = 'LEVEE_SIMPLE';
+              "
+            >
               <Unlock :size="14" aria-hidden="true" />
               Lever le gel
             </BaseButton>
             <div v-else class="mt-2.5 space-y-2 rounded-carte border border-bordure bg-fond p-3">
+              <div>
+                <label :for="`type-decision-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">Effet de la decision</label>
+                <select
+                  :id="`type-decision-${conflit.id}`"
+                  v-model="typeDecisionParConflit[conflit.id]"
+                  class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
+                >
+                  <option value="LEVEE_SIMPLE">Levee simple (restaure le statut anterieur)</option>
+                  <option value="ANNULATION_VENTE">Annulation de la vente en cours</option>
+                  <option value="TRANSFERT_FORCE">Transfert force de propriete</option>
+                </select>
+              </div>
+              <div v-if="typeDecisionParConflit[conflit.id] === 'TRANSFERT_FORCE'">
+                <label :for="`nouveau-proprietaire-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">
+                  Nom du proprietaire designe par la decision
+                </label>
+                <input
+                  :id="`nouveau-proprietaire-${conflit.id}`"
+                  v-model="nouveauProprietaireParConflit[conflit.id]"
+                  class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
+                />
+              </div>
               <div>
                 <label :for="`motif-levee-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">
                   Motif de la levee (obligatoire)
@@ -249,6 +351,17 @@ async function confirmerLevee(conflitId: string) {
                   rows="2"
                   placeholder="Ex. litige resolu par jugement du..."
                   class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
+                />
+              </div>
+              <div>
+                <label :for="`fichier-decision-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">
+                  Document de la decision (optionnel)
+                </label>
+                <input
+                  :id="`fichier-decision-${conflit.id}`"
+                  type="file"
+                  class="w-full text-xs text-texte"
+                  @change="surChoixFichierDecision(conflit.id, $event)"
                 />
               </div>
               <p class="text-xs text-texte-attenue">Confirmez-vous la levee du gel sur {{ conflit.parcelle.nup }} ?</p>

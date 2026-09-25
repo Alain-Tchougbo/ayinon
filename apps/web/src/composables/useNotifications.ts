@@ -23,11 +23,28 @@ export function useNotifications() {
       return;
     }
     try {
-      if (auth.role === RoleUtilisateur.CITOYEN) {
-        const propositions = await api.get<unknown[]>("/cessions/mes-propositions-recues");
-        compte.value = propositions.length;
-        lien.value = "/cession";
-        libelle.value = "proposition(s) de cession recue(s)";
+      if (auth.role === RoleUtilisateur.VENDEUR) {
+        const [mesAnnonces, visitesRecues] = await Promise.all([
+          api.get<Array<{ interets: Array<{ statut: string }> }>>("/annonces/mes-annonces"),
+          api.get<Array<{ statut: string }>>("/visites/recues"),
+        ]);
+        compte.value =
+          mesAnnonces.reduce((total, a) => total + a.interets.filter((i) => i.statut === "EN_ATTENTE").length, 0) +
+          visitesRecues.filter((v) => v.statut === "DEMANDEE").length;
+        lien.value = "/vendre";
+        libelle.value = "notification(s) a consulter";
+      } else if (auth.role === RoleUtilisateur.ACHETEUR) {
+        const [mesInterets, propositionsRecues, mesVisites] = await Promise.all([
+          api.get<Array<{ statut: string }>>("/annonces/mes-interets"),
+          api.get<unknown[]>("/cessions/mes-propositions-recues"),
+          api.get<Array<{ statut: string }>>("/visites/mes-demandes"),
+        ]);
+        compte.value =
+          mesInterets.filter((i) => i.statut === "RETENU").length +
+          propositionsRecues.length +
+          mesVisites.filter((v) => v.statut === "REPROGRAMMEE").length;
+        lien.value = "/acheter";
+        libelle.value = "notification(s) a consulter";
       } else if (auth.role === RoleUtilisateur.MANDATAIRE_FAMILIAL) {
         const signatures = await api.get<unknown[]>("/familles/mes-signatures-en-attente");
         compte.value = signatures.length;

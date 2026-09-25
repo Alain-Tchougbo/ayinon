@@ -32,8 +32,14 @@ onMounted(async () => {
 
 async function charger() {
   chargement.value = true;
-  cessions.value = await api.get<Cession[]>("/cessions/a-valider");
-  chargement.value = false;
+  erreur.value = null;
+  try {
+    cessions.value = await api.get<Cession[]>("/cessions/a-valider");
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Impossible de charger les cessions a valider";
+  } finally {
+    chargement.value = false;
+  }
 }
 
 async function valider(id: string, approuver: boolean) {

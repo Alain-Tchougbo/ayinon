@@ -2,11 +2,11 @@ import { BadRequestException, ForbiddenException, NotFoundException } from "@nes
 import { StatutCession, StatutParcelle } from "@ayinon/shared";
 import { CessionsService } from "./cessions.service";
 
-const VENDEUR = { id: "vendeur-1", email: "vendeur@ayinon.bj", role: "CITOYEN", proprietaireId: "prop-vendeur", nomComplet: "Vendeur Test" } as any;
+const VENDEUR = { id: "vendeur-1", email: "vendeur@ayinon.bj", role: "VENDEUR", proprietaireId: "prop-vendeur", nomComplet: "Vendeur Test" } as any;
 const ACQUEREUR_UTILISATEUR = {
   id: "acquereur-1",
   email: "acquereur@ayinon.bj",
-  role: "CITOYEN",
+  role: "ACHETEUR",
   proprietaireId: null,
   nomComplet: "Acquereur Test",
   telephone: null,
@@ -24,11 +24,20 @@ function parcelleParDefaut(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 /** Construit un service avec un etat Prisma en memoire minimal, dans le meme esprit que geometre.service.spec.ts. */
-function creerService(options: { parcelle?: Record<string, unknown> | null; convention?: Record<string, unknown> | null; parcelleGelee?: boolean } = {}) {
+function creerService(
+  options: {
+    parcelle?: Record<string, unknown> | null;
+    convention?: Record<string, unknown> | null;
+    parcelleGelee?: boolean;
+    sequestre?: Record<string, unknown> | null;
+  } = {},
+) {
   const parcelle = options.parcelle === null ? null : parcelleParDefaut(options.parcelle);
   let convention: Record<string, unknown> | null = options.convention ?? null;
   let titreCree: Record<string, unknown> | null = null;
+  let sequestre: Record<string, unknown> | null = options.sequestre ?? null;
   const auditAppels: unknown[] = [];
+  const interetUpdateManyAppels: unknown[] = [];
 
   const prisma = {
     parcelle: {
@@ -63,6 +72,19 @@ function creerService(options: { parcelle?: Record<string, unknown> | null; conv
         return convention;
       },
     },
+    interetAchat: {
+      updateMany: async (args: any) => {
+        interetUpdateManyAppels.push(args);
+        return { count: 1 };
+      },
+    },
+    sequestre: {
+      findUnique: async () => sequestre,
+      update: async ({ data }: any) => {
+        sequestre = { ...(sequestre as Record<string, unknown>), ...data };
+        return sequestre;
+      },
+    },
     $transaction: async (callback: (tx: unknown) => unknown) => callback(prisma),
   };
 
@@ -83,7 +105,13 @@ function creerService(options: { parcelle?: Record<string, unknown> | null; conv
   };
 
   const service = new CessionsService(prisma as any, cryptoAudit as any, csaf as any);
-  return { service, auditAppels, obtenirConvention: () => convention };
+  return {
+    service,
+    auditAppels,
+    obtenirConvention: () => convention,
+    obtenirSequestre: () => sequestre,
+    obtenirAppelsInteretUpdateMany: () => interetUpdateManyAppels,
+  };
 }
 
 describe("CessionsService — parcours d'achat/vente citoyen-a-citoyen", () => {
@@ -135,7 +163,7 @@ describe("CessionsService — parcours d'achat/vente citoyen-a-citoyen", () => {
   it("refuse qu'une autre personne que l'acquereur designe reponde a la proposition", async () => {
     const { service } = creerService({ convention: { id: "convention-1", acquereurId: "quelqu-un-dautre", statutCession: StatutCession.PROPOSEE } });
 
-    await expect(service.repondre("convention-1", { accepter: true }, { id: ACQUEREUR_UTILISATEUR.id, role: "CITOYEN" } as any)).rejects.toBeInstanceOf(
+    await expect(service.repondre("convention-1", { accepter: true }, { id: ACQUEREUR_UTILISATEUR.id, role: "ACHETEUR" } as any)).rejects.toBeInstanceOf(
       ForbiddenException,
     );
   });
@@ -146,7 +174,7 @@ describe("CessionsService — parcours d'achat/vente citoyen-a-citoyen", () => {
     });
 
     await expect(
-      service.repondre("convention-1", { accepter: true }, { id: ACQUEREUR_UTILISATEUR.id, role: "CITOYEN" } as any),
+      service.repondre("convention-1", { accepter: true }, { id: ACQUEREUR_UTILISATEUR.id, role: "ACHETEUR" } as any),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -156,7 +184,7 @@ describe("CessionsService — parcours d'achat/vente citoyen-a-citoyen", () => {
     });
 
     await expect(
-      service.repondre("convention-1", { accepter: false }, { id: ACQUEREUR_UTILISATEUR.id, role: "CITOYEN" } as any),
+      service.repondre("convention-1", { accepter: false }, { id: ACQUEREUR_UTILISATEUR.id, role: "ACHETEUR" } as any),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -177,5 +205,46 @@ describe("CessionsService — parcours d'achat/vente citoyen-a-citoyen", () => {
     expect(resultat.titre).toBeTruthy();
     expect((resultat.titre as any).numeroTitre).toMatch(/^BJ-TITRE-\d{4}-\d{6}$/);
     expect((obtenirConvention() as any).statutCession).toBe(StatutCession.VALIDEE);
+  });
+
+  it("libere automatiquement un sequestre confirme des que la cession est validee", async () => {
+    const { service, obtenirSequestre } = creerService({
+      convention: { id: "convention-1", parcelleId: "parcelle-1", acquereurId: ACQUEREUR_UTILISATEUR.id, statutCession: StatutCession.ACCEPTEE },
+      sequestre: { id: "sequestre-1", conventionId: "convention-1", statut: "DEPOT_CONFIRME" },
+    });
+
+    await service.valider("convention-1", { approuver: true }, AGENT_ANDF);
+
+    expect((obtenirSequestre() as any).statut).toBe("LIBERE");
+  });
+
+  it("rembourse automatiquement un sequestre declare des que la cession est rejetee par l'ANDF", async () => {
+    const { service, obtenirSequestre } = creerService({
+      convention: { id: "convention-1", parcelleId: "parcelle-1", acquereurId: ACQUEREUR_UTILISATEUR.id, statutCession: StatutCession.ACCEPTEE },
+      sequestre: { id: "sequestre-1", conventionId: "convention-1", statut: "DEPOT_DECLARE" },
+    });
+
+    await service.valider("convention-1", { approuver: false, motifRejet: "Anomalie constatee sur le titre" }, AGENT_ANDF);
+
+    expect((obtenirSequestre() as any).statut).toBe("REMBOURSE");
+  });
+
+  it("debloque l'annonce d'origine (interet RETENU -> DECLINE) quand l'ANDF rejette une cession issue de la vitrine", async () => {
+    const { service, obtenirAppelsInteretUpdateMany } = creerService({
+      convention: {
+        id: "convention-1",
+        parcelleId: "parcelle-1",
+        acquereurId: ACQUEREUR_UTILISATEUR.id,
+        statutCession: StatutCession.ACCEPTEE,
+        annonceId: "annonce-1",
+      },
+    });
+
+    await service.valider("convention-1", { approuver: false, motifRejet: "Anomalie constatee sur le titre" }, AGENT_ANDF);
+
+    const appels = obtenirAppelsInteretUpdateMany();
+    expect(appels).toHaveLength(1);
+    expect((appels[0] as any).where).toEqual({ annonceId: "annonce-1", statut: "RETENU" });
+    expect((appels[0] as any).data).toEqual({ statut: "DECLINE" });
   });
 });

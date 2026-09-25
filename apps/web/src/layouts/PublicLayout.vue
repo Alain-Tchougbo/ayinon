@@ -13,6 +13,7 @@ import { LANGUES } from "../voice/langues";
 // layout n'est monte que lorsque auth.estConnecte est false (voir App.vue). Des qu'une session
 // est active, DashboardLayout prend le relais sur les memes routes.
 const LIENS_PUBLICS = [
+  { to: "/annonces", label: "Annonces" },
   { to: "/carte", label: "Carte cadastrale" },
   { to: "/scanner", label: "Scanner anti-fraude" },
   { to: "/simulateur-frais", label: "Simulateur de frais" },
@@ -102,8 +103,14 @@ watch(() => route.fullPath, () => (menuMobileOuvert.value = false));
           </div>
 
           <RouterLink
+            to="/inscription"
+            class="ml-2 inline-flex min-h-0 items-center gap-1.5 rounded-full border border-bordure px-4 py-2 text-sm font-semibold text-texte transition-colors hover:bg-fond"
+          >
+            Creer un compte
+          </RouterLink>
+          <RouterLink
             to="/connexion"
-            class="ml-2 inline-flex min-h-0 items-center gap-1.5 rounded-full bg-primaire px-5 py-2 text-sm font-semibold text-primaire-contraste shadow-sm transition-colors hover:bg-primaire-hover"
+            class="inline-flex min-h-0 items-center gap-1.5 rounded-full bg-primaire px-5 py-2 text-sm font-semibold text-primaire-contraste shadow-sm transition-colors hover:bg-primaire-hover"
           >
             <LogIn :size="14" aria-hidden="true" />
             Se connecter
@@ -173,10 +180,16 @@ watch(() => route.fullPath, () => (menuMobileOuvert.value = false));
           </div>
         </div>
 
-        <div class="mt-3 border-t border-bordure pt-3">
+        <div class="mt-3 flex gap-2 border-t border-bordure pt-3">
+          <RouterLink
+            to="/inscription"
+            class="flex flex-1 items-center justify-center gap-2 rounded-carte border border-bordure px-4 py-2.5 text-sm font-semibold text-texte"
+          >
+            Creer un compte
+          </RouterLink>
           <RouterLink
             to="/connexion"
-            class="flex w-full items-center justify-center gap-2 rounded-carte bg-primaire px-4 py-2.5 text-sm font-semibold text-primaire-contraste"
+            class="flex flex-1 items-center justify-center gap-2 rounded-carte bg-primaire px-4 py-2.5 text-sm font-semibold text-primaire-contraste"
           >
             <LogIn :size="16" aria-hidden="true" />
             Se connecter
@@ -192,7 +205,8 @@ watch(() => route.fullPath, () => (menuMobileOuvert.value = false));
     <VoiceAssistantButton />
 
     <footer class="border-t border-bordure bg-surface px-4 py-4 pb-20 text-center text-xs text-texte-attenue sm:pb-4">
-      AYINON — Le Gardien Numerique de la Terre · Republique du Benin
+      AYINON — Le Gardien Numerique de la Terre · Republique du Benin ·
+      <RouterLink to="/aide" class="underline underline-offset-2 hover:text-texte">Aide</RouterLink>
     </footer>
   </div>
 </template>
