@@ -15,6 +15,7 @@ const router = createRouter({
   routes: [
     { path: "/", name: "accueil", component: () => import("../views/AccueilView.vue"), meta: { titre: "Accueil" } },
     { path: "/carte", name: "carte", component: () => import("../views/CarteView.vue"), meta: { titre: "Carte cadastrale" } },
+    { path: "/aide", name: "aide", component: () => import("../views/AideView.vue"), meta: { titre: "Aide" } },
     {
       path: "/scanner",
       name: "scanner",

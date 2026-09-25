@@ -373,3 +373,16 @@ usages restent proches en taille et evoluent independamment — magistrat contre
 journal "toutes actions confondues, tous dossiers" globalise : rien dans le CA ne le demande, et
 un tel flux (potentiellement des milliers d'entrees non filtrees) n'aurait pas ete exploitable
 sans un travail de pagination/filtrage hors de portee pour cette fonctionnalite secondaire.
+
+## Aide differenciee par type d'acteur (ET.4)
+
+Nouvelle page `/aide` (accessible sans compte, lien ajoute au pied de page des deux habillages)
+qui adapte le canal de contact au role connecte (ou grand public par defaut si aucune session) :
+trois categories — grand public (CITOYEN/VENDEUR/ACHETEUR), professionnels (GEOMETRE/NOTAIRE/
+AGENT_BANQUE/MANDATAIRE_FAMILIAL), institutions (AGENT_ANDF/MAGISTRAT_CSAF/ADMIN) — chacune avec
+un e-mail, un telephone et un delai de reponse indicatif distincts, conformement au CA. Comme
+aucune passerelle e-mail/telephone reelle n'est integree a la plateforme (voir "Notifications"
+plus haut), ces coordonnees sont explicitement etiquetees dans l'interface elle-meme comme des
+coordonnees de demonstration, non connectees a une veritable boite mail ou ligne — l'honnetete de
+la simplification est visible par l'utilisateur final, pas seulement documentee ici. Pas de chat
+en direct ni d'integration WhatsApp reelle, coherent avec la meme decision.

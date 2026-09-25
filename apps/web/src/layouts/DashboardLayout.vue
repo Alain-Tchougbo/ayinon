@@ -401,7 +401,8 @@ function rechercherRapide() {
       <main id="contenu-principal" class="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <RouterView />
         <footer class="mt-auto border-t border-bordure bg-surface px-4 py-4 pb-20 text-center text-xs text-texte-attenue sm:pb-4">
-          AYINON — Le Gardien Numerique de la Terre · Republique du Benin
+          AYINON — Le Gardien Numerique de la Terre · Republique du Benin ·
+          <RouterLink to="/aide" class="underline underline-offset-2 hover:text-texte">Aide</RouterLink>
         </footer>
       </main>
     </div>

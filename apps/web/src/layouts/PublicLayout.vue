@@ -205,7 +205,8 @@ watch(() => route.fullPath, () => (menuMobileOuvert.value = false));
     <VoiceAssistantButton />
 
     <footer class="border-t border-bordure bg-surface px-4 py-4 pb-20 text-center text-xs text-texte-attenue sm:pb-4">
-      AYINON — Le Gardien Numerique de la Terre · Republique du Benin
+      AYINON — Le Gardien Numerique de la Terre · Republique du Benin ·
+      <RouterLink to="/aide" class="underline underline-offset-2 hover:text-texte">Aide</RouterLink>
     </footer>
   </div>
 </template>
