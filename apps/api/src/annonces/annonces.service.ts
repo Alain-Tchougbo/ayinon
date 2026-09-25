@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { createHash } from "node:crypto";
 import {
   RoleUtilisateur,
@@ -394,6 +395,16 @@ export class AnnoncesService {
     const planCertifie = await this.prisma.planBornage.findFirst({
       where: { parcelleId: annonce.parcelleId, signeParId: { not: null }, chevauchementDetecte: false },
     });
-    return { ...annonce, limitesCertifiees: Boolean(planCertifie), enExclusivite: Boolean(annonce.exclusiviteJusqua && annonce.exclusiviteJusqua > new Date()) };
+    // Centre reel de la parcelle (PostGIS), pour afficher une vraie tuile satellite de
+    // l'emplacement plutot qu'une illustration generique — voir CarteVignette.vue cote frontend.
+    const [centre] = await this.prisma.$queryRaw<Array<{ lng: number; lat: number }>>(Prisma.sql`
+      SELECT ST_X(ST_Centroid(geom)) AS lng, ST_Y(ST_Centroid(geom)) AS lat FROM "Parcelle" WHERE id = ${annonce.parcelleId}
+    `);
+    return {
+      ...annonce,
+      limitesCertifiees: Boolean(planCertifie),
+      enExclusivite: Boolean(annonce.exclusiviteJusqua && annonce.exclusiviteJusqua > new Date()),
+      centreParcelle: centre ?? null,
+    };
   }
 }

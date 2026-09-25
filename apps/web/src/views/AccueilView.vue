@@ -25,6 +25,7 @@ import {
 import { RoleUtilisateur } from "@ayinon/shared";
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import HeroCarteBenin from "../components/accueil/HeroCarteBenin.vue";
 import BaseButton from "../components/ui/BaseButton.vue";
 import BaseCard from "../components/ui/BaseCard.vue";
 import { useVoiceAssistant } from "../composables/useVoiceAssistant";
@@ -188,35 +189,52 @@ const raccourcis = computed(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl space-y-8 px-4 py-10 sm:py-14">
-    <!-- Visiteur non connecte : hero public generique + recherche NUP. -->
-    <section v-if="!auth.estConnecte" class="rounded-carte bg-primaire px-6 py-12 text-center text-primaire-contraste shadow-flottant sm:py-16">
-      <h1 class="text-3xl font-extrabold tracking-tight sm:text-4xl">AYINON</h1>
-      <p class="mt-2 text-lg text-primaire-contraste/90">Le Gardien Numerique de la Terre</p>
-      <p class="mx-auto mt-4 max-w-2xl text-sm text-primaire-contraste/80">
-        Verifiez, securisez et defendez votre terre. Programme « Plus Loin, Ensemble » — territorialisation,
-        democratisation du titre foncier, paix sociale.
+  <!-- Visiteur non connecte : hero publique plein cadre, carte du Benin en fond (voir
+       HeroCarteBenin.vue) — hors du conteneur max-w-5xl pour occuper toute la largeur. Occupe
+       tout le premier ecran : 100vh moins la hauteur du bandeau + de l'en-tete (6rem, sticky). -->
+  <section v-if="!auth.estConnecte" class="relative h-[calc(100vh-6rem)] min-h-[28rem] overflow-hidden">
+    <HeroCarteBenin />
+    <div class="pointer-events-none absolute inset-x-0 top-0 z-10 h-64 bg-gradient-to-b from-primaire/55 to-transparent" />
+
+    <div class="pointer-events-none absolute inset-0 z-10 flex flex-col items-center px-4 pt-10 text-center sm:pt-14">
+      <h1 class="max-w-xl font-affichage text-3xl font-normal italic text-white [text-shadow:0_2px_18px_rgba(0,0,0,.35)] sm:text-4xl">
+        Retrouvez votre terrain en toute serenite.
+      </h1>
+      <p class="mt-3 max-w-lg text-sm text-white/85 [text-shadow:0_1px_10px_rgba(0,0,0,.3)]">
+        Localisation exacte, limites certifiees, statut a jour — votre parcelle, en un instant.
       </p>
 
-      <form class="mx-auto mt-7 flex max-w-md gap-2" @submit.prevent="rechercherEtOuvrirCarte">
-        <label for="nup" class="sr-only">Numero Unique Parcellaire (NUP)</label>
-        <div class="relative flex-1">
-          <Search :size="18" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
-          <input
-            id="nup"
-            v-model="nup"
-            type="text"
-            placeholder="Entrez votre NUP (ex. BJ-LIT-COT-0001)"
-            class="w-full rounded-carte border-0 py-3 pl-10 pr-4 text-sm text-texte"
-          />
-        </div>
-        <BaseButton type="submit" variant="accent" class="shrink-0">Verifier</BaseButton>
+      <form
+        class="pointer-events-auto mt-6 flex w-full max-w-lg items-center gap-2 rounded-full bg-surface py-1.5 pl-4 pr-1.5 shadow-flottant"
+        @submit.prevent="rechercherEtOuvrirCarte"
+      >
+        <label for="nup" class="sr-only">Numero Unique Parcellaire (NUP), commune ou coordonnees</label>
+        <Search :size="18" class="shrink-0 text-texte-attenue" aria-hidden="true" />
+        <input
+          id="nup"
+          v-model="nup"
+          type="text"
+          placeholder="Rechercher par NUP, commune ou coordonnees"
+          class="min-h-0 w-full min-w-0 flex-1 border-0 bg-transparent py-1.5 text-sm text-texte focus:outline-none"
+        />
+        <BaseButton type="submit" variant="primaire" class="!min-h-0 shrink-0 !rounded-full">Verifier</BaseButton>
       </form>
-    </section>
+    </div>
 
+    <!-- Exemple illustratif (NUP fictif), fidele a la DA retenue : montre a quoi ressemble un
+         resultat verifie avant meme d'avoir cherche. -->
+    <div class="pointer-events-auto absolute bottom-8 left-8 z-10 hidden max-w-xs rounded-carte bg-surface p-6 shadow-flottant sm:block">
+      <span class="inline-block rounded-full bg-primaire/10 px-2.5 py-1 text-xs font-bold text-primaire">Situation controlee ANDF</span>
+      <h3 class="mt-2.5 font-affichage text-base font-bold text-texte">BJ-LIT-COT-0014</h3>
+      <p class="mt-0.5 text-sm text-texte-attenue">Cotonou, Akpakpa — 450 m²</p>
+      <a href="#" class="mt-3 inline-block text-sm font-bold text-primaire" @click.prevent>Voir le dossier complet →</a>
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-5xl space-y-8 px-4 py-10 sm:py-14">
     <!-- Connecte : espace personnalise, different pour chaque role. Le nom complet et le role
          sont deja visibles en permanence dans l'en-tete : pas la peine de les repeter ici. -->
-    <section v-else class="rounded-carte bg-primaire px-6 py-8 text-primaire-contraste shadow-flottant">
+    <section v-if="auth.estConnecte" class="rounded-carte bg-primaire px-6 py-8 text-primaire-contraste shadow-flottant">
       <h1 class="text-2xl font-bold">Bonjour {{ prenom }}</h1>
       <p class="mt-1 text-sm text-primaire-contraste/80">Voici l'etat de votre espace AYINON aujourd'hui.</p>
     </section>

@@ -42,6 +42,12 @@ export class ParcellesController {
     return this.parcelles.obtenirParId(id);
   }
 
+  @Public()
+  @Get(":id/historique")
+  async obtenirHistoriquePublic(@Param("id") id: string) {
+    return this.parcelles.obtenirHistoriquePublic(id);
+  }
+
   @Roles(RoleUtilisateur.CITOYEN, RoleUtilisateur.VENDEUR)
   @Post("otp-verrou")
   async demanderOtpVerrou(@CurrentUser() utilisateur: UtilisateurAuthentifie) {

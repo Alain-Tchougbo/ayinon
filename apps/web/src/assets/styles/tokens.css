@@ -3,28 +3,33 @@
 @tailwind utilities;
 
 :root {
-  --color-fond: #f4f6f4;
-  --color-surface: #ffffff;
-  --color-surface-haute: #ffffff;
-  --color-texte: #12271a;
-  --color-texte-attenue: #435449;
-  --color-bordure: #d8e0da;
+  /* Valeurs en triplets "R G B" (pas #hex) : c'est le format qu'attend Tailwind pour construire
+     rgb(var(--color-x) / <alpha-value>) et faire fonctionner les modificateurs d'opacite (/10,
+     /70...) sur ces couleurs personnalisees — voir tailwind.config.ts. Un #hex direct ici ferait
+     echouer silencieusement toute classe du type bg-primaire/10 (aucune regle generee). */
+  --color-fond: 251 244 228;
+  --color-surface: 255 255 255;
+  --color-surface-haute: 255 255 255;
+  --color-texte: 20 32 26;
+  --color-texte-attenue: 92 106 97;
+  --color-bordure: 231 225 207;
 
-  --color-primaire: #0b3d24;
-  --color-primaire-hover: #0f4d2e;
-  --color-primaire-contraste: #ffffff;
-  --color-accent: #96620a;
-  --color-accent-contraste: #ffffff;
+  --color-primaire: 15 61 46;
+  --color-primaire-hover: 23 90 68;
+  --color-primaire-fonce: 10 42 31;
+  --color-primaire-contraste: 255 255 255;
+  --color-accent: 242 169 59;
+  --color-accent-contraste: 36 21 0;
 
-  --color-statut-titree: #15803d;
-  --color-statut-en-cours: #96620a;
-  --color-statut-gel: #dc2626;
-  --color-statut-domaine-public: #1d4ed8;
+  --color-statut-titree: 21 128 61;
+  --color-statut-en-cours: 150 98 10;
+  --color-statut-gel: 220 38 38;
+  --color-statut-domaine-public: 29 78 216;
 
-  --color-danger: #b91c1c;
-  --color-succes: #15803d;
+  --color-danger: 185 28 28;
+  --color-succes: 21 128 61;
 
-  --color-anneau-focus: #96620a;
+  --color-anneau-focus: 150 98 10;
 
   --ombre-carte: 0 1px 2px rgba(18, 39, 26, 0.06), 0 1px 3px rgba(18, 39, 26, 0.08);
   --ombre-flottante: 0 4px 12px rgba(18, 39, 26, 0.12), 0 2px 4px rgba(18, 39, 26, 0.08);
@@ -33,20 +38,21 @@
 }
 
 [data-theme="sombre"] {
-  --color-fond: #0b1712;
-  --color-surface: #122019;
-  --color-surface-haute: #182b21;
-  --color-texte: #eef4f0;
-  --color-texte-attenue: #a8beb0;
-  --color-bordure: #26402f;
+  --color-fond: 11 23 18;
+  --color-surface: 18 32 25;
+  --color-surface-haute: 24 43 33;
+  --color-texte: 238 244 240;
+  --color-texte-attenue: 168 190 176;
+  --color-bordure: 38 64 47;
 
-  --color-primaire: #48bd7e;
-  --color-primaire-hover: #5ccc90;
-  --color-primaire-contraste: #06140d;
-  --color-accent: #f2b90a;
-  --color-accent-contraste: #221900;
+  --color-primaire: 72 189 126;
+  --color-primaire-hover: 92 204 144;
+  --color-primaire-fonce: 13 46 28;
+  --color-primaire-contraste: 6 20 13;
+  --color-accent: 242 185 10;
+  --color-accent-contraste: 34 25 0;
 
-  --color-anneau-focus: #f2b90a;
+  --color-anneau-focus: 242 185 10;
 
   --ombre-carte: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
   --ombre-flottante: 0 4px 16px rgba(0, 0, 0, 0.5);
@@ -54,25 +60,26 @@
 
 /* Mode plein-soleil / faible litteratie : contrastes maximaux, pas de nuances intermediaires. */
 [data-theme="contraste-eleve"] {
-  --color-fond: #ffffff;
-  --color-surface: #ffffff;
-  --color-surface-haute: #ffffff;
-  --color-texte: #000000;
-  --color-texte-attenue: #000000;
-  --color-bordure: #000000;
+  --color-fond: 255 255 255;
+  --color-surface: 255 255 255;
+  --color-surface-haute: 255 255 255;
+  --color-texte: 0 0 0;
+  --color-texte-attenue: 0 0 0;
+  --color-bordure: 0 0 0;
 
-  --color-primaire: #003d1f;
-  --color-primaire-hover: #002914;
-  --color-primaire-contraste: #ffffff;
-  --color-accent: #6b3e00;
-  --color-accent-contraste: #ffffff;
+  --color-primaire: 0 61 31;
+  --color-primaire-hover: 0 41 20;
+  --color-primaire-fonce: 0 31 15;
+  --color-primaire-contraste: 255 255 255;
+  --color-accent: 107 62 0;
+  --color-accent-contraste: 255 255 255;
 
-  --color-statut-titree: #006622;
-  --color-statut-en-cours: #6b3e00;
-  --color-statut-gel: #b30000;
-  --color-statut-domaine-public: #00308f;
+  --color-statut-titree: 0 102 34;
+  --color-statut-en-cours: 107 62 0;
+  --color-statut-gel: 179 0 0;
+  --color-statut-domaine-public: 0 48 143;
 
-  --color-anneau-focus: #000000;
+  --color-anneau-focus: 0 0 0;
 
   --ombre-carte: none;
   --ombre-flottante: 0 0 0 2px #000000;
@@ -86,11 +93,32 @@ body,
   height: 100%;
 }
 
+html {
+  /* Reserve toujours la place de la barre de defilement verticale (au lieu de la faire
+     apparaitre/disparaitre selon la hauteur de page) : la hero calee sur 100vh peut sinon
+     declencher une barre au dernier pixel, qui grignote la largeur et fait deborder les rangees
+     flex les plus serrees (bandeau institutionnel) horizontalement. */
+  scrollbar-gutter: stable;
+}
+
+h1,
+h2,
+h3 {
+  font-family:
+    "Space Grotesk",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: -0.01em;
+}
+
 body {
   background-color: var(--color-fond);
   color: var(--color-texte);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
 /* Cibles tactiles genereuses pour smartphones d'entree de gamme et utilisateurs peu familiers du tactile. */
