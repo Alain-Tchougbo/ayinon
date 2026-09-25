@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BadgeCheck, Check, FileStack, Flag, LayoutDashboard, MapPin, Pencil, Users, X } from "@lucide/vue";
+import { BadgeCheck, Check, FileStack, Flag, History, LayoutDashboard, MapPin, Pencil, TriangleAlert, Users, X } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
@@ -56,6 +56,25 @@ interface DemandePro {
   numeroAgrement: string | null;
   createdAt: string;
 }
+interface EntreeAudit {
+  id: string;
+  sequence: number;
+  typeOperation: string;
+  roleActeur: string | null;
+  payload: Record<string, unknown>;
+  hashBloc: string;
+  horodatage: string;
+}
+interface AnnonceARisque {
+  id: string;
+  prixIndicatifFcfa: number;
+  prixParM2: number;
+  moyenneCommuneFcfaParM2: number;
+  deviationPourcentage: number;
+  createdAt: string;
+  parcelle: { nup: string; commune: string };
+  publieePar: { nomComplet: string };
+}
 interface Signalement {
   id: string;
   type: "ANNONCE" | "LITIGE_FONCIER";
@@ -77,6 +96,7 @@ const ONGLETS = [
   { cle: "parcelles", label: "Parcelles" },
   { cle: "documents", label: "Documents" },
   { cle: "signalements", label: "Signalements" },
+  { cle: "annonces-a-risque", label: "Annonces a risque" },
 ] as const;
 type Onglet = (typeof ONGLETS)[number]["cle"];
 
@@ -90,13 +110,22 @@ const parcelles = ref<ParcelleAdmin[]>([]);
 const documents = ref<Documents | null>(null);
 const demandesPro = ref<DemandePro[]>([]);
 const signalements = ref<Signalement[]>([]);
+const annoncesARisque = ref<AnnonceARisque[]>([]);
 const chargement = ref(false);
 const erreur = ref<string | null>(null);
 const message = ref<string | null>(null);
 
+const suspensionEnCours = ref<string | null>(null);
+const motifSuspension = ref("");
+
 const editionEnCours = ref<string | null>(null);
 const communeEdition = ref("");
 const arrondissementEdition = ref("");
+
+// ET.3 : journal d'audit horodate et signe, dossier par dossier (une parcelle = un dossier).
+const historiqueEnCours = ref<string | null>(null);
+const historique = ref<EntreeAudit[] | null>(null);
+const chargementHistorique = ref(false);
 
 const qualificationEnCours = ref<string | null>(null);
 const motifQualification = ref("");
@@ -122,6 +151,7 @@ async function charger(onglet: Onglet) {
     else if (onglet === "parcelles") parcelles.value = await api.get<ParcelleAdmin[]>("/admin/parcelles");
     else if (onglet === "documents") documents.value = await api.get<Documents>("/admin/documents");
     else if (onglet === "signalements") signalements.value = await api.get<Signalement[]>("/signalements");
+    else if (onglet === "annonces-a-risque") annoncesARisque.value = await api.get<AnnonceARisque[]>("/admin/annonces-a-risque");
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Chargement impossible";
   } finally {
@@ -145,6 +175,24 @@ async function enregistrerEdition(id: string) {
     await charger("parcelles");
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Mise a jour impossible";
+  }
+}
+
+/** ET.3 : journal d'audit d'un dossier (une parcelle), horodate et signe, identite de l'auteur
+ * de chaque action. Meme endpoint que le dossier de preuves CSAF (voir GelCsafView.vue). */
+async function voirHistorique(parcelleId: string) {
+  if (historiqueEnCours.value === parcelleId) {
+    historiqueEnCours.value = null;
+    return;
+  }
+  historiqueEnCours.value = parcelleId;
+  chargementHistorique.value = true;
+  try {
+    historique.value = await api.get<EntreeAudit[]>(`/audit/parcelles/${parcelleId}/historique`);
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Impossible de charger le journal d'audit";
+  } finally {
+    chargementHistorique.value = false;
   }
 }
 
@@ -187,6 +235,29 @@ async function traiterDemandePro(id: string, approuver: boolean) {
     await charger("demandes-pro");
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Traitement impossible";
+  } finally {
+    actionEnCours.value = false;
+  }
+}
+
+/** E1.14 : suspension de moderation, distincte du retrait par le vendeur ou de la verification ANDF. */
+async function suspendreAnnonce(id: string) {
+  erreur.value = null;
+  message.value = null;
+  const motif = motifSuspension.value.trim();
+  if (motif.length < 10) {
+    erreur.value = "Le motif de suspension doit compter au moins 10 caracteres";
+    return;
+  }
+  actionEnCours.value = true;
+  try {
+    await api.patch(`/admin/annonces/${id}/suspendre`, { motif });
+    message.value = "Annonce suspendue.";
+    suspensionEnCours.value = null;
+    motifSuspension.value = "";
+    await charger("annonces-a-risque");
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Suspension impossible";
   } finally {
     actionEnCours.value = false;
   }
@@ -348,16 +419,38 @@ async function traiterDemandePro(id: string, approuver: boolean) {
                 {{ p.proprietaire?.nomComplet ?? "Sans proprietaire" }} — {{ p.superficieM2.toLocaleString("fr-FR") }} m² — {{ p.statut.replaceAll("_", " ") }}
               </p>
             </div>
-            <BaseButton v-if="editionEnCours !== p.id" taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
-              <Pencil :size="13" aria-hidden="true" />
-              Modifier
-            </BaseButton>
+            <div class="flex gap-2">
+              <BaseButton v-if="editionEnCours !== p.id" taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
+                <Pencil :size="13" aria-hidden="true" />
+                Modifier
+              </BaseButton>
+              <BaseButton taille="sm" variant="secondaire" @click="voirHistorique(p.id)">
+                <History :size="13" aria-hidden="true" />
+                {{ historiqueEnCours === p.id ? "Masquer le journal" : "Journal d'audit" }}
+              </BaseButton>
+            </div>
           </div>
           <div v-if="editionEnCours === p.id" class="mt-3 flex flex-wrap items-end gap-2">
             <div class="w-48"><BaseInput id="commune-edition" v-model="communeEdition" label="Commune" /></div>
             <div class="w-48"><BaseInput id="arrondissement-edition" v-model="arrondissementEdition" label="Arrondissement" /></div>
             <BaseButton taille="sm" @click="enregistrerEdition(p.id)">Enregistrer</BaseButton>
             <BaseButton taille="sm" variant="secondaire" @click="editionEnCours = null">Annuler</BaseButton>
+          </div>
+
+          <!-- ET.3 : journal d'audit horodate et signe du dossier (cette parcelle). -->
+          <div v-if="historiqueEnCours === p.id" class="mt-3 border-t border-bordure pt-3">
+            <p v-if="chargementHistorique" class="text-sm text-texte-attenue" role="status">Chargement du journal d'audit…</p>
+            <p v-else-if="historique && historique.length === 0" class="text-sm text-texte-attenue">Aucune operation enregistree sur ce dossier.</p>
+            <ol v-else-if="historique" class="space-y-2 border-l-2 border-bordure pl-4">
+              <li v-for="entree in historique" :key="entree.id" class="text-sm">
+                <p class="font-medium text-texte">{{ entree.typeOperation.replaceAll("_", " ") }}</p>
+                <p class="text-xs text-texte-attenue">
+                  {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}
+                  <template v-if="entree.roleActeur"> — {{ entree.roleActeur.replaceAll("_", " ") }}</template>
+                </p>
+                <p class="mt-0.5 font-mono text-[0.65rem] text-texte-attenue">hash bloc : {{ entree.hashBloc.slice(0, 24) }}…</p>
+              </li>
+            </ol>
           </div>
         </BaseCard>
       </li>
@@ -432,6 +525,46 @@ async function traiterDemandePro(id: string, approuver: boolean) {
             </div>
             <BaseButton v-else taille="sm" class="mt-3" @click="qualificationEnCours = s.id">Qualifier</BaseButton>
           </template>
+        </BaseCard>
+      </li>
+    </ul>
+
+    <!-- Annonces a risque (E1.14) : seul le critere "prix aberrant" est detectable dans ce
+         modele de donnees (doublons impossibles par construction, aucune photo sur une annonce). -->
+    <ul v-if="!chargement && ongletActif === 'annonces-a-risque'" class="space-y-2.5">
+      <li v-if="annoncesARisque.length === 0" class="text-sm text-texte-attenue">Aucune annonce active ne devie significativement de la moyenne communale.</li>
+      <li v-for="a in annoncesARisque" :key="a.id">
+        <BaseCard accentue="danger" rembourrage="sm">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p class="flex items-center gap-1.5 font-medium text-texte">
+                <TriangleAlert :size="13" class="text-danger" aria-hidden="true" />
+                {{ a.parcelle.nup }} — {{ a.parcelle.commune }}
+              </p>
+              <p class="mt-0.5 text-xs text-texte-attenue">Publiee par {{ a.publieePar.nomComplet }} le {{ new Date(a.createdAt).toLocaleDateString("fr-FR") }}</p>
+              <p class="mt-1.5 text-sm text-texte">
+                {{ a.prixParM2.toLocaleString("fr-FR") }} FCFA/m² —
+                {{ a.deviationPourcentage > 0 ? "+" : "" }}{{ a.deviationPourcentage }}% par rapport a la moyenne communale
+                ({{ a.moyenneCommuneFcfaParM2.toLocaleString("fr-FR") }} FCFA/m²)
+              </p>
+            </div>
+          </div>
+
+          <div v-if="suspensionEnCours === a.id" class="mt-3 space-y-2 rounded-carte border border-bordure bg-fond p-3">
+            <label :for="`motif-suspension-${a.id}`" class="block text-xs font-medium text-texte">Motif de la suspension (obligatoire)</label>
+            <textarea
+              :id="`motif-suspension-${a.id}`"
+              v-model="motifSuspension"
+              rows="2"
+              placeholder="Ex. prix trois fois superieur a la moyenne communale constatee, sans justification apparente"
+              class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
+            />
+            <div class="flex gap-2">
+              <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="suspendreAnnonce(a.id)">Suspendre l'annonce</BaseButton>
+              <BaseButton taille="sm" variant="secondaire" @click="suspensionEnCours = null">Annuler</BaseButton>
+            </div>
+          </div>
+          <BaseButton v-else taille="sm" variant="secondaire" class="mt-3" @click="suspensionEnCours = a.id">Mettre en revue</BaseButton>
         </BaseCard>
       </li>
     </ul>

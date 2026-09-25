@@ -1,5 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { RoleUtilisateur, StatutValidationPro, TypeOperationAudit, type ModifierParcelleAdminDto, type TraiterDemandeProDto } from "@ayinon/shared";
+import {
+  RoleUtilisateur,
+  StatutAnnonce,
+  StatutCession,
+  StatutValidationPro,
+  TypeOperationAudit,
+  type ModifierParcelleAdminDto,
+  type SuspendreAnnonceDto,
+  type TraiterDemandeProDto,
+} from "@ayinon/shared";
 import type { UtilisateurAuthentifie } from "../common/decorators/current-user.decorator";
 import { CryptoAuditService } from "../crypto-audit/crypto-audit.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -13,6 +22,12 @@ import { PrismaService } from "../prisma/prisma.service";
  */
 @Injectable()
 export class AdminService {
+  /** Ecart de prix/m² juge suspect par rapport a la moyenne communale (indicatif, comme le
+   * simulateur de gain net et l'estimation de prix ailleurs sur la plateforme). */
+  private readonly SEUIL_DEVIATION_PRIX = 0.5;
+  /** Meme seuil que l'estimation de prix (E1.9) pour juger une moyenne communale fiable. */
+  private readonly MIN_REFERENCES_FIABLES = 3;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cryptoAudit: CryptoAuditService,
@@ -151,5 +166,89 @@ export class AdminService {
     });
 
     return misAJour;
+  }
+
+  /** E1.14 : detection automatique d'annonces a risque. Seul le critere "prix aberrant" est
+   * implementable honnetement dans cette iteration : les doublons sont deja impossibles par
+   * construction (une seule annonce active par parcelle, voir AnnoncesService.creer) et
+   * l'annonce ne porte aucune photo dans ce modele de donnees (rien a analyser). */
+  async annoncesARisque() {
+    const annoncesActives = await this.prisma.annonce.findMany({
+      where: { statut: StatutAnnonce.ACTIVE, prixIndicatifFcfa: { not: null } },
+      select: {
+        id: true,
+        prixIndicatifFcfa: true,
+        createdAt: true,
+        parcelle: { select: { nup: true, commune: true, superficieM2: true } },
+        publieePar: { select: { nomComplet: true } },
+      },
+    });
+
+    const communes = [...new Set(annoncesActives.map((a) => a.parcelle.commune))];
+    const moyennesParCommune = new Map<string, number>();
+    await Promise.all(
+      communes.map(async (commune) => {
+        const references = await this.prisma.convention.findMany({
+          where: { statutCession: StatutCession.VALIDEE, parcelle: { commune } },
+          select: { montantFcfa: true, parcelle: { select: { superficieM2: true } } },
+        });
+        if (references.length < this.MIN_REFERENCES_FIABLES) {
+          return;
+        }
+        const moyenne = references.reduce((somme, r) => somme + r.montantFcfa / r.parcelle.superficieM2, 0) / references.length;
+        moyennesParCommune.set(commune, moyenne);
+      }),
+    );
+
+    return annoncesActives
+      .map((annonce) => {
+        const moyenneCommune = moyennesParCommune.get(annonce.parcelle.commune);
+        if (!moyenneCommune) {
+          return null;
+        }
+        const prixParM2 = annonce.prixIndicatifFcfa! / annonce.parcelle.superficieM2;
+        const deviation = (prixParM2 - moyenneCommune) / moyenneCommune;
+        if (Math.abs(deviation) < this.SEUIL_DEVIATION_PRIX) {
+          return null;
+        }
+        return {
+          id: annonce.id,
+          parcelle: annonce.parcelle,
+          publieePar: annonce.publieePar,
+          prixIndicatifFcfa: annonce.prixIndicatifFcfa,
+          prixParM2: Math.round(prixParM2),
+          moyenneCommuneFcfaParM2: Math.round(moyenneCommune),
+          deviationPourcentage: Math.round(deviation * 100),
+          createdAt: annonce.createdAt,
+        };
+      })
+      .filter((annonce): annonce is NonNullable<typeof annonce> => annonce !== null);
+  }
+
+  /** Suspension de moderation : distincte du retrait par le vendeur lui-meme et de la
+   * verification legale ANDF, motif obligatoire et journalise. */
+  async suspendreAnnonce(id: string, dto: SuspendreAnnonceDto, admin: UtilisateurAuthentifie) {
+    const annonce = await this.prisma.annonce.findUnique({ where: { id } });
+    if (!annonce) {
+      throw new NotFoundException("Annonce introuvable");
+    }
+    if (annonce.statut !== StatutAnnonce.ACTIVE) {
+      throw new BadRequestException("Cette annonce n'est plus active");
+    }
+
+    const suspendue = await this.prisma.annonce.update({
+      where: { id },
+      data: { statut: StatutAnnonce.RETIREE, retireeLe: new Date() },
+    });
+
+    await this.cryptoAudit.enregistrer({
+      parcelleId: annonce.parcelleId,
+      typeOperation: TypeOperationAudit.SUSPENSION_ADMIN_ANNONCE,
+      acteurId: admin.id,
+      roleActeur: admin.role as RoleUtilisateur,
+      payload: { annonceId: id, motif: dto.motif },
+    });
+
+    return suspendue;
   }
 }

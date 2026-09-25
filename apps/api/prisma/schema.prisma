@@ -127,6 +127,7 @@ enum TypeOperationAudit {
   CONSULTATION_FINANCEMENT
   TRAITEMENT_FINANCEMENT
   ACCORD_EXCLUSIVITE
+  SUSPENSION_ADMIN_ANNONCE
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur

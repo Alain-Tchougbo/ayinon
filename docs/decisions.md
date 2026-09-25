@@ -334,3 +334,42 @@ compteur peut donc legerement sur-estimer si ce filtre est actif, un compromis h
 qu'une jointure couteuse pour une fonctionnalite secondaire. Aucune entree dans le registre
 d'audit crypto : contrairement aux operations sur une parcelle/transaction (ET.6), une recherche
 sauvegardee est une preference personnelle sans aucune portee legale.
+
+## Detection d'annonces a risque (E1.14)
+
+Des trois criteres suggeres par le CA (doublons, photos suspectes, prix aberrant), seul le
+dernier est honnetement implementable dans ce modele de donnees :
+
+- **Doublons** : deja impossibles par construction — `AnnoncesService.creer()` refuse une
+  seconde annonce active sur une parcelle qui en a deja une (voir "Vitrine (Epic 1-3)"
+  plus haut). Rien a detecter en plus.
+- **Photos suspectes** : l'annonce ne porte aucune photo dans ce modele de donnees (`CreerAnnonceSchema`
+  n'a jamais eu de champ image) — critere sans objet, pas une simplification mais une absence de
+  fonctionnalite prealable.
+- **Prix aberrant** : implemente. Reutilise exactement la logique de l'estimation de prix (E1.9,
+  meme seuil de fiabilite : au moins 3 `Convention` `VALIDEE` dans la commune) et signale toute
+  annonce active dont le prix/m² devie de plus de 50% (indicatif, comme les autres heuristiques
+  deja actees ailleurs) de cette moyenne. Sans reference fiable pour une commune, aucune annonce
+  qui s'y trouve n'est signalee — mieux ne rien affirmer que se tromper sur un echantillon trop
+  faible.
+
+Action de suspension distincte de `AnnoncesService.retirer()` (reserve au vendeur) et de
+`verifierParAndf()` (verification legale de l'ANDF) : un nouvel endpoint admin
+(`PATCH /admin/annonces/:id/suspendre`, motif obligatoire, journalise) rejoint le meme statut
+`RETIREE` que les deux autres chemins, sans les melanger dans le meme code — chaque acteur garde
+sa propre porte d'entree et sa propre justification tracee.
+
+## Journal d'audit consultable par l'admin (ET.3)
+
+L'endpoint `GET /audit/parcelles/:id/historique` (deja restreint a ADMIN/AGENT_ANDF/MAGISTRAT_CSAF)
+existait depuis le dossier de preuves CSAF (`GelCsafView.vue`), mais n'etait accessible depuis
+aucune vue pour un admin : la seule porte d'entree etait de connaitre l'ID d'une parcelle en
+contexte de gel judiciaire. Le CA d'ET.3 ("journal d'audit de toutes les actions effectuees sur
+**un dossier**") correspond exactement a ce qui existe deja — dans ce modele de donnees, un
+"dossier" est une parcelle. Ajoute donc simplement un bouton "Journal d'audit" sur chaque
+parcelle de l'onglet "Parcelles" du back-office, qui deplie le meme historique horodate/signe
+(meme rendu que GelCsafView.vue, dupliquee plutot que factorisee en composant partage : les deux
+usages restent proches en taille et evoluent independamment — magistrat contre admin). Pas de
+journal "toutes actions confondues, tous dossiers" globalise : rien dans le CA ne le demande, et
+un tel flux (potentiellement des milliers d'entrees non filtrees) n'aurait pas ete exploitable
+sans un travail de pagination/filtrage hors de portee pour cette fonctionnalite secondaire.

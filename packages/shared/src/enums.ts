@@ -127,6 +127,7 @@ export const TypeOperationAudit = {
   CONSULTATION_FINANCEMENT: "CONSULTATION_FINANCEMENT",
   TRAITEMENT_FINANCEMENT: "TRAITEMENT_FINANCEMENT",
   ACCORD_EXCLUSIVITE: "ACCORD_EXCLUSIVITE",
+  SUSPENSION_ADMIN_ANNONCE: "SUSPENSION_ADMIN_ANNONCE",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
 

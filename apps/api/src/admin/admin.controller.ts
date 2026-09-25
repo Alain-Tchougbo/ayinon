@@ -2,8 +2,10 @@ import { Body, Controller, Get, Param, Patch } from "@nestjs/common";
 import {
   ModifierParcelleAdminSchema,
   RoleUtilisateur,
+  SuspendreAnnonceSchema,
   TraiterDemandeProSchema,
   type ModifierParcelleAdminDto,
+  type SuspendreAnnonceDto,
   type TraiterDemandeProDto,
 } from "@ayinon/shared";
 import { CurrentUser, type UtilisateurAuthentifie } from "../common/decorators/current-user.decorator";
@@ -63,5 +65,21 @@ export class AdminController {
     @CurrentUser() utilisateur: UtilisateurAuthentifie,
   ) {
     return this.admin.traiterDemandePro(id, dto, utilisateur);
+  }
+
+  /** E1.14 : detection automatique d'annonces a risque (prix aberrant par rapport a la moyenne
+   * communale reelle). */
+  @Get("annonces-a-risque")
+  async annoncesARisque() {
+    return this.admin.annoncesARisque();
+  }
+
+  @Patch("annonces/:id/suspendre")
+  async suspendreAnnonce(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(SuspendreAnnonceSchema)) dto: SuspendreAnnonceDto,
+    @CurrentUser() utilisateur: UtilisateurAuthentifie,
+  ) {
+    return this.admin.suspendreAnnonce(id, dto, utilisateur);
   }
 }
