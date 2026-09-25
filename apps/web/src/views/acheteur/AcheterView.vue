@@ -6,6 +6,7 @@ import BaseCard from "../../components/ui/BaseCard.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 import { ApiError, api } from "../../services/api";
+import { useAuthStore } from "../../stores/auth.store";
 
 interface Sequestre {
   id: string;
@@ -25,6 +26,9 @@ interface MonInteret {
     parcelle: { nup: string; commune: string; superficieM2: number };
     publieePar: { nomComplet: string };
     cessions: Array<{ id: string; statutCession: string; sequestre: Sequestre | null }>;
+    enExclusivite: boolean;
+    exclusiviteAcheteur: { id: string; nomComplet: string } | null;
+    exclusiviteJusqua: string | null;
   };
 }
 
@@ -119,6 +123,7 @@ const COULEUR_STATUT_FINANCEMENT: Record<DemandeFinancement["statut"], string> =
   REFUSEE: "bg-danger/10 text-danger",
 };
 
+const auth = useAuthStore();
 const mesInterets = ref<MonInteret[]>([]);
 const mesTitres = ref<MonTitre[]>([]);
 const propositionsRecues = ref<PropositionRecue[]>([]);
@@ -504,6 +509,10 @@ async function noter(conventionId: string) {
               <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT[i.statut]">{{ LIBELLE_STATUT[i.statut] }}</span>
             </div>
             <p v-if="i.message" class="mt-1.5 text-xs text-texte-attenue">« {{ i.message }} »</p>
+            <!-- E4.5 : seul le beneficiaire voit qu'il en profite (la vitrine publique n'affiche qu'un badge anonyme). -->
+            <p v-if="i.annonce.enExclusivite && i.annonce.exclusiviteAcheteur?.id === auth.utilisateur?.id" class="mt-1.5 text-xs font-semibold text-primaire">
+              Le vendeur vous accorde une exclusivite jusqu'au {{ new Date(i.annonce.exclusiviteJusqua!).toLocaleDateString("fr-FR") }}.
+            </p>
             <div v-if="i.statut === 'RETENU'" class="mt-2.5 flex items-center gap-2 rounded-carte bg-succes/10 px-3 py-2 text-xs font-semibold text-succes">
               <Award :size="14" aria-hidden="true" />
               {{ i.annonce.statut === "VENDUE" ? "Vente finalisee : le titre a ete transfere." : "Retenu par le vendeur — cession en cours de validation ANDF." }}

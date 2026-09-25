@@ -32,6 +32,9 @@ interface MonAnnonce {
   parcelle: { nup: string; commune: string; superficieM2: number };
   interets: InteretResume[];
   limitesCertifiees: boolean;
+  enExclusivite: boolean;
+  exclusiviteAcheteur: { id: string; nomComplet: string } | null;
+  exclusiviteJusqua: string | null;
   cessions: Array<{ id: string; statutCession: string; sequestre: Sequestre | null }>;
 }
 interface CessionDirecte {
@@ -124,6 +127,9 @@ const retenueEnCours = ref<string | null>(null);
 // les deux cas reels (vide au depart, number une fois saisi).
 const montantParInteret = ref<Record<string, string | number>>({});
 const actionEnCours = ref(false);
+
+const exclusiviteEnCours = ref<string | null>(null);
+const dureeExclusiviteParInteret = ref<Record<string, string | number>>({});
 
 const reprogrammationEnCours = ref<string | null>(null);
 const nouvelleDateVisite = ref("");
@@ -249,6 +255,29 @@ async function retenir(annonceId: string, interetId: string) {
     await rafraichir();
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Impossible de retenir cet interet";
+  } finally {
+    actionEnCours.value = false;
+  }
+}
+
+/** E4.5 : securise une negociation serieuse en excluant temporairement les autres acheteurs. */
+async function accorderExclusivite(annonceId: string, interet: InteretResume) {
+  erreur.value = null;
+  message.value = null;
+  const dureeJours = dureeExclusiviteParInteret.value[interet.id];
+  if (!dureeJours) {
+    erreur.value = "Indiquez une duree en jours avant de confirmer";
+    return;
+  }
+  actionEnCours.value = true;
+  try {
+    await api.patch(`/annonces/${annonceId}/exclusivite`, { acheteurId: interet.acheteur.id, dureeJours });
+    message.value = `Exclusivite accordee a ${interet.acheteur.nomComplet}.`;
+    exclusiviteEnCours.value = null;
+    delete dureeExclusiviteParInteret.value[interet.id];
+    await rafraichir();
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Impossible d'accorder l'exclusivite";
   } finally {
     actionEnCours.value = false;
   }
@@ -564,6 +593,10 @@ async function reprogrammerVisite(id: string) {
               <Banknote :size="13" aria-hidden="true" />
               {{ LIBELLE_STATUT_SEQUESTRE[a.cessions[0]!.sequestre!.statut] }}
             </p>
+            <p v-if="a.enExclusivite" class="mt-2 text-xs font-semibold text-primaire">
+              Exclusivite accordee a {{ a.exclusiviteAcheteur?.nomComplet }} jusqu'au
+              {{ new Date(a.exclusiviteJusqua!).toLocaleDateString("fr-FR") }}
+            </p>
             <BaseButton
               v-if="a.statut === 'ACTIVE'"
               taille="sm"
@@ -609,7 +642,22 @@ async function reprogrammerVisite(id: string) {
                       Annuler
                     </BaseButton>
                   </div>
-                  <BaseButton v-else taille="sm" class="mt-2" @click="retenueEnCours = i.id">Retenir cet acheteur</BaseButton>
+                  <div v-else-if="exclusiviteEnCours === i.id" class="mt-2 flex flex-wrap items-center gap-2">
+                    <input
+                      v-model="dureeExclusiviteParInteret[i.id]"
+                      type="number"
+                      min="1"
+                      max="30"
+                      placeholder="Duree (jours)"
+                      class="w-24 rounded-carte border border-bordure bg-surface px-3 py-1.5 text-xs text-texte placeholder:text-texte-attenue"
+                    />
+                    <BaseButton taille="sm" variant="secondaire" :disabled="actionEnCours" @click="accorderExclusivite(a.id, i)">Confirmer</BaseButton>
+                    <BaseButton taille="sm" variant="secondaire" @click="exclusiviteEnCours = null">Annuler</BaseButton>
+                  </div>
+                  <div v-else class="mt-2 flex flex-wrap gap-2">
+                    <BaseButton taille="sm" @click="retenueEnCours = i.id">Retenir cet acheteur</BaseButton>
+                    <BaseButton taille="sm" variant="secondaire" @click="exclusiviteEnCours = i.id">Accorder une exclusivite</BaseButton>
+                  </div>
                 </template>
               </div>
             </div>

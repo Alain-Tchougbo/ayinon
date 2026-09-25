@@ -12,6 +12,7 @@ function creerService(options: {
   parcelleGelee?: boolean;
   autreInteretRetenu?: boolean;
   annoncesListe?: Array<Record<string, unknown>>;
+  mesInteretsListe?: Array<Record<string, unknown>>;
   parcellesLimitesCertifiees?: string[];
 } = {}) {
   const parcelle =
@@ -40,6 +41,7 @@ function creerService(options: {
       },
     },
     interetAchat: {
+      findMany: async () => options.mesInteretsListe ?? [],
       findUnique: async () => interet,
       findFirst: async ({ where }: any) =>
         where.statut === StatutInteret.RETENU && options.autreInteretRetenu
@@ -152,6 +154,84 @@ describe("AnnoncesService — vitrine publique et manifestations d'interet", () 
       interet: { id: "interet-1", annonceId: "annonce-1", acheteurId: ACHETEUR.id, statut: StatutInteret.DECLINE, acheteur: ACHETEUR },
     });
     await expect(service.retenirInteret("annonce-1", "interet-1", { montantFcfa: 10_000_000 }, VENDEUR)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("accorde une exclusivite au profit d'un acheteur ayant deja manifeste un interet (E4.5)", async () => {
+    const { service, auditAppels } = creerService({
+      annonce: { id: "annonce-1", parcelleId: "parcelle-1", publieeParId: VENDEUR.id, statut: StatutAnnonce.ACTIVE },
+      interet: { id: "interet-1", annonceId: "annonce-1", acheteurId: ACHETEUR.id, statut: StatutInteret.EN_ATTENTE, acheteur: ACHETEUR },
+    });
+    const annonce = await service.accorderExclusivite("annonce-1", { acheteurId: ACHETEUR.id, dureeJours: 5 }, VENDEUR);
+    expect((annonce as any).exclusiviteAcheteurId).toBe(ACHETEUR.id);
+    expect((annonce as any).exclusiviteJusqua).toBeInstanceOf(Date);
+    expect(auditAppels).toHaveLength(1);
+    expect((auditAppels[0] as any).typeOperation).toBe("ACCORD_EXCLUSIVITE");
+  });
+
+  it("refuse d'accorder une exclusivite a un acheteur qui n'a pas manifeste d'interet", async () => {
+    const { service } = creerService({
+      annonce: { id: "annonce-1", parcelleId: "parcelle-1", publieeParId: VENDEUR.id, statut: StatutAnnonce.ACTIVE },
+    });
+    await expect(service.accorderExclusivite("annonce-1", { acheteurId: ACHETEUR.id, dureeJours: 5 }, VENDEUR)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it("refuse qu'un vendeur accorde une exclusivite sur l'annonce d'un autre", async () => {
+    const { service } = creerService({
+      annonce: { id: "annonce-1", parcelleId: "parcelle-1", publieeParId: "autre-vendeur", statut: StatutAnnonce.ACTIVE },
+      interet: { id: "interet-1", annonceId: "annonce-1", acheteurId: ACHETEUR.id, statut: StatutInteret.EN_ATTENTE, acheteur: ACHETEUR },
+    });
+    await expect(service.accorderExclusivite("annonce-1", { acheteurId: ACHETEUR.id, dureeJours: 5 }, VENDEUR)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it("bloque une nouvelle manifestation d'interet d'un autre acheteur pendant l'exclusivite active", async () => {
+    const dansLeFutur = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+    const { service } = creerService({
+      annonce: {
+        id: "annonce-1",
+        parcelleId: "parcelle-1",
+        publieeParId: VENDEUR.id,
+        statut: StatutAnnonce.ACTIVE,
+        exclusiviteAcheteurId: "beneficiaire-1",
+        exclusiviteJusqua: dansLeFutur,
+      },
+    });
+    await expect(service.manifesterInteret("annonce-1", {}, ACHETEUR)).rejects.toThrow("negociation exclusive");
+  });
+
+  it("n'empeche plus une manifestation d'interet une fois l'exclusivite expiree (levee automatique)", async () => {
+    const dansLePasse = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const { service } = creerService({
+      annonce: {
+        id: "annonce-1",
+        parcelleId: "parcelle-1",
+        publieeParId: VENDEUR.id,
+        statut: StatutAnnonce.ACTIVE,
+        exclusiviteAcheteurId: "beneficiaire-1",
+        exclusiviteJusqua: dansLePasse,
+      },
+    });
+    const interet = await service.manifesterInteret("annonce-1", {}, ACHETEUR);
+    expect((interet as any).acheteurId).toBe(ACHETEUR.id);
+  });
+
+  it("expose enExclusivite sur l'annonce imbriquee de mes-interets (regression trouvee par verification navigateur)", async () => {
+    const dansLeFutur = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+    const { service } = creerService({
+      mesInteretsListe: [
+        {
+          id: "interet-1",
+          acheteurId: ACHETEUR.id,
+          annonce: { id: "annonce-1", parcelleId: "parcelle-1", exclusiviteAcheteurId: ACHETEUR.id, exclusiviteJusqua: dansLeFutur },
+        },
+      ],
+    });
+    const interets = await service.mesInterets(ACHETEUR.id);
+    expect((interets[0] as any).annonce.enExclusivite).toBe(true);
+    expect((interets[0] as any).annonce.limitesCertifiees).toBe(false);
   });
 
   it("renvoie une estimation honnete quand aucune transaction comparable n'existe", async () => {

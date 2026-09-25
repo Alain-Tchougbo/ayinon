@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Calculator, MapPin, Search, ShieldCheck, Store, X } from "@lucide/vue";
+import { Calculator, MapPin, Scale, Search, ShieldCheck, Store, X } from "@lucide/vue";
 import { computed, onMounted, ref } from "vue";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
@@ -13,6 +13,7 @@ interface AnnonceResume {
   verifieeParAndfId: string | null;
   parcelle: { nup: string; commune: string; arrondissement: string | null; superficieM2: number };
   limitesCertifiees: boolean;
+  enExclusivite: boolean;
 }
 
 interface EstimationPrix {
@@ -24,6 +25,20 @@ interface EstimationPrix {
 const annonces = ref<AnnonceResume[]>([]);
 const chargement = ref(false);
 const erreur = ref<string | null>(null);
+
+// E3.3 : comparaison cote a cote, jusqu'a 3 annonces a la fois.
+const MAX_COMPARAISON = 3;
+const idsComparaison = ref<string[]>([]);
+const annoncesComparees = computed(() => idsComparaison.value.map((id) => annonces.value.find((a) => a.id === id)).filter((a): a is AnnonceResume => Boolean(a)));
+
+function basculerComparaison(id: string) {
+  const index = idsComparaison.value.indexOf(id);
+  if (index !== -1) {
+    idsComparaison.value.splice(index, 1);
+  } else if (idsComparaison.value.length < MAX_COMPARAISON) {
+    idsComparaison.value.push(id);
+  }
+}
 
 const communeEstimation = ref("");
 const estimation = ref<EstimationPrix | null>(null);
@@ -171,32 +186,102 @@ async function estimer() {
       </form>
     </BaseCard>
 
+    <!-- E3.3 : comparaison cote a cote, jusqu'a 3 annonces selectionnees via la case "Comparer". -->
+    <BaseCard v-if="annoncesComparees.length > 0" rembourrage="sm">
+      <div class="mb-3 flex items-center justify-between">
+        <h2 class="flex items-center gap-2 text-sm font-semibold text-texte">
+          <Scale :size="16" class="text-primaire" aria-hidden="true" />
+          Comparaison ({{ annoncesComparees.length }}/{{ MAX_COMPARAISON }})
+        </h2>
+        <button type="button" class="text-xs font-medium text-texte-attenue underline underline-offset-2" @click="idsComparaison = []">
+          Vider
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[32rem] text-sm">
+          <tbody>
+            <tr class="border-b border-bordure">
+              <td class="py-1.5 pr-3 text-xs font-medium text-texte-attenue">Parcelle</td>
+              <td v-for="a in annoncesComparees" :key="a.id" class="py-1.5 pr-3 font-semibold text-texte">
+                <RouterLink :to="`/annonces/${a.id}`" class="hover:underline">{{ a.parcelle.nup }}</RouterLink>
+              </td>
+            </tr>
+            <tr class="border-b border-bordure">
+              <td class="py-1.5 pr-3 text-xs font-medium text-texte-attenue">Commune</td>
+              <td v-for="a in annoncesComparees" :key="a.id" class="py-1.5 pr-3 text-texte">{{ a.parcelle.commune }}</td>
+            </tr>
+            <tr class="border-b border-bordure">
+              <td class="py-1.5 pr-3 text-xs font-medium text-texte-attenue">Superficie</td>
+              <td v-for="a in annoncesComparees" :key="a.id" class="py-1.5 pr-3 text-texte">{{ a.parcelle.superficieM2.toLocaleString("fr-FR") }} m²</td>
+            </tr>
+            <tr class="border-b border-bordure">
+              <td class="py-1.5 pr-3 text-xs font-medium text-texte-attenue">Prix</td>
+              <td v-for="a in annoncesComparees" :key="a.id" class="py-1.5 pr-3 font-semibold text-primaire">
+                {{ a.prixIndicatifFcfa ? `${a.prixIndicatifFcfa.toLocaleString("fr-FR")} FCFA` : "A discuter" }}
+              </td>
+            </tr>
+            <tr class="border-b border-bordure">
+              <td class="py-1.5 pr-3 text-xs font-medium text-texte-attenue">Situation ANDF</td>
+              <td v-for="a in annoncesComparees" :key="a.id" class="py-1.5 pr-3">
+                <span :class="a.verifieeParAndfId ? 'text-succes' : 'text-texte-attenue'">{{ a.verifieeParAndfId ? "Controlee" : "Non controlee" }}</span>
+              </td>
+            </tr>
+            <tr>
+              <td class="py-1.5 pr-3 text-xs font-medium text-texte-attenue">Limites certifiees</td>
+              <td v-for="a in annoncesComparees" :key="a.id" class="py-1.5 pr-3">
+                <span :class="a.limitesCertifiees ? 'text-accent' : 'text-texte-attenue'">{{ a.limitesCertifiees ? "Oui" : "Non" }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </BaseCard>
+
     <section>
       <p v-if="chargement" class="text-sm text-texte-attenue" role="status">Chargement…</p>
       <p v-else-if="annonces.length === 0" class="text-sm text-texte-attenue">
         {{ filtresActifs ? "Aucune annonce ne correspond a ces filtres." : "Aucune annonce active pour le moment." }}
       </p>
       <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <BaseCard v-for="a in annonces" :key="a.id" :to="`/annonces/${a.id}`">
-          <p class="font-semibold text-texte">{{ a.parcelle.nup }}</p>
-          <p class="mt-0.5 flex items-center gap-1 text-xs text-texte-attenue">
-            <MapPin :size="12" aria-hidden="true" />
-            {{ a.parcelle.commune }}<span v-if="a.parcelle.arrondissement">, {{ a.parcelle.arrondissement }}</span>
-          </p>
-          <p class="mt-2 text-sm text-texte-attenue">{{ a.parcelle.superficieM2.toLocaleString("fr-FR") }} m²</p>
-          <p v-if="a.prixIndicatifFcfa" class="mt-1 text-lg font-bold text-primaire">{{ a.prixIndicatifFcfa.toLocaleString("fr-FR") }} FCFA</p>
-          <p v-else class="mt-1 text-sm italic text-texte-attenue">Prix a discuter</p>
+        <div v-for="a in annonces" :key="a.id" class="relative">
+          <label
+            class="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full bg-surface/95 px-2 py-1 text-xs text-texte shadow-carte"
+            @click.stop
+          >
+            <input
+              type="checkbox"
+              class="h-3.5 w-3.5"
+              :checked="idsComparaison.includes(a.id)"
+              :disabled="!idsComparaison.includes(a.id) && idsComparaison.length >= MAX_COMPARAISON"
+              @change="basculerComparaison(a.id)"
+            />
+            Comparer
+          </label>
+          <BaseCard :to="`/annonces/${a.id}`">
+            <p class="font-semibold text-texte">{{ a.parcelle.nup }}</p>
+            <p class="mt-0.5 flex items-center gap-1 text-xs text-texte-attenue">
+              <MapPin :size="12" aria-hidden="true" />
+              {{ a.parcelle.commune }}<span v-if="a.parcelle.arrondissement">, {{ a.parcelle.arrondissement }}</span>
+            </p>
+            <p class="mt-2 text-sm text-texte-attenue">{{ a.parcelle.superficieM2.toLocaleString("fr-FR") }} m²</p>
+            <p v-if="a.prixIndicatifFcfa" class="mt-1 text-lg font-bold text-primaire">{{ a.prixIndicatifFcfa.toLocaleString("fr-FR") }} FCFA</p>
+            <p v-else class="mt-1 text-sm italic text-texte-attenue">Prix a discuter</p>
 
-          <div class="mt-3 flex flex-wrap gap-1.5">
-            <span v-if="a.verifieeParAndfId" class="inline-flex items-center gap-1 rounded-full bg-succes/10 px-2.5 py-0.5 text-xs font-semibold text-succes">
-              <ShieldCheck :size="12" aria-hidden="true" />
-              Situation controlee ANDF
-            </span>
-            <span v-if="a.limitesCertifiees" class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-semibold text-accent">
-              Limites certifiees
-            </span>
-          </div>
-        </BaseCard>
+            <div class="mt-3 flex flex-wrap gap-1.5">
+              <span v-if="a.verifieeParAndfId" class="inline-flex items-center gap-1 rounded-full bg-succes/10 px-2.5 py-0.5 text-xs font-semibold text-succes">
+                <ShieldCheck :size="12" aria-hidden="true" />
+                Situation controlee ANDF
+              </span>
+              <span v-if="a.limitesCertifiees" class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-semibold text-accent">
+                Limites certifiees
+              </span>
+              <!-- E4.5 : badge public, sans jamais reveler l'identite de l'acheteur beneficiaire. -->
+              <span v-if="a.enExclusivite" class="inline-flex items-center gap-1 rounded-full bg-texte-attenue/10 px-2.5 py-0.5 text-xs font-semibold text-texte-attenue">
+                En negociation exclusive
+              </span>
+            </div>
+          </BaseCard>
+        </div>
       </div>
     </section>
   </div>

@@ -1,11 +1,13 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import {
+  AccorderExclusiviteSchema,
   CreerAnnonceSchema,
   ManifesterInteretSchema,
   RechercheAnnonceSchema,
   RetenirInteretSchema,
   RoleUtilisateur,
   VerifierAnnonceSchema,
+  type AccorderExclusiviteDto,
   type CreerAnnonceDto,
   type ManifesterInteretDto,
   type RechercheAnnonceDto,
@@ -83,6 +85,16 @@ export class AnnoncesController {
     @CurrentUser() utilisateur: UtilisateurAuthentifie,
   ) {
     return this.annonces.retenirInteret(id, interetId, dto, utilisateur);
+  }
+
+  @Roles(RoleUtilisateur.VENDEUR)
+  @Patch(":id/exclusivite")
+  async accorderExclusivite(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(AccorderExclusiviteSchema)) dto: AccorderExclusiviteDto,
+    @CurrentUser() utilisateur: UtilisateurAuthentifie,
+  ) {
+    return this.annonces.accorderExclusivite(id, dto, utilisateur);
   }
 
   @Roles(RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.ADMIN)

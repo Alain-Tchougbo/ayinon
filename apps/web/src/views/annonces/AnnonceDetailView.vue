@@ -19,6 +19,7 @@ interface AnnonceDetail {
   publieePar: { id: string; nomComplet: string };
   interets: Array<{ acheteur: { id: string } }>;
   limitesCertifiees: boolean;
+  enExclusivite: boolean;
 }
 
 interface ProfilVendeur {
@@ -183,6 +184,10 @@ async function signaler() {
           <span v-if="annonce.limitesCertifiees" class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-semibold text-accent">
             Limites certifiees par un geometre
           </span>
+          <!-- E4.5 : badge public, sans jamais reveler l'identite de l'acheteur beneficiaire. -->
+          <span v-if="annonce.enExclusivite" class="inline-flex items-center gap-1 rounded-full bg-texte-attenue/10 px-2.5 py-0.5 text-xs font-semibold text-texte-attenue">
+            En negociation exclusive
+          </span>
         </div>
 
         <p v-if="annonce.description" class="mt-4 whitespace-pre-line text-sm text-texte">{{ annonce.description }}</p>
@@ -257,6 +262,9 @@ async function signaler() {
         </h2>
         <p v-if="dejaManifeste" class="text-sm text-texte-attenue">
           Vous avez deja manifeste votre interet sur cette annonce. Le vendeur a ete notifie.
+        </p>
+        <p v-else-if="annonce.enExclusivite" class="text-sm text-texte-attenue">
+          Cette annonce est en negociation exclusive avec un autre acheteur pour le moment.
         </p>
         <form v-else class="space-y-3" @submit.prevent="manifesterInteret">
           <textarea

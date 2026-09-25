@@ -286,3 +286,34 @@ ce que le CA autorise : statut (en attente / fonde / rejete), motif du signalant
 la decision une fois qualifie — jamais les pieces ou echanges reserves a l'admin/au magistrat
 CSAF, qui restent sur leurs files dediees (`/signalements` pour l'admin, `/signalements/litiges-fondes`
 pour le CSAF).
+
+## Exclusivite temporaire (E4.5)
+
+Nouveaux champs `exclusiviteAcheteurId`/`exclusiviteJusqua` sur `Annonce`. Le vendeur ne peut
+l'accorder qu'a un acheteur ayant deja reellement manifeste un interet (`InteretAchat` existant) —
+pas a n'importe qui, pour rester coherent avec le CA ("securiser une negociation serieuse"). Duree
+bornee a 1-30 jours (`AccorderExclusiviteSchema`). Comme pour le badge "limites certifiees", aucun
+statut booleen stocke a part : `enExclusivite` est toujours recalcule depuis `exclusiviteJusqua`
+compare a `new Date()`, ce qui fait que la levee est **automatique a expiration** (CA d'E4.5) sans
+tache planifiee ni cron — la prochaine lecture de l'annonce refletera deja la levee. Pendant
+l'exclusivite active, `manifesterInteret()` refuse toute nouvelle manifestation d'un acheteur autre
+que le beneficiaire ; celui-ci, ayant deja manifeste son interet au prealable, n'a de toute facon
+rien de plus a faire.
+
+Affichage a trois niveaux de granularite selon le public : la vitrine publique et le detail
+d'annonce affichent un badge anonyme "En negociation exclusive" (sans jamais reveler l'identite de
+l'acheteur beneficiaire a un visiteur quelconque) ; le vendeur, dans `VendreView.vue`, voit le nom
+complet du beneficiaire et l'echeance (c'est son propre choix) ; l'acheteur beneficiaire, dans
+`AcheterView.vue`, voit une note dediee uniquement sur *sa propre* ligne d'interet — un autre
+acheteur qui aurait deja manifeste un interet avant l'octroi de l'exclusivite ne voit, lui, que le
+badge public anonyme sur l'annonce, jamais le nom du beneficiaire.
+
+## Comparaison cote a cote (E3.3)
+
+Purement frontend : `AnnoncesListeView.vue` derive la comparaison directement de la liste deja
+chargee (`GET /annonces`), aucun endpoint dedie. Case a cocher "Comparer" par annonce (jusqu'a 3,
+CA), affichee en dehors de la carte cliquable (`BaseCard :to=...`) pour eviter tout conflit de
+propagation de clic avec la navigation vers le detail. Comparaison sur prix, superficie, commune et
+les deux badges (controle ANDF, limites certifiees) — le CA mentionne aussi la "distance", non
+retenue : aucune position de reference (l'utilisateur n'a pas fourni sa propre localisation) dont
+calculer une distance pertinente dans cette iteration.

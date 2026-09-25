@@ -126,6 +126,7 @@ enum TypeOperationAudit {
   DEMANDE_FINANCEMENT
   CONSULTATION_FINANCEMENT
   TRAITEMENT_FINANCEMENT
+  ACCORD_EXCLUSIVITE
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
@@ -270,6 +271,7 @@ model Utilisateur {
   cessionsValidees      Convention[]         @relation("CessionValidateur")
   annoncesPubliees      Annonce[]            @relation("AnnoncePubliee")
   annoncesVerifiees     Annonce[]            @relation("AnnonceVerifieeAndf")
+  exclusivitesRecues    Annonce[]            @relation("AnnonceExclusivite")
   interetsExprimes      InteretAchat[]       @relation("InteretAcheteur")
   signalementsDeposes   Signalement[]        @relation("SignalementAuteur")
   signalementsQualifies Signalement[]        @relation("SignalementQualificateur")
@@ -463,6 +465,13 @@ model Annonce {
   verifieeParAndfId    String?
   verifieeParAndf      Utilisateur? @relation("AnnonceVerifieeAndf", fields: [verifieeParAndfId], references: [id])
   dateVerificationAndf DateTime?
+
+  /// Exclusivite temporaire (E4.5) : le vendeur suspend l'arrivee de nouveaux interets au profit
+  /// d'un acheteur deja interesse, le temps de securiser la negociation. Purement declarative (pas
+  /// de statut stocke a part : leve automatiquement des que exclusiviteJusqua est depassee).
+  exclusiviteAcheteurId String?
+  exclusiviteAcheteur   Utilisateur? @relation("AnnonceExclusivite", fields: [exclusiviteAcheteurId], references: [id])
+  exclusiviteJusqua     DateTime?
 
   interets            InteretAchat[]
   cessions            Convention[]

@@ -40,3 +40,11 @@ export const RechercheAnnonceSchema = z.object({
   limitesCertifiees: z.string().optional(),
 });
 export type RechercheAnnonceDto = z.infer<typeof RechercheAnnonceSchema>;
+
+/** Exclusivite temporaire (E4.5) : le vendeur suspend l'arrivee de nouveaux interets au profit
+ * d'un acheteur deja interesse, pour une duree bornee (1 a 30 jours). */
+export const AccorderExclusiviteSchema = z.object({
+  acheteurId: z.string().uuid(),
+  dureeJours: z.coerce.number().int().min(1).max(30),
+});
+export type AccorderExclusiviteDto = z.infer<typeof AccorderExclusiviteSchema>;

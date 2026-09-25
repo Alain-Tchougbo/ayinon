@@ -6,6 +6,7 @@ import {
   StatutCession,
   StatutInteret,
   TypeOperationAudit,
+  type AccorderExclusiviteDto,
   type CreerAnnonceDto,
   type ManifesterInteretDto,
   type RechercheAnnonceDto,
@@ -21,6 +22,7 @@ const INCLUSION_ANNONCE = {
   parcelle: { select: { id: true, nup: true, commune: true, arrondissement: true, superficieM2: true, statut: true, poleTerritorial: true } },
   publieePar: { select: { id: true, nomComplet: true } },
   verifieeParAndf: { select: { id: true, nomComplet: true } },
+  exclusiviteAcheteur: { select: { id: true, nomComplet: true } },
   interets: { include: { acheteur: { select: { id: true, nomComplet: true } } } },
   // E7.7 : id de la cession issue de cette annonce, necessaire pour que l'acheteur/le vendeur
   // puisse noter l'autre partie une fois la vente finalisee (voir AvisService). Le sequestre
@@ -177,6 +179,13 @@ export class AnnoncesService {
       throw new BadRequestException("Cette annonce est deja en cours de cession avec un autre acheteur");
     }
 
+    // E4.5 : tant que l'exclusivite accordee par le vendeur n'est pas expiree, seul l'acheteur
+    // qui en beneficie peut manifester son interet — leve automatiquement des que la date est
+    // depassee, sans action manuelle ni tache planifiee (voir docs/decisions.md).
+    if (annonce.exclusiviteAcheteurId && annonce.exclusiviteJusqua && annonce.exclusiviteJusqua > new Date() && annonce.exclusiviteAcheteurId !== acheteur.id) {
+      throw new BadRequestException("Cette annonce est en negociation exclusive avec un autre acheteur pour le moment");
+    }
+
     const dejaManifeste = await this.prisma.interetAchat.findUnique({
       where: { annonceId_acheteurId: { annonceId, acheteurId: acheteur.id } },
     });
@@ -200,11 +209,15 @@ export class AnnoncesService {
   }
 
   async mesInterets(acheteurId: string) {
-    return this.prisma.interetAchat.findMany({
+    const interets = await this.prisma.interetAchat.findMany({
       where: { acheteurId },
       include: { annonce: { include: INCLUSION_ANNONCE } },
       orderBy: { createdAt: "desc" },
     });
+    // Bug trouve par verification Playwright (E4.5) : sans ce passage par avecBadges, l'annonce
+    // imbriquee n'avait ni enExclusivite ni limitesCertifiees (toujours undefined cote frontend),
+    // contrairement a listerActives/obtenirParId/mesAnnonces qui l'appellent deja tous.
+    return Promise.all(interets.map(async (interet) => ({ ...interet, annonce: await this.avecBadges(interet.annonce) })));
   }
 
   /** Le vendeur retient un interet (E4.3) : scelle immediatement une cession ACCEPTEE, qui rejoint
@@ -280,6 +293,45 @@ export class AnnoncesService {
     return convention;
   }
 
+  /** E4.5 : le vendeur securise une negociation serieuse en excluant temporairement les autres
+   * acheteurs. L'acheteur beneficiaire doit avoir deja manifeste un interet reel (pas n'importe
+   * qui) ; la levee est automatique a expiration, jamais une action manuelle a part. */
+  async accorderExclusivite(annonceId: string, dto: AccorderExclusiviteDto, vendeur: UtilisateurAuthentifie) {
+    const annonce = await this.prisma.annonce.findUnique({ where: { id: annonceId } });
+    if (!annonce) {
+      throw new NotFoundException("Annonce introuvable");
+    }
+    if (annonce.publieeParId !== vendeur.id) {
+      throw new ForbiddenException("Seul le vendeur ayant publie cette annonce peut accorder une exclusivite");
+    }
+    if (annonce.statut !== StatutAnnonce.ACTIVE) {
+      throw new BadRequestException("Cette annonce n'est plus active");
+    }
+    const interet = await this.prisma.interetAchat.findUnique({ where: { annonceId_acheteurId: { annonceId, acheteurId: dto.acheteurId } } });
+    if (!interet) {
+      throw new BadRequestException("Cet acheteur n'a pas manifeste d'interet sur cette annonce");
+    }
+
+    const exclusiviteJusqua = new Date();
+    exclusiviteJusqua.setDate(exclusiviteJusqua.getDate() + dto.dureeJours);
+
+    const misAJour = await this.prisma.annonce.update({
+      where: { id: annonceId },
+      data: { exclusiviteAcheteurId: dto.acheteurId, exclusiviteJusqua },
+      include: INCLUSION_ANNONCE,
+    });
+
+    await this.cryptoAudit.enregistrer({
+      parcelleId: annonce.parcelleId,
+      typeOperation: TypeOperationAudit.ACCORD_EXCLUSIVITE,
+      acteurId: vendeur.id,
+      roleActeur: vendeur.role as RoleUtilisateur,
+      payload: { annonceId, acheteurId: dto.acheteurId, dureeJours: dto.dureeJours, exclusiviteJusqua: exclusiviteJusqua.toISOString() },
+    });
+
+    return this.avecBadges(misAJour);
+  }
+
   /** E1.11/E2.2 : un agent ANDF verifie la situation fonciere et pose (ou refuse) le badge public. */
   async verifierParAndf(id: string, dto: VerifierAnnonceDto, agent: UtilisateurAuthentifie) {
     const annonce = await this.prisma.annonce.findUnique({ where: { id } });
@@ -335,11 +387,13 @@ export class AnnoncesService {
   }
 
   /** Badge "limites certifiees" (E2.3) : jamais stocke, toujours deduit du plan de bornage reel
-   * pour ne jamais desynchroniser un booleen dedie de la situation technique effective. */
-  private async avecBadges<T extends { parcelleId: string }>(annonce: T) {
+   * pour ne jamais desynchroniser un booleen dedie de la situation technique effective. Meme
+   * logique pour "en exclusivite" (E4.5) : jamais un statut a part, toujours recalcule depuis la
+   * date d'expiration pour se lever automatiquement sans tache planifiee. */
+  private async avecBadges<T extends { parcelleId: string; exclusiviteJusqua?: Date | null }>(annonce: T) {
     const planCertifie = await this.prisma.planBornage.findFirst({
       where: { parcelleId: annonce.parcelleId, signeParId: { not: null }, chevauchementDetecte: false },
     });
-    return { ...annonce, limitesCertifiees: Boolean(planCertifie) };
+    return { ...annonce, limitesCertifiees: Boolean(planCertifie), enExclusivite: Boolean(annonce.exclusiviteJusqua && annonce.exclusiviteJusqua > new Date()) };
   }
 }
