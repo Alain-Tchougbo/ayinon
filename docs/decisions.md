@@ -273,3 +273,16 @@ tout sequestre non deja `LIBERE`/`REMBOURSE` lie a une cession annulee par le CS
 Aucun changement frontend necessaire : `AcheterView.vue`/`VendreView.vue` affichent deja le
 statut du sequestre de facon generique (`LIBELLE_STATUT_SEQUESTRE`), REMBOURSE s'y reflete
 donc automatiquement.
+
+## Suivi d'un dossier de litige pour le signalant (E8.9)
+
+Le backend exposait deja `GET /signalements/mes-signalements` (depuis la construction des
+signalements, E2.6/E2.7/E8.1/E8.2) mais aucune vue ne l'affichait, laissant le signalant sans
+moyen de suivre l'avancement de son propre dossier — exactement le besoin d'E8.9 ("suivre
+l'etat d'avancement de la procedure sans acceder aux pieces qui ne me concernent pas"). Nouvelle
+vue `MesSignalementsView.vue` (route `/mes-signalements`, accessible aux quatre roles habilites
+a deposer un signalement : CITOYEN/VENDEUR/ACHETEUR/MANDATAIRE_FAMILIAL) qui affiche uniquement
+ce que le CA autorise : statut (en attente / fonde / rejete), motif du signalant, et le motif de
+la decision une fois qualifie — jamais les pieces ou echanges reserves a l'admin/au magistrat
+CSAF, qui restent sur leurs files dediees (`/signalements` pour l'admin, `/signalements/litiges-fondes`
+pour le CSAF).

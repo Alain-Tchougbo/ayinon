@@ -15,6 +15,7 @@ import {
   Megaphone,
   Ruler,
   ScanLine,
+  ScrollText,
   Search,
   ShieldCheck,
   Store,
@@ -168,6 +169,18 @@ const raccourcis = computed(() => {
       icone: LayoutDashboard,
       titre: "Back-office",
       description: "Vue d'ensemble, utilisateurs, proprietaires, parcelles et documents.",
+    });
+  }
+  // E8.9 : suivi d'avancement d'un dossier de litige, accessible a chaque partie prenante habilitee a signaler.
+  if (
+    auth.role &&
+    [RoleUtilisateur.CITOYEN, RoleUtilisateur.VENDEUR, RoleUtilisateur.ACHETEUR, RoleUtilisateur.MANDATAIRE_FAMILIAL].includes(auth.role)
+  ) {
+    items.push({
+      to: "/mes-signalements",
+      icone: ScrollText,
+      titre: "Mes signalements",
+      description: "Suivez l'avancement de vos signalements et contestations.",
     });
   }
   return items;

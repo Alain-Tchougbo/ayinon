@@ -112,6 +112,16 @@ const router = createRouter({
       },
     },
     {
+      path: "/mes-signalements",
+      name: "mes-signalements",
+      component: () => import("../views/signalements/MesSignalementsView.vue"),
+      meta: {
+        necessiteAuth: true,
+        rolesAutorises: [RoleUtilisateur.CITOYEN, RoleUtilisateur.VENDEUR, RoleUtilisateur.ACHETEUR, RoleUtilisateur.MANDATAIRE_FAMILIAL],
+        titre: "Mes signalements",
+      },
+    },
+    {
       path: "/admin",
       name: "admin",
       component: () => import("../views/admin/AdminView.vue"),
