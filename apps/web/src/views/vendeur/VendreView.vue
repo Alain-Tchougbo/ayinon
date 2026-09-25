@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Award, Banknote, Check, Handshake, Megaphone, Send, ShieldCheck, Star, Store, X } from "@lucide/vue";
+import { Award, Banknote, Calculator, Check, Handshake, Megaphone, Send, ShieldCheck, Star, Store, X } from "@lucide/vue";
+import { simulerGainNet } from "@ayinon/shared";
 import { computed, onMounted, ref } from "vue";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
@@ -106,6 +107,13 @@ const parcellesSansAnnonceActive = computed(() => {
   return parcelles.parcelles.filter((p) => p.proprietaireId === auth.utilisateur?.proprietaireId && !idsAvecAnnonceActive.has(p.id));
 });
 const mesParcelles = computed(() => parcelles.parcelles.filter((p) => p.proprietaireId === auth.utilisateur?.proprietaireId));
+
+// E1.10 : simulation instantanee, recalculee a chaque frappe sans aller-retour reseau (fonction
+// pure partagee avec le backend, voir packages/shared/src/calculs/gain-net.ts).
+const simulationGainNet = computed(() => {
+  const prix = Number(prixIndicatifFcfa.value);
+  return prix > 0 ? simulerGainNet(prix) : null;
+});
 
 onMounted(async () => {
   chargement.value = true;
@@ -272,6 +280,24 @@ async function noter(conventionId: string) {
             </select>
           </div>
           <BaseInput id="prix-indicatif" v-model="prixIndicatifFcfa" type="number" label="Prix indicatif en FCFA (optionnel)" />
+
+          <!-- E1.10 : simulation du gain net, mise a jour instantanement au fil de la saisie. -->
+          <div v-if="simulationGainNet" class="rounded-carte bg-fond p-3 text-xs text-texte-attenue">
+            <p class="mb-1.5 flex items-center gap-1.5 font-semibold text-texte">
+              <Calculator :size="13" aria-hidden="true" />
+              Gain net estime
+            </p>
+            <ul class="space-y-0.5">
+              <li class="flex justify-between"><span>Commission plateforme</span><span>− {{ simulationGainNet.commissionPlateformeFcfa.toLocaleString("fr-FR") }} FCFA</span></li>
+              <li class="flex justify-between"><span>Frais notariaux vendeur</span><span>− {{ simulationGainNet.fraisNotariauxFcfa.toLocaleString("fr-FR") }} FCFA</span></li>
+              <li class="flex justify-between"><span>Taxe sur la plus-value</span><span>− {{ simulationGainNet.taxeFcfa.toLocaleString("fr-FR") }} FCFA</span></li>
+              <li class="mt-1 flex justify-between border-t border-bordure pt-1 font-semibold text-texte">
+                <span>Montant net estime</span><span>{{ simulationGainNet.montantNetFcfa.toLocaleString("fr-FR") }} FCFA</span>
+              </li>
+            </ul>
+            <p class="mt-1.5 italic">Simulation a taux forfaitaires indicatifs, pas un calcul fiscal definitif.</p>
+          </div>
+
           <div>
             <label for="description-annonce" class="mb-1 block text-sm font-medium text-texte">Description (optionnelle)</label>
             <textarea

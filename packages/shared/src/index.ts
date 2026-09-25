@@ -12,3 +12,4 @@ export * from "./schemas/signalement.schema";
 export * from "./schemas/avis.schema";
 export * from "./schemas/sequestre.schema";
 export * from "./schemas/sync.schema";
+export * from "./calculs/gain-net";

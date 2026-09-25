@@ -158,6 +158,19 @@ limite a la note moyenne, au nombre d'avis et au nombre de ventes conclues (`Con
 + `statutCession: VALIDEE`) — pas de page de profil dediee ni de liste paginee des avis, juste un
 resume affiche sur la fiche d'annonce.
 
+## Simulateur de gain net vendeur (E1.10)
+
+Trois taux forfaitaires indicatifs (commission plateforme 2%, frais notariaux vendeur 1%, taxe
+sur la plus-value 5%) — aucun de ces taux n'a de base reglementaire ou commerciale arretee a ce
+stade du projet, ils servent uniquement a donner un ordre de grandeur honnete, explicitement
+qualifie comme tel dans l'interface ("Simulation a taux forfaitaires indicatifs, pas un calcul
+fiscal definitif"). Implemente comme une fonction pure partagee (`packages/shared/src/calculs/gain-net.ts`)
+appelee directement cote client (recalcul instantane a chaque frappe dans le champ prix, sans
+aucun aller-retour reseau) plutot que via un endpoint API : contrairement a l'estimation de prix
+(E1.9, qui interroge des cessions reelles en base) ou au simulateur de frais acheteur existant
+(qui appelle le backend), ce calcul ne depend d'aucune donnee serveur — le faire transiter par
+une requete HTTP a chaque frappe n'aurait ajoute que de la latence sans aucun benefice.
+
 ## Estimation de prix (E1.9)
 
 Calculee uniquement a partir des `Convention` reellement `VALIDEE` dans la meme commune
