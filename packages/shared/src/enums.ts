@@ -111,6 +111,8 @@ export const TypeOperationAudit = {
   DEMANDE_VALIDATION_PRO: "DEMANDE_VALIDATION_PRO",
   VALIDATION_COMPTE_PRO: "VALIDATION_COMPTE_PRO",
   REJET_COMPTE_PRO: "REJET_COMPTE_PRO",
+  DEMANDE_VISITE: "DEMANDE_VISITE",
+  REPONSE_VISITE: "REPONSE_VISITE",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
 
@@ -188,6 +190,22 @@ export const StatutDeclarantVendeur = {
   AGENCE: "AGENCE",
 } as const;
 export type StatutDeclarantVendeur = (typeof StatutDeclarantVendeur)[keyof typeof StatutDeclarantVendeur];
+
+/** Modalite d'une visite (E3.5) : VIDEO ne suppose aucune integration de visioconference reelle,
+ * les parties conviennent elles-memes du lien a utiliser. */
+export const ModeVisite = {
+  PRESENTIEL: "PRESENTIEL",
+  VIDEO: "VIDEO",
+} as const;
+export type ModeVisite = (typeof ModeVisite)[keyof typeof ModeVisite];
+
+export const StatutVisite = {
+  DEMANDEE: "DEMANDEE",
+  CONFIRMEE: "CONFIRMEE",
+  REFUSEE: "REFUSEE",
+  REPROGRAMMEE: "REPROGRAMMEE",
+} as const;
+export type StatutVisite = (typeof StatutVisite)[keyof typeof StatutVisite];
 
 /** File d'attente de validation des comptes professionnels (E0.5/E0.6). */
 export const StatutValidationPro = {

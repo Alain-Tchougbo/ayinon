@@ -109,6 +109,8 @@ enum TypeOperationAudit {
   DEMANDE_VALIDATION_PRO
   VALIDATION_COMPTE_PRO
   REJET_COMPTE_PRO
+  DEMANDE_VISITE
+  REPONSE_VISITE
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
@@ -187,6 +189,22 @@ enum StatutSequestre {
   REMBOURSE
 }
 
+/// Modalite d'une visite (E3.5) : pas d'integration de visioconference reelle (Zoom, Meet...),
+/// VIDEO signifie simplement que les parties conviennent elles-memes du lien a utiliser.
+enum ModeVisite {
+  PRESENTIEL
+  VIDEO
+}
+
+/// DEMANDEE -> CONFIRMEE/REFUSEE par le vendeur, ou REPROGRAMMEE (le vendeur propose une autre
+/// date, que l'acheteur doit alors confirmer ou refuser a son tour).
+enum StatutVisite {
+  DEMANDEE
+  CONFIRMEE
+  REFUSEE
+  REPROGRAMMEE
+}
+
 enum PoleTerritorial {
   LITTORAL_ATLANTIQUE
   OUEME_PLATEAU
@@ -235,6 +253,7 @@ model Utilisateur {
   avisRecus             Avis[]         @relation("AvisCite")
   sequestresDeclares    Sequestre[]    @relation("SequestreDeclarant")
   sequestresConfirmes   Sequestre[]    @relation("SequestreConfirmateur")
+  visitesDemandees      Visite[]       @relation("VisiteAcheteur")
 
   /// Declare uniquement par un VENDEUR (E0.3) : adapte les pieces demandees lors de la publication.
   statutDeclarant StatutDeclarantVendeur?
@@ -422,6 +441,7 @@ model Annonce {
   interets     InteretAchat[]
   cessions     Convention[]
   signalements Signalement[]
+  visites      Visite[]
 
   @@index([parcelleId])
   @@index([statut])
@@ -443,6 +463,32 @@ model InteretAchat {
 
   @@unique([annonceId, acheteurId])
   @@index([annonceId])
+}
+
+/// Demande de visite (E3.5/E3.6) : l'acheteur propose un creneau, le vendeur confirme, refuse ou
+/// reprogramme (propose une autre date, que l'acheteur doit alors confirmer/refuser a son tour).
+/// Pas de delegation a un accompagnateur de terrain dans cette iteration (aucun role dedie
+/// n'existe pour ca), ni d'integration de visioconference reelle (voir enum ModeVisite).
+model Visite {
+  id              String       @id @default(uuid())
+  annonceId       String
+  annonce         Annonce      @relation(fields: [annonceId], references: [id])
+  mode            ModeVisite
+  dateProposee    DateTime
+  messageAcheteur String?
+  statut          StatutVisite @default(DEMANDEE)
+
+  /// Renseignee uniquement quand le vendeur reprogramme (statut REPROGRAMMEE).
+  nouvelleDateProposee DateTime?
+  motifRefus           String?
+  createdAt            DateTime  @default(now())
+  traiteeLe            DateTime?
+
+  acheteurId String
+  acheteur   Utilisateur @relation("VisiteAcheteur", fields: [acheteurId], references: [id])
+
+  @@index([annonceId])
+  @@index([acheteurId])
 }
 
 /// Gage bancaire inscrit sur une parcelle titree : tant qu'une hypotheque ACTIVE existe, la

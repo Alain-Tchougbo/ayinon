@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Flag, Handshake, MapPin, ShieldCheck, Star, Store } from "@lucide/vue";
+import { CalendarClock, Flag, Handshake, MapPin, ShieldCheck, Star, Store } from "@lucide/vue";
 import { RoleUtilisateur } from "@ayinon/shared";
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
@@ -37,6 +37,13 @@ const erreur = ref<string | null>(null);
 const message = ref<string | null>(null);
 const messageInteret = ref("");
 const envoiEnCours = ref(false);
+
+const visiteOuverte = ref(false);
+const dateVisite = ref("");
+const modeVisite = ref<"PRESENTIEL" | "VIDEO">("PRESENTIEL");
+const messageVisite = ref("");
+const visiteEnvoyee = ref(false);
+const visiteEnCours = ref(false);
 
 const ROLES_SIGNALANTS: RoleUtilisateur[] = [
   RoleUtilisateur.CITOYEN,
@@ -86,6 +93,28 @@ async function manifesterInteret() {
     erreur.value = e instanceof ApiError ? e.message : "Impossible d'envoyer votre interet";
   } finally {
     envoiEnCours.value = false;
+  }
+}
+
+async function demanderVisite() {
+  erreur.value = null;
+  if (!dateVisite.value) {
+    erreur.value = "Choisissez une date et une heure pour la visite";
+    return;
+  }
+  visiteEnCours.value = true;
+  try {
+    await api.post(`/visites/annonces/${route.params.id}`, {
+      dateProposee: new Date(dateVisite.value).toISOString(),
+      mode: modeVisite.value,
+      message: messageVisite.value.trim() || undefined,
+    });
+    visiteEnvoyee.value = true;
+    visiteOuverte.value = false;
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Impossible d'envoyer la demande de visite";
+  } finally {
+    visiteEnCours.value = false;
   }
 }
 
@@ -167,6 +196,58 @@ async function signaler() {
             <span>{{ profilVendeur.ventesConclues }} vente(s) conclue(s)</span>
           </template>
         </div>
+      </BaseCard>
+
+      <!-- E3.5 : demander une visite avant de s'engager davantage. -->
+      <BaseCard v-if="annonce.statut === 'ACTIVE' && auth.role === RoleUtilisateur.ACHETEUR">
+        <h2 class="mb-3 flex items-center gap-2 text-sm font-semibold text-texte">
+          <CalendarClock :size="16" class="text-primaire" aria-hidden="true" />
+          Demander une visite
+        </h2>
+        <p v-if="visiteEnvoyee" class="text-sm text-texte-attenue">
+          Votre demande de visite a ete envoyee au vendeur. Retrouvez son statut depuis votre espace "Acheter un terrain".
+        </p>
+        <template v-else>
+          <button
+            v-if="!visiteOuverte"
+            type="button"
+            class="text-sm font-medium text-primaire underline underline-offset-2"
+            @click="visiteOuverte = true"
+          >
+            Proposer un creneau de visite
+          </button>
+          <form v-else class="space-y-3" @submit.prevent="demanderVisite">
+            <div>
+              <label for="date-visite" class="mb-1 block text-xs font-medium text-texte">Date et heure souhaitees</label>
+              <input
+                id="date-visite"
+                v-model="dateVisite"
+                type="datetime-local"
+                class="w-full rounded-carte border border-bordure bg-fond px-3.5 py-2.5 text-sm text-texte"
+              />
+            </div>
+            <div class="flex gap-4 text-xs text-texte">
+              <label class="flex items-center gap-1.5">
+                <input v-model="modeVisite" type="radio" value="PRESENTIEL" />
+                Sur place
+              </label>
+              <label class="flex items-center gap-1.5">
+                <input v-model="modeVisite" type="radio" value="VIDEO" />
+                A distance (video)
+              </label>
+            </div>
+            <textarea
+              v-model="messageVisite"
+              rows="2"
+              placeholder="Un message pour le vendeur (optionnel)"
+              class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-sm text-texte placeholder:text-texte-attenue"
+            />
+            <div class="flex gap-2">
+              <BaseButton type="submit" taille="sm" :disabled="visiteEnCours">Envoyer la demande</BaseButton>
+              <BaseButton taille="sm" variant="secondaire" @click="visiteOuverte = false">Annuler</BaseButton>
+            </div>
+          </form>
+        </template>
       </BaseCard>
 
       <BaseCard v-if="annonce.statut === 'ACTIVE' && auth.role === RoleUtilisateur.ACHETEUR">

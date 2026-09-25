@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Award, Banknote, Check, Download, FileStack, Handshake, Inbox, Search, Star, X } from "@lucide/vue";
+import { Award, Banknote, CalendarClock, Check, Download, FileStack, Handshake, Inbox, Search, Star, X } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
@@ -53,6 +53,16 @@ interface PropositionRecue {
   parcelle: { nup: string; commune: string };
 }
 
+interface MaVisite {
+  id: string;
+  mode: "PRESENTIEL" | "VIDEO";
+  dateProposee: string;
+  nouvelleDateProposee: string | null;
+  statut: "DEMANDEE" | "CONFIRMEE" | "REFUSEE" | "REPROGRAMMEE";
+  motifRefus: string | null;
+  annonce: { id: string; parcelle: { nup: string; commune: string }; publieePar: { nomComplet: string } };
+}
+
 const LIBELLE_STATUT: Record<MonInteret["statut"], string> = { EN_ATTENTE: "En attente", RETENU: "Retenu", DECLINE: "Decline" };
 const COULEUR_STATUT: Record<MonInteret["statut"], string> = {
   EN_ATTENTE: "bg-accent/10 text-accent",
@@ -75,11 +85,24 @@ const LIBELLE_STATUT_SEQUESTRE: Record<Sequestre["statut"], string> = {
   LIBERE: "Depot libere au vendeur",
   REMBOURSE: "Depot rembourse",
 };
+const LIBELLE_STATUT_VISITE: Record<MaVisite["statut"], string> = {
+  DEMANDEE: "En attente du vendeur",
+  CONFIRMEE: "Confirmee",
+  REFUSEE: "Refusee",
+  REPROGRAMMEE: "Nouvelle date proposee par le vendeur",
+};
+const COULEUR_STATUT_VISITE: Record<MaVisite["statut"], string> = {
+  DEMANDEE: "bg-accent/10 text-accent",
+  CONFIRMEE: "bg-succes/10 text-succes",
+  REFUSEE: "bg-danger/10 text-danger",
+  REPROGRAMMEE: "bg-primaire/10 text-primaire",
+};
 
 const mesInterets = ref<MonInteret[]>([]);
 const mesTitres = ref<MonTitre[]>([]);
 const propositionsRecues = ref<PropositionRecue[]>([]);
 const cessionsAcquises = ref<CessionAcquise[]>([]);
+const mesVisites = ref<MaVisite[]>([]);
 const chargement = ref(false);
 const erreur = ref<string | null>(null);
 const message = ref<string | null>(null);
@@ -99,11 +122,12 @@ const montantSequestre = ref<Record<string, string | number>>({});
 onMounted(async () => {
   chargement.value = true;
   try {
-    [mesInterets.value, mesTitres.value, propositionsRecues.value, cessionsAcquises.value] = await Promise.all([
+    [mesInterets.value, mesTitres.value, propositionsRecues.value, cessionsAcquises.value, mesVisites.value] = await Promise.all([
       api.get<MonInteret[]>("/annonces/mes-interets"),
       api.get<MonTitre[]>("/cessions/mes-titres"),
       api.get<PropositionRecue[]>("/cessions/mes-propositions-recues"),
       api.get<CessionAcquise[]>("/cessions/mes-cessions-acquises"),
+      api.get<MaVisite[]>("/visites/mes-demandes"),
     ]);
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Impossible de charger vos manifestations d'interet";
@@ -152,6 +176,21 @@ async function repondre(cessionId: string, accepter: boolean) {
     refusEnCoursId.value = null;
     delete motifRefusParCession.value[cessionId];
     propositionsRecues.value = await api.get<PropositionRecue[]>("/cessions/mes-propositions-recues");
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Reponse impossible";
+  } finally {
+    actionEnCours.value = false;
+  }
+}
+
+async function repondreVisite(id: string, decision: "CONFIRMER" | "REFUSER") {
+  erreur.value = null;
+  message.value = null;
+  actionEnCours.value = true;
+  try {
+    await api.patch(`/visites/${id}/repondre`, { decision });
+    message.value = decision === "CONFIRMER" ? "Nouvelle date de visite confirmee." : "Visite refusee.";
+    mesVisites.value = await api.get<MaVisite[]>("/visites/mes-demandes");
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Reponse impossible";
   } finally {
@@ -294,6 +333,45 @@ async function noter(conventionId: string) {
                   Declarer un depot de reservation
                 </BaseButton>
               </template>
+            </div>
+          </BaseCard>
+        </li>
+      </ul>
+    </section>
+
+    <section v-if="mesVisites.length > 0">
+      <h2 class="mb-3 flex items-center gap-2 font-semibold text-texte">
+        <CalendarClock :size="16" class="text-primaire" aria-hidden="true" />
+        Vos demandes de visite
+      </h2>
+      <ul class="space-y-3">
+        <li v-for="v in mesVisites" :key="v.id">
+          <BaseCard rembourrage="sm">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p class="font-semibold text-texte">{{ v.annonce.parcelle.nup }} — {{ v.annonce.parcelle.commune }}</p>
+                <p class="text-xs text-texte-attenue">
+                  {{ v.mode === "PRESENTIEL" ? "Sur place" : "A distance" }} — {{ new Date(v.dateProposee).toLocaleString("fr-FR") }}
+                </p>
+              </div>
+              <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_VISITE[v.statut]">
+                {{ LIBELLE_STATUT_VISITE[v.statut] }}
+              </span>
+            </div>
+            <p v-if="v.statut === 'REFUSEE' && v.motifRefus" class="mt-1.5 text-xs text-danger">Motif : {{ v.motifRefus }}</p>
+
+            <div v-if="v.statut === 'REPROGRAMMEE' && v.nouvelleDateProposee" class="mt-3 space-y-2 rounded-carte border border-bordure bg-fond p-3">
+              <p class="text-xs text-texte">Nouvelle date proposee : {{ new Date(v.nouvelleDateProposee).toLocaleString("fr-FR") }}</p>
+              <div class="flex gap-2">
+                <BaseButton taille="sm" :disabled="actionEnCours" @click="repondreVisite(v.id, 'CONFIRMER')">
+                  <Check :size="12" aria-hidden="true" />
+                  Confirmer cette date
+                </BaseButton>
+                <BaseButton taille="sm" variant="secondaire" :disabled="actionEnCours" @click="repondreVisite(v.id, 'REFUSER')">
+                  <X :size="12" aria-hidden="true" />
+                  Refuser
+                </BaseButton>
+              </div>
             </div>
           </BaseCard>
         </li>

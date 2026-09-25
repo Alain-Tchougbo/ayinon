@@ -158,6 +158,23 @@ limite a la note moyenne, au nombre d'avis et au nombre de ventes conclues (`Con
 + `statutCession: VALIDEE`) — pas de page de profil dediee ni de liste paginee des avis, juste un
 resume affiche sur la fiche d'annonce.
 
+## Demandes de visite (E3.5/E3.6)
+
+Cycle simplifie : l'acheteur propose un creneau (date/heure + mode presentiel/video), le vendeur
+confirme, refuse, ou reprogramme une fois (propose une autre date que l'acheteur doit alors
+confirmer/refuser a son tour). Deux simplifications deliberees par rapport au CA du backlog :
+
+- **Pas de delegation a un "accompagnateur de terrain"** (mentionnee dans E3.6) : aucun role de ce
+  type n'existe dans le systeme, en inventer un uniquement pour cette fonctionnalite secondaire
+  aurait ete disproportionne.
+- **Le mode VIDEO ne suppose aucune integration de visioconference reelle** (Zoom, Meet...) : les
+  parties conviennent elles-memes du lien a utiliser, exactement comme les autres canaux non
+  integres de la plateforme (voir "Notifications" plus bas).
+
+Aucun motif n'est exige pour refuser une visite (contrairement aux cessions ou aux signalements) :
+le CA d'E3.5/E3.6 ne le demande pas explicitement, et une visite refusee est un evenement mineur
+comparee au rejet d'une cession ou d'un signalement.
+
 ## Inscription professionnelle et validation admin (E0.5/E0.6)
 
 GEOMETRE, NOTAIRE et AGENT_BANQUE peuvent desormais s'inscrire en libre-service comme

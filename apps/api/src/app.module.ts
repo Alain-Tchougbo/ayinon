@@ -23,6 +23,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 import { SequestresModule } from "./sequestres/sequestres.module";
 import { SignalementsModule } from "./signalements/signalements.module";
 import { SyncModule } from "./sync/sync.module";
+import { VisitesModule } from "./visites/visites.module";
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { SyncModule } from "./sync/sync.module";
     SignalementsModule,
     AvisModule,
     SequestresModule,
+    VisitesModule,
     SyncModule,
   ],
   providers: [

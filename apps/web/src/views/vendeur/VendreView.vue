@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Award, Banknote, Calculator, Check, Handshake, Megaphone, Send, ShieldCheck, Star, Store, X } from "@lucide/vue";
+import { Award, Banknote, Calculator, CalendarClock, Check, Handshake, Megaphone, Send, ShieldCheck, Star, Store, X } from "@lucide/vue";
 import { simulerGainNet } from "@ayinon/shared";
 import { computed, onMounted, ref } from "vue";
 import BaseButton from "../../components/ui/BaseButton.vue";
@@ -45,6 +45,15 @@ interface CessionDirecte {
   titre: { id: string; numeroTitre: string; dateDelivrance: string } | null;
   sequestre: Sequestre | null;
 }
+interface VisiteRecue {
+  id: string;
+  mode: "PRESENTIEL" | "VIDEO";
+  dateProposee: string;
+  messageAcheteur: string | null;
+  statut: "DEMANDEE" | "CONFIRMEE" | "REFUSEE" | "REPROGRAMMEE";
+  annonce: { parcelle: { nup: string; commune: string } };
+  acheteur: { nomComplet: string };
+}
 
 const LIBELLE_STATUT_SEQUESTRE: Record<Sequestre["statut"], string> = {
   DEPOT_DECLARE: "Depot declare par l'acheteur — en attente de confirmation par la banque",
@@ -72,12 +81,25 @@ const COULEUR_STATUT: Record<MonAnnonce["statut"], string> = {
   RETIREE: "bg-texte-attenue/10 text-texte-attenue",
   VENDUE: "bg-primaire/10 text-primaire",
 };
+const LIBELLE_STATUT_VISITE: Record<VisiteRecue["statut"], string> = {
+  DEMANDEE: "A traiter",
+  CONFIRMEE: "Confirmee",
+  REFUSEE: "Refusee",
+  REPROGRAMMEE: "Nouvelle date proposee — en attente de l'acheteur",
+};
+const COULEUR_STATUT_VISITE: Record<VisiteRecue["statut"], string> = {
+  DEMANDEE: "bg-accent/10 text-accent",
+  CONFIRMEE: "bg-succes/10 text-succes",
+  REFUSEE: "bg-danger/10 text-danger",
+  REPROGRAMMEE: "bg-primaire/10 text-primaire",
+};
 
 const auth = useAuthStore();
 const parcelles = useParcellesStore();
 
 const mesAnnonces = ref<MonAnnonce[]>([]);
 const cessionsEmises = ref<CessionDirecte[]>([]);
+const visitesRecues = ref<VisiteRecue[]>([]);
 const chargement = ref(false);
 const erreur = ref<string | null>(null);
 const message = ref<string | null>(null);
@@ -96,6 +118,9 @@ const retenueEnCours = ref<string | null>(null);
 // les deux cas reels (vide au depart, number une fois saisi).
 const montantParInteret = ref<Record<string, string | number>>({});
 const actionEnCours = ref(false);
+
+const reprogrammationEnCours = ref<string | null>(null);
+const nouvelleDateVisite = ref("");
 
 const notationEnCours = ref<string | null>(null);
 const noteChoisie = ref<Record<string, number>>({});
@@ -119,9 +144,10 @@ onMounted(async () => {
   chargement.value = true;
   try {
     await parcelles.chargerToutes();
-    [mesAnnonces.value, cessionsEmises.value] = await Promise.all([
+    [mesAnnonces.value, cessionsEmises.value, visitesRecues.value] = await Promise.all([
       api.get<MonAnnonce[]>("/annonces/mes-annonces"),
       api.get<CessionDirecte[]>("/cessions/mes-cessions-emises"),
+      api.get<VisiteRecue[]>("/visites/recues"),
     ]);
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Impossible de charger vos annonces";
@@ -234,6 +260,42 @@ async function noter(conventionId: string) {
     notationEnCours.value = null;
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Impossible d'enregistrer votre avis";
+  } finally {
+    actionEnCours.value = false;
+  }
+}
+
+async function repondreVisite(id: string, decision: "CONFIRMER" | "REFUSER") {
+  erreur.value = null;
+  message.value = null;
+  actionEnCours.value = true;
+  try {
+    await api.patch(`/visites/${id}/repondre`, { decision });
+    message.value = decision === "CONFIRMER" ? "Visite confirmee." : "Visite refusee.";
+    visitesRecues.value = await api.get<VisiteRecue[]>("/visites/recues");
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Reponse impossible";
+  } finally {
+    actionEnCours.value = false;
+  }
+}
+
+async function reprogrammerVisite(id: string) {
+  erreur.value = null;
+  message.value = null;
+  if (!nouvelleDateVisite.value) {
+    erreur.value = "Choisissez une nouvelle date avant d'envoyer";
+    return;
+  }
+  actionEnCours.value = true;
+  try {
+    await api.patch(`/visites/${id}/repondre`, { decision: "REPROGRAMMER", nouvelleDate: new Date(nouvelleDateVisite.value).toISOString() });
+    message.value = "Nouvelle date proposee a l'acheteur.";
+    reprogrammationEnCours.value = null;
+    nouvelleDateVisite.value = "";
+    visitesRecues.value = await api.get<VisiteRecue[]>("/visites/recues");
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Reprogrammation impossible";
   } finally {
     actionEnCours.value = false;
   }
@@ -377,6 +439,51 @@ async function noter(conventionId: string) {
               <Award :size="14" aria-hidden="true" />
               Titre {{ c.titre.numeroTitre }} delivre le {{ new Date(c.titre.dateDelivrance).toLocaleDateString("fr-FR") }}
             </div>
+          </BaseCard>
+        </li>
+      </ul>
+    </section>
+
+    <section v-if="visitesRecues.length > 0">
+      <h2 class="mb-3 flex items-center gap-2 font-semibold text-texte">
+        <CalendarClock :size="16" class="text-primaire" aria-hidden="true" />
+        Visites recues
+      </h2>
+      <ul class="space-y-3">
+        <li v-for="v in visitesRecues" :key="v.id">
+          <BaseCard rembourrage="sm">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p class="font-semibold text-texte">{{ v.annonce.parcelle.nup }} — {{ v.annonce.parcelle.commune }}</p>
+                <p class="text-xs text-texte-attenue">
+                  {{ v.acheteur.nomComplet }} — {{ v.mode === "PRESENTIEL" ? "Sur place" : "A distance" }} —
+                  {{ new Date(v.dateProposee).toLocaleString("fr-FR") }}
+                </p>
+              </div>
+              <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_VISITE[v.statut]">
+                {{ LIBELLE_STATUT_VISITE[v.statut] }}
+              </span>
+            </div>
+            <p v-if="v.messageAcheteur" class="mt-1.5 text-xs text-texte-attenue">« {{ v.messageAcheteur }} »</p>
+
+            <template v-if="v.statut === 'DEMANDEE'">
+              <div v-if="reprogrammationEnCours === v.id" class="mt-3 flex flex-wrap items-center gap-2">
+                <input v-model="nouvelleDateVisite" type="datetime-local" class="rounded-carte border border-bordure bg-fond px-3 py-1.5 text-xs text-texte" />
+                <BaseButton taille="sm" :disabled="actionEnCours" @click="reprogrammerVisite(v.id)">Envoyer</BaseButton>
+                <BaseButton taille="sm" variant="secondaire" @click="reprogrammationEnCours = null">Annuler</BaseButton>
+              </div>
+              <div v-else class="mt-3 flex flex-wrap gap-2">
+                <BaseButton taille="sm" :disabled="actionEnCours" @click="repondreVisite(v.id, 'CONFIRMER')">
+                  <Check :size="12" aria-hidden="true" />
+                  Confirmer
+                </BaseButton>
+                <BaseButton taille="sm" variant="secondaire" :disabled="actionEnCours" @click="repondreVisite(v.id, 'REFUSER')">
+                  <X :size="12" aria-hidden="true" />
+                  Refuser
+                </BaseButton>
+                <BaseButton taille="sm" variant="secondaire" @click="reprogrammationEnCours = v.id">Reprogrammer</BaseButton>
+              </div>
+            </template>
           </BaseCard>
         </li>
       </ul>
