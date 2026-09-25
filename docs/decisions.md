@@ -238,3 +238,23 @@ Calculee uniquement a partir des `Convention` reellement `VALIDEE` dans la meme 
 (prix/m² moyen). Aucune donnee de marche externe, aucun chiffre invente. Le nombre de
 references utilisees est toujours renvoye, avec un avertissement explicite si ce nombre
 est faible (< 3), plutot que de presenter une estimation comme fiable sans l'etre.
+
+## Dossier de financement bancaire (E4.6-E4.9)
+
+Demande de financement independante d'une annonce precise (champ `annonceId` optionnel) :
+un acheteur peut vouloir un accord de principe avant meme d'avoir trouve un bien. Aucun
+scoring automatique ni verification de revenus reelle — la banque partenaire (AGENT_BANQUE)
+tranche elle-meme, avec un simple montant souhaite et un justificatif optionnel en piece
+jointe (meme mecanisme de stockage que les decisions CSAF : hash SHA-256 sur disque, chemin
+en base). L'acces de la banque a une demande est horodate des la premiere ouverture
+(`dateConsultation`, pose une seule fois) pour repondre a l'exigence E4.7 de tracabilite,
+sans notification en temps reel (coherent avec l'absence de passerelle e-mail/SMS deja
+actee ailleurs).
+
+Un accord de principe genere un `codeVerification` aleatoire (8 caracteres hexadecimaux) :
+c'est le mecanisme complet de l'E4.8 ("attestation verifiable par le vendeur via un code"),
+sans generation de PDF ni document formel — le vendeur saisit le code dans une page publique
+(`GET /financements/verifier/:code`, sans authentification) et obtient une confirmation
+minimale (nom de l'acheteur, montant accorde). Comme pour les documents CSAF, aucune route
+ne sert le fichier justificatif televerse en telechargement — limitation deja actee pour les
+autres uploads de la plateforme, pas specifique a cette fonctionnalite.

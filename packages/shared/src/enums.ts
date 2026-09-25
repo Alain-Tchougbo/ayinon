@@ -123,6 +123,9 @@ export const TypeOperationAudit = {
   REPONSE_VISITE: "REPONSE_VISITE",
   DECISION_CSAF_ANNULATION_VENTE: "DECISION_CSAF_ANNULATION_VENTE",
   DECISION_CSAF_TRANSFERT_FORCE: "DECISION_CSAF_TRANSFERT_FORCE",
+  DEMANDE_FINANCEMENT: "DEMANDE_FINANCEMENT",
+  CONSULTATION_FINANCEMENT: "CONSULTATION_FINANCEMENT",
+  TRAITEMENT_FINANCEMENT: "TRAITEMENT_FINANCEMENT",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
 
@@ -142,6 +145,14 @@ export const StatutHypotheque = {
   LEVEE: "LEVEE",
 } as const;
 export type StatutHypotheque = (typeof StatutHypotheque)[keyof typeof StatutHypotheque];
+
+/** Demande de financement (E4.6-E4.8) : aucun scoring automatique, la decision reste toujours humaine. */
+export const StatutDemandeFinancement = {
+  EN_ATTENTE: "EN_ATTENTE",
+  ACCORD_PRINCIPE: "ACCORD_PRINCIPE",
+  REFUSEE: "REFUSEE",
+} as const;
+export type StatutDemandeFinancement = (typeof StatutDemandeFinancement)[keyof typeof StatutDemandeFinancement];
 
 /**
  * Six poles territoriaux (regroupement des 12 departements du Benin), reference structurante

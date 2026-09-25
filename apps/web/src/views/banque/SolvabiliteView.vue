@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Banknote, CircleCheck, CircleX, Landmark, Search, TriangleAlert } from "@lucide/vue";
+import { Banknote, CircleCheck, CircleX, FileCheck, Landmark, Search, TriangleAlert } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
@@ -32,6 +32,14 @@ interface DepotAConfirmer {
   convention: { montantFcfa: number; vendeurNom: string; acquereurNom: string; parcelle: { nup: string; commune: string } };
   declarePar: { nomComplet: string };
 }
+interface DemandeFinancementATraiter {
+  id: string;
+  montantSouhaiteFcfa: number;
+  cheminDocument: string | null;
+  createdAt: string;
+  acheteur: { nomComplet: string };
+  annonce: { parcelle: { nup: string; commune: string } } | null;
+}
 
 const { definirPhraseCourante } = useVoiceAssistant();
 
@@ -53,10 +61,16 @@ const motifLeveeParHypotheque = ref<Record<string, string>>({});
 const depotsAConfirmer = ref<DepotAConfirmer[]>([]);
 const confirmationEnCoursId = ref<string | null>(null);
 
+const demandesFinancement = ref<DemandeFinancementATraiter[]>([]);
+const decisionEnCoursId = ref<string | null>(null);
+const montantAccordeParDemande = ref<Record<string, string>>({});
+const motifRefusParDemande = ref<Record<string, string>>({});
+const actionFinancementEnCours = ref(false);
+
 onMounted(async () => {
   definirPhraseCourante(PHRASES.solvabiliteIntro);
   try {
-    await Promise.all([chargerMesInscriptions(), chargerDepotsAConfirmer()]);
+    await Promise.all([chargerMesInscriptions(), chargerDepotsAConfirmer(), chargerDemandesFinancement()]);
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Impossible de charger vos donnees";
   }
@@ -68,6 +82,49 @@ async function chargerMesInscriptions() {
 
 async function chargerDepotsAConfirmer() {
   depotsAConfirmer.value = await api.get<DepotAConfirmer[]>("/sequestres/a-confirmer");
+}
+
+async function chargerDemandesFinancement() {
+  demandesFinancement.value = await api.get<DemandeFinancementATraiter[]>("/financements/a-traiter");
+}
+
+/** E4.7 : ouvrir la demande horodate sa premiere consultation cote serveur. */
+async function examinerDemandeFinancement(id: string) {
+  erreur.value = null;
+  decisionEnCoursId.value = id;
+  try {
+    await api.get(`/financements/${id}`);
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Impossible d'ouvrir cette demande";
+  }
+}
+
+async function traiterDemandeFinancement(id: string, decision: "ACCORD_PRINCIPE" | "REFUSER") {
+  erreur.value = null;
+  message.value = null;
+  const montantAccordeFcfa = montantAccordeParDemande.value[id]?.trim();
+  const motifRefus = motifRefusParDemande.value[id]?.trim();
+  if (decision === "ACCORD_PRINCIPE" && !montantAccordeFcfa) {
+    erreur.value = "Indiquez le montant accorde avant de valider";
+    return;
+  }
+  if (decision === "REFUSER" && (!motifRefus || motifRefus.length < 10)) {
+    erreur.value = "Le motif de refus doit compter au moins 10 caracteres";
+    return;
+  }
+  actionFinancementEnCours.value = true;
+  try {
+    await api.patch(`/financements/${id}/traiter`, { decision, montantAccordeFcfa, motifRefus });
+    message.value = decision === "ACCORD_PRINCIPE" ? "Accord de principe envoye a l'acheteur." : "Demande de financement refusee.";
+    decisionEnCoursId.value = null;
+    delete montantAccordeParDemande.value[id];
+    delete motifRefusParDemande.value[id];
+    await chargerDemandesFinancement();
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Traitement impossible";
+  } finally {
+    actionFinancementEnCours.value = false;
+  }
 }
 
 async function confirmerDepot(id: string) {
@@ -170,6 +227,48 @@ async function lever(hypothequeId: string) {
             <BaseButton taille="sm" class="mt-2.5" :disabled="confirmationEnCoursId === d.id" @click="confirmerDepot(d.id)">
               Confirmer l'encaissement
             </BaseButton>
+          </BaseCard>
+        </li>
+      </ul>
+    </section>
+
+    <!-- E4.6-E4.9 : dossier de financement bancaire des acheteurs, a examiner et trancher. -->
+    <section v-if="demandesFinancement.length > 0">
+      <h2 class="mb-3 flex items-center gap-2 font-semibold text-texte">
+        <FileCheck :size="16" class="text-accent" aria-hidden="true" />
+        Demandes de financement a traiter ({{ demandesFinancement.length }})
+      </h2>
+      <ul class="space-y-2.5">
+        <li v-for="d in demandesFinancement" :key="d.id">
+          <BaseCard accentue="accent" rembourrage="sm">
+            <p class="font-semibold text-texte">{{ d.acheteur.nomComplet }} — {{ d.montantSouhaiteFcfa.toLocaleString("fr-FR") }} FCFA souhaites</p>
+            <p v-if="d.annonce" class="mt-0.5 text-xs text-texte-attenue">Pour {{ d.annonce.parcelle.nup }} — {{ d.annonce.parcelle.commune }}</p>
+            <p class="mt-0.5 text-xs text-texte-attenue">Demande le {{ new Date(d.createdAt).toLocaleDateString("fr-FR") }}</p>
+            <p v-if="d.cheminDocument" class="mt-0.5 text-xs text-texte-attenue">Un justificatif a ete joint a cette demande.</p>
+
+            <BaseButton v-if="decisionEnCoursId !== d.id" taille="sm" class="mt-2.5" @click="examinerDemandeFinancement(d.id)">
+              Examiner
+            </BaseButton>
+            <div v-else class="mt-2.5 space-y-2.5 rounded-carte border border-bordure bg-fond p-3">
+              <BaseInput :id="`montant-accorde-${d.id}`" v-model="montantAccordeParDemande[d.id]" type="number" label="Montant accorde (FCFA)" />
+              <BaseButton taille="sm" :disabled="actionFinancementEnCours" @click="traiterDemandeFinancement(d.id, 'ACCORD_PRINCIPE')">
+                Accorder un principe de financement
+              </BaseButton>
+              <div class="border-t border-bordure pt-2.5">
+                <label :for="`motif-refus-financement-${d.id}`" class="mb-1 block text-xs font-medium text-texte">Ou refuser, avec motif</label>
+                <textarea
+                  :id="`motif-refus-financement-${d.id}`"
+                  v-model="motifRefusParDemande[d.id]"
+                  rows="2"
+                  placeholder="Ex. revenus insuffisants au regard du montant demande"
+                  class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
+                />
+                <BaseButton taille="sm" variant="danger" class="mt-2" :disabled="actionFinancementEnCours" @click="traiterDemandeFinancement(d.id, 'REFUSER')">
+                  Refuser la demande
+                </BaseButton>
+              </div>
+              <BaseButton taille="sm" variant="secondaire" @click="decisionEnCoursId = null">Annuler</BaseButton>
+            </div>
           </BaseCard>
         </li>
       </ul>

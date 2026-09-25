@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Award, Banknote, Calculator, CalendarClock, Check, Handshake, Megaphone, Send, ShieldCheck, Star, Store, X } from "@lucide/vue";
+import { Award, Banknote, Calculator, CalendarClock, Check, Handshake, Landmark, Megaphone, Send, ShieldCheck, Star, Store, X } from "@lucide/vue";
 import { simulerGainNet } from "@ayinon/shared";
 import { computed, onMounted, ref } from "vue";
 import BaseButton from "../../components/ui/BaseButton.vue";
@@ -44,6 +44,12 @@ interface CessionDirecte {
   acquereur: { id: string; nomComplet: string } | null;
   titre: { id: string; numeroTitre: string; dateDelivrance: string } | null;
   sequestre: Sequestre | null;
+}
+interface ResultatVerificationFinancement {
+  valide: boolean;
+  acheteurNom?: string;
+  montantAccordeFcfa?: number | null;
+  dateEmission?: string | null;
 }
 interface VisiteRecue {
   id: string;
@@ -121,6 +127,10 @@ const actionEnCours = ref(false);
 
 const reprogrammationEnCours = ref<string | null>(null);
 const nouvelleDateVisite = ref("");
+
+const codeVerificationFinancement = ref("");
+const resultatVerificationFinancement = ref<ResultatVerificationFinancement | null>(null);
+const verificationFinancementEnCours = ref(false);
 
 const notationEnCours = ref<string | null>(null);
 const noteChoisie = ref<Record<string, number>>({});
@@ -280,6 +290,23 @@ async function repondreVisite(id: string, decision: "CONFIRMER" | "REFUSER") {
   }
 }
 
+/** E4.8 : verifier l'attestation d'une banque sans avoir a la contacter. */
+async function verifierAttestationFinancement() {
+  erreur.value = null;
+  resultatVerificationFinancement.value = null;
+  if (!codeVerificationFinancement.value.trim()) return;
+  verificationFinancementEnCours.value = true;
+  try {
+    resultatVerificationFinancement.value = await api.get<ResultatVerificationFinancement>(
+      `/financements/verifier/${encodeURIComponent(codeVerificationFinancement.value.trim())}`,
+    );
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Verification impossible";
+  } finally {
+    verificationFinancementEnCours.value = false;
+  }
+}
+
 async function reprogrammerVisite(id: string) {
   erreur.value = null;
   message.value = null;
@@ -374,6 +401,32 @@ async function reprogrammerVisite(id: string) {
             <BaseButton taille="sm" :disabled="actionEnCours || !parcelleChoisie" @click="publier">Publier l'annonce</BaseButton>
             <BaseButton taille="sm" variant="secondaire" @click="publicationEnCours = false">Annuler</BaseButton>
           </div>
+        </div>
+      </BaseCard>
+    </section>
+
+    <!-- E4.8 : verification d'une attestation de financement via son code, sans contacter la banque. -->
+    <section>
+      <h2 class="mb-3 flex items-center gap-2 font-semibold text-texte">
+        <Landmark :size="16" class="text-primaire" aria-hidden="true" />
+        Verifier une attestation de financement
+      </h2>
+      <BaseCard rembourrage="sm">
+        <form class="flex gap-2" @submit.prevent="verifierAttestationFinancement">
+          <input
+            v-model="codeVerificationFinancement"
+            placeholder="Code de verification (ex. AB12CD34)"
+            class="flex-1 rounded-carte border border-bordure bg-surface px-3.5 py-2.5 text-sm uppercase text-texte placeholder:text-texte-attenue placeholder:normal-case"
+          />
+          <BaseButton type="submit" taille="sm" :disabled="verificationFinancementEnCours || !codeVerificationFinancement.trim()">Verifier</BaseButton>
+        </form>
+        <div v-if="resultatVerificationFinancement" class="mt-3 border-t border-bordure pt-3">
+          <p v-if="resultatVerificationFinancement.valide" class="flex items-center gap-1.5 text-sm font-semibold text-succes">
+            <ShieldCheck :size="15" aria-hidden="true" />
+            Accord de principe valide pour {{ resultatVerificationFinancement.acheteurNom }} —
+            {{ resultatVerificationFinancement.montantAccordeFcfa?.toLocaleString("fr-FR") }} FCFA
+          </p>
+          <p v-else class="text-sm text-danger">Code invalide ou attestation non accordee.</p>
         </div>
       </BaseCard>
     </section>

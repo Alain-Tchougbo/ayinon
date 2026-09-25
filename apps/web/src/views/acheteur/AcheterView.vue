@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Award, Banknote, CalendarClock, Check, Download, FileStack, Handshake, Inbox, Search, Star, X } from "@lucide/vue";
+import { Award, Banknote, CalendarClock, Check, Download, FileStack, Handshake, Inbox, Landmark, Search, Star, X } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
+import BaseInput from "../../components/ui/BaseInput.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 import { ApiError, api } from "../../services/api";
 
@@ -63,6 +64,16 @@ interface MaVisite {
   annonce: { id: string; parcelle: { nup: string; commune: string }; publieePar: { nomComplet: string } };
 }
 
+interface DemandeFinancement {
+  id: string;
+  montantSouhaiteFcfa: number;
+  statut: "EN_ATTENTE" | "ACCORD_PRINCIPE" | "REFUSEE";
+  montantAccordeFcfa: number | null;
+  motifRefus: string | null;
+  codeVerification: string | null;
+  createdAt: string;
+}
+
 const LIBELLE_STATUT: Record<MonInteret["statut"], string> = { EN_ATTENTE: "En attente", RETENU: "Retenu", DECLINE: "Decline" };
 const COULEUR_STATUT: Record<MonInteret["statut"], string> = {
   EN_ATTENTE: "bg-accent/10 text-accent",
@@ -97,15 +108,30 @@ const COULEUR_STATUT_VISITE: Record<MaVisite["statut"], string> = {
   REFUSEE: "bg-danger/10 text-danger",
   REPROGRAMMEE: "bg-primaire/10 text-primaire",
 };
+const LIBELLE_STATUT_FINANCEMENT: Record<DemandeFinancement["statut"], string> = {
+  EN_ATTENTE: "En attente d'examen par la banque",
+  ACCORD_PRINCIPE: "Accord de principe",
+  REFUSEE: "Refusee",
+};
+const COULEUR_STATUT_FINANCEMENT: Record<DemandeFinancement["statut"], string> = {
+  EN_ATTENTE: "bg-accent/10 text-accent",
+  ACCORD_PRINCIPE: "bg-succes/10 text-succes",
+  REFUSEE: "bg-danger/10 text-danger",
+};
 
 const mesInterets = ref<MonInteret[]>([]);
 const mesTitres = ref<MonTitre[]>([]);
 const propositionsRecues = ref<PropositionRecue[]>([]);
 const cessionsAcquises = ref<CessionAcquise[]>([]);
 const mesVisites = ref<MaVisite[]>([]);
+const mesFinancements = ref<DemandeFinancement[]>([]);
 const chargement = ref(false);
 const erreur = ref<string | null>(null);
 const message = ref<string | null>(null);
+
+const formulaireFinancementOuvert = ref(false);
+const montantSouhaiteFinancement = ref("");
+const fichierFinancement = ref<File | null>(null);
 
 const notationEnCours = ref<string | null>(null);
 const noteChoisie = ref<Record<string, number>>({});
@@ -122,12 +148,13 @@ const montantSequestre = ref<Record<string, string | number>>({});
 onMounted(async () => {
   chargement.value = true;
   try {
-    [mesInterets.value, mesTitres.value, propositionsRecues.value, cessionsAcquises.value, mesVisites.value] = await Promise.all([
+    [mesInterets.value, mesTitres.value, propositionsRecues.value, cessionsAcquises.value, mesVisites.value, mesFinancements.value] = await Promise.all([
       api.get<MonInteret[]>("/annonces/mes-interets"),
       api.get<MonTitre[]>("/cessions/mes-titres"),
       api.get<PropositionRecue[]>("/cessions/mes-propositions-recues"),
       api.get<CessionAcquise[]>("/cessions/mes-cessions-acquises"),
       api.get<MaVisite[]>("/visites/mes-demandes"),
+      api.get<DemandeFinancement[]>("/financements/mes-demandes"),
     ]);
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Impossible de charger vos manifestations d'interet";
@@ -193,6 +220,35 @@ async function repondreVisite(id: string, decision: "CONFIRMER" | "REFUSER") {
     mesVisites.value = await api.get<MaVisite[]>("/visites/mes-demandes");
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Reponse impossible";
+  } finally {
+    actionEnCours.value = false;
+  }
+}
+
+function surChoixFichierFinancement(evenement: Event) {
+  fichierFinancement.value = (evenement.target as HTMLInputElement).files?.[0] ?? null;
+}
+
+async function demanderFinancement() {
+  erreur.value = null;
+  message.value = null;
+  if (!montantSouhaiteFinancement.value) {
+    erreur.value = "Indiquez le montant souhaite avant d'envoyer";
+    return;
+  }
+  actionEnCours.value = true;
+  try {
+    const donnees = new FormData();
+    donnees.set("montantSouhaiteFcfa", montantSouhaiteFinancement.value);
+    if (fichierFinancement.value) donnees.set("fichier", fichierFinancement.value);
+    await api.postForm("/financements", donnees);
+    message.value = "Demande de financement envoyee a une banque partenaire.";
+    formulaireFinancementOuvert.value = false;
+    montantSouhaiteFinancement.value = "";
+    fichierFinancement.value = null;
+    mesFinancements.value = await api.get<DemandeFinancement[]>("/financements/mes-demandes");
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Impossible d'envoyer la demande de financement";
   } finally {
     actionEnCours.value = false;
   }
@@ -373,6 +429,55 @@ async function noter(conventionId: string) {
                 </BaseButton>
               </div>
             </div>
+          </BaseCard>
+        </li>
+      </ul>
+    </section>
+
+    <!-- E4.6-E4.9 : dossier de financement bancaire, independant d'une annonce precise. -->
+    <section>
+      <h2 class="mb-3 flex items-center gap-2 font-semibold text-texte">
+        <Landmark :size="16" class="text-primaire" aria-hidden="true" />
+        Dossier de financement bancaire
+      </h2>
+
+      <BaseCard v-if="formulaireFinancementOuvert" rembourrage="sm">
+        <div class="space-y-2.5">
+          <BaseInput id="montant-financement" v-model="montantSouhaiteFinancement" type="number" label="Montant souhaite (FCFA)" />
+          <div>
+            <label for="fichier-financement" class="mb-1 block text-xs font-medium text-texte">Justificatif (optionnel)</label>
+            <input id="fichier-financement" type="file" class="w-full text-xs text-texte" @change="surChoixFichierFinancement" />
+          </div>
+          <div class="flex gap-2">
+            <BaseButton taille="sm" :disabled="actionEnCours || !montantSouhaiteFinancement" @click="demanderFinancement">Envoyer la demande</BaseButton>
+            <BaseButton taille="sm" variant="secondaire" @click="formulaireFinancementOuvert = false">Annuler</BaseButton>
+          </div>
+        </div>
+      </BaseCard>
+      <BaseCard v-else rembourrage="sm">
+        <button type="button" class="flex items-center gap-2 text-sm font-semibold text-primaire" @click="formulaireFinancementOuvert = true">
+          <Landmark :size="16" aria-hidden="true" />
+          Demander un accord de financement
+        </button>
+      </BaseCard>
+
+      <ul v-if="mesFinancements.length > 0" class="mt-3 space-y-2.5">
+        <li v-for="f in mesFinancements" :key="f.id">
+          <BaseCard rembourrage="sm">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <p class="font-semibold text-texte">{{ f.montantSouhaiteFcfa.toLocaleString("fr-FR") }} FCFA souhaites</p>
+              <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_FINANCEMENT[f.statut]">
+                {{ LIBELLE_STATUT_FINANCEMENT[f.statut] }}
+              </span>
+            </div>
+            <p class="mt-0.5 text-xs text-texte-attenue">Demande envoyee le {{ new Date(f.createdAt).toLocaleDateString("fr-FR") }}</p>
+            <template v-if="f.statut === 'ACCORD_PRINCIPE'">
+              <p class="mt-2 text-sm text-succes">Montant accorde : {{ f.montantAccordeFcfa?.toLocaleString("fr-FR") }} FCFA</p>
+              <p class="mt-1 font-mono text-xs text-texte-attenue">
+                Code de verification a transmettre au vendeur : <span class="font-semibold text-texte">{{ f.codeVerification }}</span>
+              </p>
+            </template>
+            <p v-else-if="f.statut === 'REFUSEE' && f.motifRefus" class="mt-1.5 text-xs text-danger">Motif : {{ f.motifRefus }}</p>
           </BaseCard>
         </li>
       </ul>

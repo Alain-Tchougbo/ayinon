@@ -15,6 +15,7 @@ import { ConventionsModule } from "./conventions/conventions.module";
 import { CryptoAuditModule } from "./crypto-audit/crypto-audit.module";
 import { CsafModule } from "./csaf/csaf.module";
 import { FamillesModule } from "./familles/familles.module";
+import { FinancementsModule } from "./financements/financements.module";
 import { GeometreModule } from "./geometre/geometre.module";
 import { HypothequesModule } from "./hypotheques/hypotheques.module";
 import { OtpModule } from "./otp/otp.module";
@@ -47,6 +48,7 @@ import { VisitesModule } from "./visites/visites.module";
     AvisModule,
     SequestresModule,
     VisitesModule,
+    FinancementsModule,
     SyncModule,
   ],
   providers: [

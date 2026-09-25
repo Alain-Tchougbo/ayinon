@@ -123,6 +123,9 @@ enum TypeOperationAudit {
   REPONSE_VISITE
   DECISION_CSAF_ANNULATION_VENTE
   DECISION_CSAF_TRANSFERT_FORCE
+  DEMANDE_FINANCEMENT
+  CONSULTATION_FINANCEMENT
+  TRAITEMENT_FINANCEMENT
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
@@ -138,6 +141,15 @@ enum StatutCession {
 enum StatutHypotheque {
   ACTIVE
   LEVEE
+}
+
+/// Demande de financement (E4.6-E4.8) : l'acheteur demande un accord de principe a une banque
+/// partenaire, qui l'accorde ou le refuse. Aucun scoring automatique : la decision reste toujours
+/// humaine, l'agent banque tranche lui-meme au vu des pieces jointes.
+enum StatutDemandeFinancement {
+  EN_ATTENTE
+  ACCORD_PRINCIPE
+  REFUSEE
 }
 
 /// Cycle de vie d'une annonce (vitrine publique) : ACTIVE tant que le vendeur cherche un
@@ -249,23 +261,25 @@ model Utilisateur {
 
   refreshTokens         RefreshToken[]
   codesOtp              CodeOtp[]
-  plansBornageSignes    PlanBornage[]  @relation("GeometreSignataire")
-  plansBornageImportes  PlanBornage[]  @relation("GeometreImportateur")
-  conflitsOuverts       ConflitCsaf[]  @relation("MagistratOuvrant")
-  cessionsAcquises      Convention[]   @relation("CessionAcquereur")
-  hypothequesInscrites  Hypotheque[]   @relation("HypothequeInscripteur")
-  hypothequesLevees     Hypotheque[]   @relation("HypothequeLeveur")
-  cessionsValidees      Convention[]   @relation("CessionValidateur")
-  annoncesPubliees      Annonce[]      @relation("AnnoncePubliee")
-  annoncesVerifiees     Annonce[]      @relation("AnnonceVerifieeAndf")
-  interetsExprimes      InteretAchat[] @relation("InteretAcheteur")
-  signalementsDeposes   Signalement[]  @relation("SignalementAuteur")
-  signalementsQualifies Signalement[]  @relation("SignalementQualificateur")
-  avisDeposes           Avis[]         @relation("AvisAuteur")
-  avisRecus             Avis[]         @relation("AvisCite")
-  sequestresDeclares    Sequestre[]    @relation("SequestreDeclarant")
-  sequestresConfirmes   Sequestre[]    @relation("SequestreConfirmateur")
-  visitesDemandees      Visite[]       @relation("VisiteAcheteur")
+  plansBornageSignes    PlanBornage[]        @relation("GeometreSignataire")
+  plansBornageImportes  PlanBornage[]        @relation("GeometreImportateur")
+  conflitsOuverts       ConflitCsaf[]        @relation("MagistratOuvrant")
+  cessionsAcquises      Convention[]         @relation("CessionAcquereur")
+  hypothequesInscrites  Hypotheque[]         @relation("HypothequeInscripteur")
+  hypothequesLevees     Hypotheque[]         @relation("HypothequeLeveur")
+  cessionsValidees      Convention[]         @relation("CessionValidateur")
+  annoncesPubliees      Annonce[]            @relation("AnnoncePubliee")
+  annoncesVerifiees     Annonce[]            @relation("AnnonceVerifieeAndf")
+  interetsExprimes      InteretAchat[]       @relation("InteretAcheteur")
+  signalementsDeposes   Signalement[]        @relation("SignalementAuteur")
+  signalementsQualifies Signalement[]        @relation("SignalementQualificateur")
+  avisDeposes           Avis[]               @relation("AvisAuteur")
+  avisRecus             Avis[]               @relation("AvisCite")
+  sequestresDeclares    Sequestre[]          @relation("SequestreDeclarant")
+  sequestresConfirmes   Sequestre[]          @relation("SequestreConfirmateur")
+  visitesDemandees      Visite[]             @relation("VisiteAcheteur")
+  demandesFinancement   DemandeFinancement[] @relation("FinancementAcheteur")
+  financementsTraites   DemandeFinancement[] @relation("FinancementTraite")
 
   /// Declare uniquement par un VENDEUR (E0.3) : adapte les pieces demandees lors de la publication.
   statutDeclarant StatutDeclarantVendeur?
@@ -450,10 +464,11 @@ model Annonce {
   verifieeParAndf      Utilisateur? @relation("AnnonceVerifieeAndf", fields: [verifieeParAndfId], references: [id])
   dateVerificationAndf DateTime?
 
-  interets     InteretAchat[]
-  cessions     Convention[]
-  signalements Signalement[]
-  visites      Visite[]
+  interets            InteretAchat[]
+  cessions            Convention[]
+  signalements        Signalement[]
+  visites             Visite[]
+  demandesFinancement DemandeFinancement[]
 
   @@index([parcelleId])
   @@index([statut])
@@ -523,6 +538,35 @@ model Hypotheque {
   leveePar      Utilisateur? @relation("HypothequeLeveur", fields: [leveeParId], references: [id])
 
   @@index([parcelleId])
+  @@index([statut])
+}
+
+/// Demande d'accord de financement (E4.6-E4.8) : l'acheteur demande un accord de principe a une
+/// banque partenaire, avec une piece jointe optionnelle (preuve de revenus...) qu'elle seule peut
+/// consulter (acces trace via dateConsultation). L'accord genere un code de verification que le
+/// vendeur peut utiliser pour authentifier l'attestation sans avoir a contacter la banque.
+model DemandeFinancement {
+  id                  String                   @id @default(uuid())
+  montantSouhaiteFcfa Float
+  cheminDocument      String?
+  statut              StatutDemandeFinancement @default(EN_ATTENTE)
+  createdAt           DateTime                 @default(now())
+  dateConsultation    DateTime?
+
+  acheteurId String
+  acheteur   Utilisateur @relation("FinancementAcheteur", fields: [acheteurId], references: [id])
+
+  annonceId String?
+  annonce   Annonce? @relation(fields: [annonceId], references: [id])
+
+  traiteeParId       String?
+  traiteePar         Utilisateur? @relation("FinancementTraite", fields: [traiteeParId], references: [id])
+  dateTraitement     DateTime?
+  montantAccordeFcfa Float?
+  motifRefus         String?
+  codeVerification   String?      @unique
+
+  @@index([acheteurId])
   @@index([statut])
 }
 
