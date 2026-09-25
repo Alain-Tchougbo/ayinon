@@ -21,6 +21,13 @@ const INCLUSION_ANNONCE = {
   publieePar: { select: { id: true, nomComplet: true } },
   verifieeParAndf: { select: { id: true, nomComplet: true } },
   interets: { include: { acheteur: { select: { id: true, nomComplet: true } } } },
+  // E7.7 : id de la cession issue de cette annonce, necessaire pour que l'acheteur/le vendeur
+  // puisse noter l'autre partie une fois la vente finalisee (voir AvisService). Le sequestre
+  // eventuel (Epic 5) est expose au meme endroit pour eviter un appel separe. Triees par date
+  // decroissante : une annonce peut accumuler plusieurs cessions dans le temps (ex. une premiere
+  // rejetee par l'ANDF puis une seconde relancee avec un autre acheteur) — le frontend ne doit
+  // jamais voir que la plus recente en position 0, jamais une tentative perimee.
+  cessions: { orderBy: { createdAt: "desc" }, select: { id: true, statutCession: true, sequestre: true } },
 } as const;
 
 /**
@@ -143,6 +150,14 @@ export class AnnoncesService {
       throw new BadRequestException("Vous ne pouvez pas manifester votre interet sur votre propre annonce");
     }
 
+    // E5.7 (esprit "verrou anti double-vente") : des qu'un interet est retenu, une cession est deja
+    // en cours de validation ANDF sur cette parcelle — aucune nouvelle manifestation ne doit pouvoir
+    // s'y ajouter tant que l'annonce reste ACTIVE (elle ne passe VENDUE qu'a la validation).
+    const dejaEnNegociation = await this.prisma.interetAchat.findFirst({ where: { annonceId, statut: StatutInteret.RETENU } });
+    if (dejaEnNegociation) {
+      throw new BadRequestException("Cette annonce est deja en cours de cession avec un autre acheteur");
+    }
+
     const dejaManifeste = await this.prisma.interetAchat.findUnique({
       where: { annonceId_acheteurId: { annonceId, acheteurId: acheteur.id } },
     });
@@ -192,6 +207,10 @@ export class AnnoncesService {
     }
     if (interet.statut !== StatutInteret.EN_ATTENTE) {
       throw new BadRequestException("Cet interet a deja ete traite");
+    }
+    const dejaEnNegociation = await this.prisma.interetAchat.findFirst({ where: { annonceId, statut: StatutInteret.RETENU } });
+    if (dejaEnNegociation) {
+      throw new BadRequestException("Un interet est deja retenu sur cette annonce : la cession est en cours de validation ANDF");
     }
     await this.csaf.verifierParcelleNonGelee(annonce.parcelleId);
 

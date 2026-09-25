@@ -74,7 +74,6 @@ const liensNav = computed(() => {
     items.push({ to: "/scanner", label: "Scanner anti-fraude", icone: ScanLine });
     items.push({ to: "/simulateur-frais", label: "Simulateur de frais", icone: Calculator });
     items.push({ to: "/passeport-foncier", label: "Passeport foncier", icone: ShieldCheck });
-    items.push({ to: "/cession", label: "Ceder un terrain", icone: Handshake });
   }
   if (auth.role === RoleUtilisateur.VENDEUR) {
     items.push({ to: "/vendre", label: "Vendre un terrain", icone: Megaphone });

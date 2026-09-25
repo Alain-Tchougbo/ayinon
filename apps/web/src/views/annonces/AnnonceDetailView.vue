@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Handshake, MapPin, ShieldCheck, Store } from "@lucide/vue";
+import { Flag, Handshake, MapPin, ShieldCheck, Star, Store } from "@lucide/vue";
 import { RoleUtilisateur } from "@ayinon/shared";
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
@@ -21,22 +21,49 @@ interface AnnonceDetail {
   limitesCertifiees: boolean;
 }
 
+interface ProfilVendeur {
+  noteMoyenne: number | null;
+  nombreAvis: number;
+  ventesConclues: number;
+}
+
 const route = useRoute();
 const auth = useAuthStore();
 
 const annonce = ref<AnnonceDetail | null>(null);
+const profilVendeur = ref<ProfilVendeur | null>(null);
 const chargement = ref(false);
 const erreur = ref<string | null>(null);
 const message = ref<string | null>(null);
 const messageInteret = ref("");
 const envoiEnCours = ref(false);
 
+const ROLES_SIGNALANTS: RoleUtilisateur[] = [
+  RoleUtilisateur.CITOYEN,
+  RoleUtilisateur.VENDEUR,
+  RoleUtilisateur.ACHETEUR,
+  RoleUtilisateur.MANDATAIRE_FAMILIAL,
+];
+const signalementOuvert = ref(false);
+const typeSignalement = ref<"ANNONCE" | "LITIGE_FONCIER">("ANNONCE");
+const motifSignalement = ref("");
+const descriptifSignalement = ref("");
+const signalementEnvoye = ref(false);
+const signalementEnCours = ref(false);
+
 const dejaManifeste = computed(() => annonce.value?.interets.some((i) => i.acheteur.id === auth.utilisateur?.id) ?? false);
+const peutSignaler = computed(
+  () =>
+    auth.role !== null &&
+    ROLES_SIGNALANTS.includes(auth.role) &&
+    auth.utilisateur?.id !== annonce.value?.publieePar.id,
+);
 
 async function charger() {
   chargement.value = true;
   try {
     annonce.value = await api.get<AnnonceDetail>(`/annonces/${route.params.id}`);
+    profilVendeur.value = await api.get<ProfilVendeur>(`/avis/profil/${annonce.value.publieePar.id}`);
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Annonce introuvable";
   } finally {
@@ -59,6 +86,33 @@ async function manifesterInteret() {
     erreur.value = e instanceof ApiError ? e.message : "Impossible d'envoyer votre interet";
   } finally {
     envoiEnCours.value = false;
+  }
+}
+
+async function signaler() {
+  erreur.value = null;
+  const motif = motifSignalement.value.trim();
+  if (motif.length < 10) {
+    erreur.value = "Decrivez le probleme en au moins 10 caracteres";
+    return;
+  }
+  signalementEnCours.value = true;
+  try {
+    await api.post("/signalements", {
+      type: typeSignalement.value,
+      annonceId: route.params.id,
+      motif,
+      descriptif: descriptifSignalement.value.trim() || undefined,
+    });
+    signalementEnvoye.value = true;
+    signalementOuvert.value = false;
+    typeSignalement.value = "ANNONCE";
+    motifSignalement.value = "";
+    descriptifSignalement.value = "";
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Impossible d'envoyer le signalement";
+  } finally {
+    signalementEnCours.value = false;
   }
 }
 </script>
@@ -103,7 +157,16 @@ async function manifesterInteret() {
         </div>
 
         <p v-if="annonce.description" class="mt-4 whitespace-pre-line text-sm text-texte">{{ annonce.description }}</p>
-        <p class="mt-4 text-xs text-texte-attenue">Publiee par {{ annonce.publieePar.nomComplet }}</p>
+        <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-texte-attenue">
+          <span>Publiee par {{ annonce.publieePar.nomComplet }}</span>
+          <template v-if="profilVendeur">
+            <span v-if="profilVendeur.noteMoyenne !== null" class="flex items-center gap-1 font-medium text-texte">
+              <Star :size="12" class="fill-accent text-accent" aria-hidden="true" />
+              {{ profilVendeur.noteMoyenne }} ({{ profilVendeur.nombreAvis }} avis)
+            </span>
+            <span>{{ profilVendeur.ventesConclues }} vente(s) conclue(s)</span>
+          </template>
+        </div>
       </BaseCard>
 
       <BaseCard v-if="annonce.statut === 'ACTIVE' && auth.role === RoleUtilisateur.ACHETEUR">
@@ -129,6 +192,56 @@ async function manifesterInteret() {
         <RouterLink to="/inscription" class="font-medium text-primaire underline underline-offset-2">Creez un compte acheteur</RouterLink>
         pour manifester votre interet sur cette parcelle.
       </p>
+
+      <!-- E2.6 : signaler un probleme sur l'annonce (occupant, litige non declare, prix suspect...). -->
+      <BaseCard v-if="peutSignaler" rembourrage="sm">
+        <p v-if="signalementEnvoye" class="text-sm text-texte-attenue">
+          Signalement transmis a l'equipe de moderation. Merci de contribuer a la fiabilite de la vitrine.
+        </p>
+        <template v-else>
+          <button
+            v-if="!signalementOuvert"
+            type="button"
+            class="flex items-center gap-1.5 text-xs font-medium text-texte-attenue underline underline-offset-2 hover:text-texte"
+            @click="signalementOuvert = true"
+          >
+            <Flag :size="13" aria-hidden="true" />
+            Signaler un probleme sur cette annonce
+          </button>
+          <form v-else class="space-y-2.5" @submit.prevent="signaler">
+            <p class="flex items-center gap-1.5 text-sm font-semibold text-texte">
+              <Flag :size="14" class="text-danger" aria-hidden="true" />
+              Signaler un probleme
+            </p>
+            <div class="flex gap-4 text-xs text-texte">
+              <label class="flex items-center gap-1.5">
+                <input v-model="typeSignalement" type="radio" value="ANNONCE" />
+                Probleme sur l'annonce (occupant, prix suspect...)
+              </label>
+              <label class="flex items-center gap-1.5">
+                <input v-model="typeSignalement" type="radio" value="LITIGE_FONCIER" />
+                Litige foncier sur la parcelle
+              </label>
+            </div>
+            <textarea
+              v-model="motifSignalement"
+              rows="2"
+              placeholder="Ex. parcelle deja occupee, litige familial non declare, prix suspect..."
+              class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte placeholder:text-texte-attenue"
+            />
+            <textarea
+              v-model="descriptifSignalement"
+              rows="2"
+              placeholder="Details complementaires (optionnel)"
+              class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte placeholder:text-texte-attenue"
+            />
+            <div class="flex gap-2">
+              <BaseButton taille="sm" variant="danger" type="submit" :disabled="signalementEnCours">Envoyer le signalement</BaseButton>
+              <BaseButton taille="sm" variant="secondaire" @click="signalementOuvert = false">Annuler</BaseButton>
+            </div>
+          </form>
+        </template>
+      </BaseCard>
     </template>
   </div>
 </template>

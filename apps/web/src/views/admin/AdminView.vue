@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FileStack, LayoutDashboard, MapPin, Pencil, Users } from "@lucide/vue";
+import { Check, FileStack, Flag, LayoutDashboard, MapPin, Pencil, Users, X } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
@@ -47,6 +47,18 @@ interface Documents {
   conventions: Array<{ id: string; vendeurNom: string; acquereurNom: string; montantFcfa: number; statutCession: string; parcelle: { nup: string } }>;
   titres: Array<{ id: string; numeroTitre: string; dateDelivrance: string; parcelle: { nup: string } }>;
 }
+interface Signalement {
+  id: string;
+  type: "ANNONCE" | "LITIGE_FONCIER";
+  statut: "DEPOSE" | "FONDE" | "REJETE";
+  motif: string;
+  descriptif: string | null;
+  decisionMotif: string | null;
+  createdAt: string;
+  parcelle: { nup: string; commune: string };
+  annonce: { id: string; statut: string } | null;
+  signalant: { nomComplet: string; role: string };
+}
 
 const ONGLETS = [
   { cle: "vue-ensemble", label: "Vue d'ensemble" },
@@ -54,6 +66,7 @@ const ONGLETS = [
   { cle: "proprietaires", label: "Proprietaires" },
   { cle: "parcelles", label: "Parcelles" },
   { cle: "documents", label: "Documents" },
+  { cle: "signalements", label: "Signalements" },
 ] as const;
 type Onglet = (typeof ONGLETS)[number]["cle"];
 
@@ -65,6 +78,7 @@ const utilisateurs = ref<Utilisateur[]>([]);
 const proprietaires = ref<Proprietaire[]>([]);
 const parcelles = ref<ParcelleAdmin[]>([]);
 const documents = ref<Documents | null>(null);
+const signalements = ref<Signalement[]>([]);
 const chargement = ref(false);
 const erreur = ref<string | null>(null);
 const message = ref<string | null>(null);
@@ -72,6 +86,10 @@ const message = ref<string | null>(null);
 const editionEnCours = ref<string | null>(null);
 const communeEdition = ref("");
 const arrondissementEdition = ref("");
+
+const qualificationEnCours = ref<string | null>(null);
+const motifQualification = ref("");
+const actionEnCours = ref(false);
 
 onMounted(async () => {
   definirPhraseCourante(PHRASES.adminIntro);
@@ -88,6 +106,7 @@ async function charger(onglet: Onglet) {
     else if (onglet === "proprietaires") proprietaires.value = await api.get<Proprietaire[]>("/admin/proprietaires");
     else if (onglet === "parcelles") parcelles.value = await api.get<ParcelleAdmin[]>("/admin/parcelles");
     else if (onglet === "documents") documents.value = await api.get<Documents>("/admin/documents");
+    else if (onglet === "signalements") signalements.value = await api.get<Signalement[]>("/signalements");
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Chargement impossible";
   } finally {
@@ -111,6 +130,28 @@ async function enregistrerEdition(id: string) {
     await charger("parcelles");
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Mise a jour impossible";
+  }
+}
+
+async function qualifier(id: string, fonde: boolean) {
+  erreur.value = null;
+  message.value = null;
+  const motif = motifQualification.value.trim();
+  if (motif.length < 10) {
+    erreur.value = "Le motif de decision doit compter au moins 10 caracteres";
+    return;
+  }
+  actionEnCours.value = true;
+  try {
+    await api.patch(`/signalements/${id}/qualifier`, { fonde, motif });
+    message.value = fonde ? "Signalement retenu comme fonde." : "Signalement rejete.";
+    qualificationEnCours.value = null;
+    motifQualification.value = "";
+    await charger("signalements");
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Qualification impossible";
+  } finally {
+    actionEnCours.value = false;
   }
 }
 </script>
@@ -263,5 +304,56 @@ async function enregistrerEdition(id: string) {
         </ul>
       </div>
     </div>
+
+    <!-- Signalements -->
+    <ul v-if="!chargement && ongletActif === 'signalements'" class="space-y-2.5">
+      <li v-if="signalements.length === 0" class="text-sm text-texte-attenue">Aucun signalement pour le moment.</li>
+      <li v-for="s in signalements" :key="s.id">
+        <BaseCard rembourrage="sm" :accentue="s.statut === 'FONDE' ? 'danger' : s.statut === 'DEPOSE' ? 'accent' : 'aucun'">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p class="flex items-center gap-1.5 font-medium text-texte">
+                <Flag :size="13" aria-hidden="true" />
+                {{ s.type === "ANNONCE" ? "Probleme sur une annonce" : "Litige foncier" }} — {{ s.parcelle.nup }} ({{ s.parcelle.commune }})
+              </p>
+              <p class="mt-0.5 text-xs text-texte-attenue">Signale par {{ s.signalant.nomComplet }} ({{ s.signalant.role.replaceAll("_", " ") }})</p>
+              <p class="mt-1.5 text-sm text-texte">{{ s.motif }}</p>
+              <p v-if="s.descriptif" class="mt-1 text-xs text-texte-attenue">{{ s.descriptif }}</p>
+              <p v-if="s.decisionMotif" class="mt-1.5 text-xs italic text-texte-attenue">Decision : {{ s.decisionMotif }}</p>
+            </div>
+            <span
+              class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+              :class="s.statut === 'FONDE' ? 'bg-danger/10 text-danger' : s.statut === 'REJETE' ? 'bg-texte-attenue/10 text-texte-attenue' : 'bg-accent/10 text-accent'"
+            >
+              {{ s.statut === "DEPOSE" ? "A qualifier" : s.statut === "FONDE" ? "Fonde" : "Rejete" }}
+            </span>
+          </div>
+
+          <template v-if="s.statut === 'DEPOSE'">
+            <div v-if="qualificationEnCours === s.id" class="mt-3 space-y-2 rounded-carte border border-bordure bg-fond p-3">
+              <label :for="`motif-qualif-${s.id}`" class="block text-xs font-medium text-texte">Motif de la decision (obligatoire)</label>
+              <textarea
+                :id="`motif-qualif-${s.id}`"
+                v-model="motifQualification"
+                rows="2"
+                class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
+              />
+              <div class="flex gap-2">
+                <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="qualifier(s.id, true)">
+                  <Check :size="12" aria-hidden="true" />
+                  Retenir comme fonde
+                </BaseButton>
+                <BaseButton taille="sm" variant="secondaire" :disabled="actionEnCours" @click="qualifier(s.id, false)">
+                  <X :size="12" aria-hidden="true" />
+                  Rejeter
+                </BaseButton>
+                <BaseButton taille="sm" variant="ghost" @click="qualificationEnCours = null">Annuler</BaseButton>
+              </div>
+            </div>
+            <BaseButton v-else taille="sm" class="mt-3" @click="qualificationEnCours = s.id">Qualifier</BaseButton>
+          </template>
+        </BaseCard>
+      </li>
+    </ul>
   </div>
 </template>

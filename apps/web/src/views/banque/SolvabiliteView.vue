@@ -25,6 +25,13 @@ interface Hypotheque {
   dateInscription: string;
   parcelle: { nup: string; commune: string };
 }
+interface DepotAConfirmer {
+  id: string;
+  montantFcfa: number;
+  dateDeclaration: string;
+  convention: { montantFcfa: number; vendeurNom: string; acquereurNom: string; parcelle: { nup: string; commune: string } };
+  declarePar: { nomComplet: string };
+}
 
 const { definirPhraseCourante } = useVoiceAssistant();
 
@@ -43,13 +50,39 @@ const mesInscriptions = ref<Hypotheque[]>([]);
 const leveeEnCoursId = ref<string | null>(null);
 const motifLeveeParHypotheque = ref<Record<string, string>>({});
 
+const depotsAConfirmer = ref<DepotAConfirmer[]>([]);
+const confirmationEnCoursId = ref<string | null>(null);
+
 onMounted(async () => {
   definirPhraseCourante(PHRASES.solvabiliteIntro);
-  await chargerMesInscriptions();
+  try {
+    await Promise.all([chargerMesInscriptions(), chargerDepotsAConfirmer()]);
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Impossible de charger vos donnees";
+  }
 });
 
 async function chargerMesInscriptions() {
   mesInscriptions.value = await api.get<Hypotheque[]>("/hypotheques/mes-inscriptions");
+}
+
+async function chargerDepotsAConfirmer() {
+  depotsAConfirmer.value = await api.get<DepotAConfirmer[]>("/sequestres/a-confirmer");
+}
+
+async function confirmerDepot(id: string) {
+  erreur.value = null;
+  message.value = null;
+  confirmationEnCoursId.value = id;
+  try {
+    await api.patch(`/sequestres/${id}/confirmer`);
+    message.value = "Depot confirme : le vendeur et l'acheteur en sont informes.";
+    await chargerDepotsAConfirmer();
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Confirmation impossible";
+  } finally {
+    confirmationEnCoursId.value = null;
+  }
 }
 
 async function rechercher() {
@@ -116,6 +149,32 @@ async function lever(hypothequeId: string) {
       <template #icone><Landmark :size="22" class="text-primaire" aria-hidden="true" /></template>
     </PageHeader>
 
+    <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ erreur }}</p>
+    <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes" role="status">{{ message }}</p>
+
+    <!-- E5.5 : depots de reservation declares par des acheteurs, en attente de confirmation
+         d'encaissement (suivi de statut uniquement, voir docs/decisions.md). -->
+    <section v-if="depotsAConfirmer.length > 0">
+      <h2 class="mb-3 flex items-center gap-2 font-semibold text-texte">
+        <Banknote :size="16" class="text-accent" aria-hidden="true" />
+        Depots a confirmer ({{ depotsAConfirmer.length }})
+      </h2>
+      <ul class="space-y-2.5">
+        <li v-for="d in depotsAConfirmer" :key="d.id">
+          <BaseCard accentue="accent" rembourrage="sm">
+            <p class="font-semibold text-texte">{{ d.convention.parcelle.nup }} — {{ d.convention.parcelle.commune }}</p>
+            <p class="mt-0.5 text-sm text-texte-attenue">
+              {{ d.declarePar.nomComplet }} declare {{ d.montantFcfa.toLocaleString("fr-FR") }} FCFA le
+              {{ new Date(d.dateDeclaration).toLocaleDateString("fr-FR") }}
+            </p>
+            <BaseButton taille="sm" class="mt-2.5" :disabled="confirmationEnCoursId === d.id" @click="confirmerDepot(d.id)">
+              Confirmer l'encaissement
+            </BaseButton>
+          </BaseCard>
+        </li>
+      </ul>
+    </section>
+
     <form class="flex gap-2" @submit.prevent="rechercher">
       <div class="relative flex-1">
         <Search :size="16" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
@@ -127,9 +186,6 @@ async function lever(hypothequeId: string) {
       </div>
       <BaseButton type="submit" :disabled="chargementRecherche || !nup.trim()">Verifier</BaseButton>
     </form>
-
-    <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ erreur }}</p>
-    <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes" role="status">{{ message }}</p>
 
     <BaseCard v-if="resultat" :accentue="resultat.eligibleCredit ? 'succes' : 'danger'">
       <p class="font-semibold text-texte">{{ resultat.parcelle.nup }} — {{ resultat.parcelle.commune }}</p>

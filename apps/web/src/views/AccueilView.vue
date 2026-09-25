@@ -51,12 +51,6 @@ interface ConflitCsaf {
   dateGel: string;
   parcelle: { nup: string; commune: string };
 }
-interface PropositionCession {
-  id: string;
-  vendeurNom: string;
-  montantFcfa: number;
-  parcelle: { id: string; nup: string; commune: string };
-}
 interface AnnonceAvecInterets {
   id: string;
   statut: "ACTIVE" | "RETIREE" | "VENDUE";
@@ -68,6 +62,12 @@ interface InteretExprime {
   statut: "EN_ATTENTE" | "RETENU" | "DECLINE";
   annonce: { id: string; parcelle: { nup: string; commune: string } };
 }
+interface PropositionCession {
+  id: string;
+  vendeurNom: string;
+  montantFcfa: number;
+  parcelle: { id: string; nup: string; commune: string };
+}
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -78,9 +78,9 @@ const nup = ref("");
 const mesSignatures = ref<SignatureEnAttente[]>([]);
 const mesImports = ref<MonImport[]>([]);
 const conflitsActifs = ref<ConflitCsaf[]>([]);
-const propositionsCession = ref<PropositionCession[]>([]);
 const mesAnnonces = ref<AnnonceAvecInterets[]>([]);
 const mesInterets = ref<InteretExprime[]>([]);
+const propositionsCession = ref<PropositionCession[]>([]);
 const chargementEspace = ref(false);
 
 const mesParcelles = computed(() => parcelles.parcelles.filter((p) => p.proprietaireId === auth.utilisateur?.proprietaireId));
@@ -96,11 +96,13 @@ onMounted(async () => {
   try {
     if (auth.role === RoleUtilisateur.CITOYEN) {
       await parcelles.chargerToutes();
-      propositionsCession.value = await api.get<PropositionCession[]>("/cessions/mes-propositions-recues");
     } else if (auth.role === RoleUtilisateur.VENDEUR) {
       mesAnnonces.value = await api.get<AnnonceAvecInterets[]>("/annonces/mes-annonces");
     } else if (auth.role === RoleUtilisateur.ACHETEUR) {
-      mesInterets.value = await api.get<InteretExprime[]>("/annonces/mes-interets");
+      [mesInterets.value, propositionsCession.value] = await Promise.all([
+        api.get<InteretExprime[]>("/annonces/mes-interets"),
+        api.get<PropositionCession[]>("/cessions/mes-propositions-recues"),
+      ]);
     } else if (auth.role === RoleUtilisateur.MANDATAIRE_FAMILIAL) {
       mesSignatures.value = await api.get<SignatureEnAttente[]>("/familles/mes-signatures-en-attente");
     } else if (auth.role === RoleUtilisateur.GEOMETRE) {
@@ -130,7 +132,6 @@ const raccourcis = computed(() => {
   }
   if (auth.role === RoleUtilisateur.CITOYEN) {
     items.push({ to: "/passeport-foncier", icone: ShieldCheck, titre: "Passeport foncier", description: "Verrouillez votre parcelle contre toute vente non consentie." });
-    items.push({ to: "/cession", icone: Handshake, titre: "Ceder ou acquerir un terrain", description: "Proposez une vente ou repondez a une proposition d'achat." });
     items.push({ to: "/famille", icone: Users, titre: "Terre familiale", description: "Multi-signature et affichage de ban sur une parcelle hereditaire." });
   }
   if (auth.role === RoleUtilisateur.VENDEUR) {
@@ -207,23 +208,6 @@ const raccourcis = computed(() => {
       <p class="mt-1 text-sm text-primaire-contraste/80">Voici l'etat de votre espace AYINON aujourd'hui.</p>
     </section>
 
-    <!-- CITOYEN : propositions de cession recues, mises en avant comme les signatures familiales en attente. -->
-    <section v-if="auth.role === RoleUtilisateur.CITOYEN && propositionsCession.length > 0">
-      <h2 class="mb-3 flex items-center gap-2 text-lg font-semibold text-texte">
-        <Inbox :size="18" class="text-accent" aria-hidden="true" />
-        Propositions de cession recues
-        <span class="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-accent-contraste">{{ propositionsCession.length }}</span>
-      </h2>
-      <ul class="space-y-2">
-        <li v-for="p in propositionsCession" :key="p.id">
-          <BaseCard :to="`/cession`" accentue="accent" rembourrage="sm">
-            <p class="font-medium text-texte">{{ p.parcelle.nup }} — {{ p.parcelle.commune }}</p>
-            <p class="mt-0.5 text-xs text-texte-attenue">Proposee par {{ p.vendeurNom }} — {{ p.montantFcfa.toLocaleString("fr-FR") }} FCFA</p>
-          </BaseCard>
-        </li>
-      </ul>
-    </section>
-
     <!-- CITOYEN : vos parcelles. -->
     <section v-if="auth.role === RoleUtilisateur.CITOYEN">
       <h2 class="mb-3 text-lg font-semibold text-texte">Vos parcelles</h2>
@@ -259,6 +243,23 @@ const raccourcis = computed(() => {
             <p class="mt-0.5 text-xs text-texte-attenue">
               {{ a.interets.filter((i) => i.statut === "EN_ATTENTE").length }} interet(s) en attente
             </p>
+          </BaseCard>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ACHETEUR : propositions de cession recues directement (hors vitrine). -->
+    <section v-if="auth.role === RoleUtilisateur.ACHETEUR && propositionsCession.length > 0">
+      <h2 class="mb-3 flex items-center gap-2 text-lg font-semibold text-texte">
+        <Inbox :size="18" class="text-accent" aria-hidden="true" />
+        Propositions de cession recues
+        <span class="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-accent-contraste">{{ propositionsCession.length }}</span>
+      </h2>
+      <ul class="space-y-2">
+        <li v-for="p in propositionsCession" :key="p.id">
+          <BaseCard to="/acheter" accentue="accent" rembourrage="sm">
+            <p class="font-medium text-texte">{{ p.parcelle.nup }} — {{ p.parcelle.commune }}</p>
+            <p class="mt-0.5 text-xs text-texte-attenue">Proposee par {{ p.vendeurNom }} — {{ p.montantFcfa.toLocaleString("fr-FR") }} FCFA</p>
           </BaseCard>
         </li>
       </ul>

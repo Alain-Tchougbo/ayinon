@@ -101,6 +101,13 @@ export const TypeOperationAudit = {
   RETENUE_INTERET: "RETENUE_INTERET",
   VERIFICATION_ANDF_ANNONCE: "VERIFICATION_ANDF_ANNONCE",
   CREATION_COMPTE: "CREATION_COMPTE",
+  DEPOT_SIGNALEMENT: "DEPOT_SIGNALEMENT",
+  QUALIFICATION_SIGNALEMENT: "QUALIFICATION_SIGNALEMENT",
+  DEPOT_AVIS: "DEPOT_AVIS",
+  DECLARATION_SEQUESTRE: "DECLARATION_SEQUESTRE",
+  CONFIRMATION_SEQUESTRE: "CONFIRMATION_SEQUESTRE",
+  LIBERATION_SEQUESTRE: "LIBERATION_SEQUESTRE",
+  REMBOURSEMENT_SEQUESTRE: "REMBOURSEMENT_SEQUESTRE",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
 
@@ -178,3 +185,27 @@ export const StatutDeclarantVendeur = {
   AGENCE: "AGENCE",
 } as const;
 export type StatutDeclarantVendeur = (typeof StatutDeclarantVendeur)[keyof typeof StatutDeclarantVendeur];
+
+/** Portee d'un signalement : ANNONCE (probleme sur une annonce publiee) ou LITIGE_FONCIER
+ * (contestation sur la parcelle elle-meme, susceptible d'aboutir a un gel CSAF). */
+export const TypeSignalement = {
+  ANNONCE: "ANNONCE",
+  LITIGE_FONCIER: "LITIGE_FONCIER",
+} as const;
+export type TypeSignalement = (typeof TypeSignalement)[keyof typeof TypeSignalement];
+
+export const StatutSignalement = {
+  DEPOSE: "DEPOSE",
+  FONDE: "FONDE",
+  REJETE: "REJETE",
+} as const;
+export type StatutSignalement = (typeof StatutSignalement)[keyof typeof StatutSignalement];
+
+/** Sequestre en pur suivi de statut (Epic 5) : aucun mouvement d'argent reel (voir docs/decisions.md). */
+export const StatutSequestre = {
+  DEPOT_DECLARE: "DEPOT_DECLARE",
+  DEPOT_CONFIRME: "DEPOT_CONFIRME",
+  LIBERE: "LIBERE",
+  REMBOURSE: "REMBOURSE",
+} as const;
+export type StatutSequestre = (typeof StatutSequestre)[keyof typeof StatutSequestre];

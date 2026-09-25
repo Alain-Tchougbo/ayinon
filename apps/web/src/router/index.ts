@@ -86,12 +86,6 @@ const router = createRouter({
       },
     },
     {
-      path: "/cession",
-      name: "cession",
-      component: () => import("../views/citoyen/CessionView.vue"),
-      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.CITOYEN], titre: "Ceder ou acquerir un terrain" },
-    },
-    {
       path: "/andf/cessions",
       name: "andf-cessions",
       component: () => import("../views/andf/ValidationCessionsView.vue"),

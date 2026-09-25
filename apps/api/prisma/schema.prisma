@@ -99,6 +99,13 @@ enum TypeOperationAudit {
   RETENUE_INTERET
   VERIFICATION_ANDF_ANNONCE
   CREATION_COMPTE
+  DEPOT_SIGNALEMENT
+  QUALIFICATION_SIGNALEMENT
+  DEPOT_AVIS
+  DECLARATION_SEQUESTRE
+  CONFIRMATION_SEQUESTRE
+  LIBERATION_SEQUESTRE
+  REMBOURSEMENT_SEQUESTRE
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
@@ -140,6 +147,33 @@ enum StatutDeclarantVendeur {
   AGENCE
 }
 
+/// Portee d'un signalement (E2.6/E8.1) : ANNONCE pour un probleme sur une annonce publiee
+/// (occupant, litige non declare, prix suspect...), LITIGE_FONCIER pour une contestation plus
+/// large sur la parcelle elle-meme (susceptible d'aboutir a un gel conservatoire CSAF).
+enum TypeSignalement {
+  ANNONCE
+  LITIGE_FONCIER
+}
+
+/// DEPOSE tant qu'un admin ne l'a pas qualifie ; FONDE ou REJETE ensuite (E2.7/E8.2). La
+/// qualification FONDE d'un litige n'applique jamais elle-meme le gel : elle informe la file du
+/// magistrat CSAF, seul habilite a l'ordonner (separation des autorites, voir ET.8).
+enum StatutSignalement {
+  DEPOSE
+  FONDE
+  REJETE
+}
+
+/// Sequestre en pur suivi de statut (Epic 5) : aucun mouvement d'argent reel, ni mobile money ni
+/// virement (voir docs/decisions.md). DEPOT_DECLARE -> DEPOT_CONFIRME -> LIBERE (a la validation
+/// ANDF de la cession) ou REMBOURSE (des que la cession est REJETEE, quelle qu'en soit la cause).
+enum StatutSequestre {
+  DEPOT_DECLARE
+  DEPOT_CONFIRME
+  LIBERE
+  REMBOURSE
+}
+
 enum PoleTerritorial {
   LITTORAL_ATLANTIQUE
   OUEME_PLATEAU
@@ -170,18 +204,24 @@ model Utilisateur {
   proprietaireId String?       @unique
   proprietaire   Proprietaire? @relation(fields: [proprietaireId], references: [id])
 
-  refreshTokens        RefreshToken[]
-  codesOtp             CodeOtp[]
-  plansBornageSignes   PlanBornage[]  @relation("GeometreSignataire")
-  plansBornageImportes PlanBornage[]  @relation("GeometreImportateur")
-  conflitsOuverts      ConflitCsaf[]  @relation("MagistratOuvrant")
-  cessionsAcquises     Convention[]   @relation("CessionAcquereur")
-  hypothequesInscrites Hypotheque[]   @relation("HypothequeInscripteur")
-  hypothequesLevees    Hypotheque[]   @relation("HypothequeLeveur")
-  cessionsValidees     Convention[]   @relation("CessionValidateur")
-  annoncesPubliees     Annonce[]      @relation("AnnoncePubliee")
-  annoncesVerifiees    Annonce[]      @relation("AnnonceVerifieeAndf")
-  interetsExprimes     InteretAchat[] @relation("InteretAcheteur")
+  refreshTokens         RefreshToken[]
+  codesOtp              CodeOtp[]
+  plansBornageSignes    PlanBornage[]  @relation("GeometreSignataire")
+  plansBornageImportes  PlanBornage[]  @relation("GeometreImportateur")
+  conflitsOuverts       ConflitCsaf[]  @relation("MagistratOuvrant")
+  cessionsAcquises      Convention[]   @relation("CessionAcquereur")
+  hypothequesInscrites  Hypotheque[]   @relation("HypothequeInscripteur")
+  hypothequesLevees     Hypotheque[]   @relation("HypothequeLeveur")
+  cessionsValidees      Convention[]   @relation("CessionValidateur")
+  annoncesPubliees      Annonce[]      @relation("AnnoncePubliee")
+  annoncesVerifiees     Annonce[]      @relation("AnnonceVerifieeAndf")
+  interetsExprimes      InteretAchat[] @relation("InteretAcheteur")
+  signalementsDeposes   Signalement[]  @relation("SignalementAuteur")
+  signalementsQualifies Signalement[]  @relation("SignalementQualificateur")
+  avisDeposes           Avis[]         @relation("AvisAuteur")
+  avisRecus             Avis[]         @relation("AvisCite")
+  sequestresDeclares    Sequestre[]    @relation("SequestreDeclarant")
+  sequestresConfirmes   Sequestre[]    @relation("SequestreConfirmateur")
 
   /// Declare uniquement par un VENDEUR (E0.3) : adapte les pieces demandees lors de la publication.
   statutDeclarant StatutDeclarantVendeur?
@@ -261,6 +301,7 @@ model Parcelle {
   hypotheques       Hypotheque[]
   mutationsAudit    MutationAudit[]
   annonces          Annonce[]
+  signalements      Signalement[]
 
   @@index([statut])
   @@index([poleTerritorial])
@@ -323,6 +364,9 @@ model Convention {
   annonceId String?
   annonce   Annonce? @relation(fields: [annonceId], references: [id])
 
+  avis      Avis[]
+  sequestre Sequestre?
+
   @@index([parcelleId])
   @@index([statutCession])
 }
@@ -351,8 +395,9 @@ model Annonce {
   verifieeParAndf      Utilisateur? @relation("AnnonceVerifieeAndf", fields: [verifieeParAndfId], references: [id])
   dateVerificationAndf DateTime?
 
-  interets InteretAchat[]
-  cessions Convention[]
+  interets     InteretAchat[]
+  cessions     Convention[]
+  signalements Signalement[]
 
   @@index([parcelleId])
   @@index([statut])
@@ -512,6 +557,83 @@ model ConflitCsaf {
 
   @@index([parcelleId])
   @@index([statut])
+}
+
+/// Signalement citoyen ou litige foncier (E2.6/E2.7/E8.1/E8.2) : deposant une preuve/description,
+/// un admin qualifie ensuite le signalement (FONDE/REJETE). Pour ANNONCE fonde, l'admin retire
+/// lui-meme l'annonce (relevant de la moderation, pas de l'autorite judiciaire). Pour
+/// LITIGE_FONCIER fonde, seule la visibilite change : le gel effectif de la parcelle reste un acte
+/// reserve au magistrat CSAF (voir CsafService.gelerParcelle), jamais declenche automatiquement.
+model Signalement {
+  id         String            @id @default(uuid())
+  type       TypeSignalement
+  parcelleId String
+  parcelle   Parcelle          @relation(fields: [parcelleId], references: [id])
+  annonceId  String?
+  annonce    Annonce?          @relation(fields: [annonceId], references: [id])
+  motif      String
+  descriptif String?
+  statut     StatutSignalement @default(DEPOSE)
+  createdAt  DateTime          @default(now())
+
+  signalantId String
+  signalant   Utilisateur @relation("SignalementAuteur", fields: [signalantId], references: [id])
+
+  qualifieParId String?
+  qualifiePar   Utilisateur? @relation("SignalementQualificateur", fields: [qualifieParId], references: [id])
+  decisionMotif String?
+  traiteLe      DateTime?
+
+  @@index([parcelleId])
+  @@index([statut])
+  @@index([type])
+}
+
+/// Avis reciproque en fin de transaction (E7.7) : chaque partie d'une Convention VALIDEE peut noter
+/// une seule fois l'autre partie. Publie immediatement (pas de file de moderation prealable dans
+/// cette iteration, voir docs/decisions.md), mais uniquement depose par une des deux parties reelles
+/// de la transaction, jamais librement par un tiers.
+model Avis {
+  id           String     @id @default(uuid())
+  conventionId String
+  convention   Convention @relation(fields: [conventionId], references: [id])
+  note         Int
+  commentaire  String?
+  createdAt    DateTime   @default(now())
+
+  auteurId String
+  auteur   Utilisateur @relation("AvisAuteur", fields: [auteurId], references: [id])
+  citeId   String
+  cite     Utilisateur @relation("AvisCite", fields: [citeId], references: [id])
+
+  @@unique([conventionId, auteurId])
+  @@index([citeId])
+}
+
+/// Sequestre en pur suivi de statut (Epic 5, voir docs/decisions.md : aucun mouvement d'argent
+/// reel). L'acheteur declare un depot, un agent banque confirme l'encaissement declare, puis le
+/// statut passe automatiquement a LIBERE des que la cession est validee par l'ANDF, ou a
+/// REMBOURSE des que la cession est rejetee (quelle qu'en soit la cause) — jamais sur simple
+/// demande manuelle, puisqu'aucun argent reel n'est en jeu (voir CessionsService.valider/repondre).
+model Sequestre {
+  id           String          @id @default(uuid())
+  conventionId String          @unique
+  convention   Convention      @relation(fields: [conventionId], references: [id])
+  montantFcfa  Float
+  statut       StatutSequestre @default(DEPOT_DECLARE)
+  createdAt    DateTime        @default(now())
+
+  declareParId    String
+  declarePar      Utilisateur @relation("SequestreDeclarant", fields: [declareParId], references: [id])
+  dateDeclaration DateTime    @default(now())
+
+  confirmeParId    String?
+  confirmePar      Utilisateur? @relation("SequestreConfirmateur", fields: [confirmeParId], references: [id])
+  dateConfirmation DateTime?
+
+  dateLiberation     DateTime?
+  dateRemboursement  DateTime?
+  motifRemboursement String?
 }
 
 // ---------------------------------------------------------------------------

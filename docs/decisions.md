@@ -17,10 +17,45 @@ tout le systeme de permissions (`@Roles`) construit sur un role unique par utili
 
 Aucun mouvement d'argent reel : ni mobile money, ni virement, ni carte bancaire. Un vrai
 sequestre demanderait une integration avec un prestataire de paiement reglemente, hors de
-portee et hors sujet pour une plateforme de securisation fonciere. Le sequestre est
-represente comme un **suivi de statut** uniquement (depot declare -> confirme -> libere),
-sans jamais pretendre detenir de fonds reels. A construire dans une prochaine iteration ;
-en attendant, le depot de reservation reste absent plutot que simule de facon trompeuse.
+portee et hors sujet pour une plateforme de securisation fonciere. Construit comme un
+**suivi de statut** uniquement (`Sequestre` 1-1 avec une `Convention`) :
+
+- E5.4 : l'acheteur declare un depot des que la cession qu'il a acceptee (`ACCEPTEE`) est en
+  attente de validation ANDF — que la cession vienne de la vitrine ou d'une proposition
+  directe, le mecanisme est identique.
+- E5.5 : un agent banque confirme l'encaissement declare (`DEPOT_DECLARE` -> `DEPOT_CONFIRME`)
+  depuis une file dediee (`/sequestres/a-confirmer`), sans jamais manipuler de fonds reels.
+- E6.7/E5.8 : liberation et remboursement ne sont **jamais** des actions manuelles — ils
+  decoulent automatiquement du sort de la cession dans `CessionsService.valider()` : validee
+  par l'ANDF -> `LIBERE` ; rejetee par l'ANDF -> `REMBOURSE`. Puisqu'aucun argent reel n'est
+  en jeu, il n'y a rien a « demander » : le statut suit fidelement et immediatement la
+  decision deja prise par l'autorite competente, sans etape de confirmation supplementaire
+  qui n'aurait aucune substance financiere derriere elle.
+- Sans notaire dans cette iteration (voir plus bas), la validation ANDF — deja le
+  declencheur du transfert de propriete — sert aussi de declencheur a la liberation, a la
+  place du binome notaire+ANDF prevu par E6.7.
+
+## Restauration du parcours de cession directe (hors vitrine)
+
+En verifiant le parcours acheteur/vendeur de bout en bout, une route `/cession` s'est
+revelee **inaccessible a qui que ce soit** : restreinte au role CITOYEN dans le routeur,
+alors que `CessionsController` exige VENDEUR (proposer) et ACHETEUR (repondre) depuis la
+scission des roles plus tot dans cette session — un reliquat jamais nettoye. Plutot que de
+simplement elargir les roles autorises sur l'ancienne page (qui melangeait les deux
+perspectives sur un seul ecran, adapte a un CITOYEN pouvant jouer les deux roles, plus au
+modele actuel a un role par compte), la fonctionnalite a ete repartie dans les espaces deja
+dedies : "Proposer une cession directement" + historique dans `VendreView.vue` (cote
+vendeur), "Propositions recues" + reponse dans `AcheterView.vue` (cote acheteur).
+`CessionView.vue` et la route `/cession` sont supprimes. Les references stagnantes a
+`/cession` dans le tableau de bord, l'accueil et les notifications du role CITOYEN ont
+egalement ete retirees — un CITOYEN ne peut plus ceder ou acquerir de terrain, coherent
+avec la decision "Roles ACHETEUR / VENDEUR" ci-dessus deja actee en debut de session.
+
+Corrige au passage un veritable bug introduit par le verrou anti double-vente de cette
+session (voir plus haut) : quand l'ANDF rejette une cession issue de la vitrine, l'interet
+retenu restait bloque au statut RETENU indefiniment, empechant toute nouvelle manifestation
+d'interet sur l'annonce meme apres l'echec. `CessionsService.valider()` repasse desormais
+cet interet a DECLINE des que la cession est rejetee, ce qui reouvre l'annonce.
 
 ## Verification d'identite (E0.2)
 
@@ -63,6 +98,65 @@ une parcelle deja transferee.
 Le badge "limites certifiees" (E2.3) n'est jamais stocke comme un booleen dedie : il se
 deduit a chaque lecture de l'existence d'un `PlanBornage` signe et non conflictuel, pour
 ne jamais desynchroniser un badge affiche de la realite technique du bornage.
+
+## Signalements (E2.6/E2.7/E8.1/E8.2)
+
+Un seul modele `Signalement` sert les deux besoins du backlog (probleme sur une annonce et litige
+foncier plus large), avec un champ `type` qui distingue le traitement :
+- `ANNONCE` fonde -> l'admin retire lui-meme l'annonce (c'est de la moderation de contenu, un acte
+  qui lui revient legitimement).
+- `LITIGE_FONCIER` fonde -> **aucun gel automatique**. La qualification admin rend seulement le
+  signalement visible dans une file consultee par le magistrat CSAF (`/signalements/litiges-fondes`,
+  affichee en tete de `GelCsafView.vue` avec un bouton "Instruire ce dossier" qui pre-remplit la
+  recherche). Le gel reste un acte que seul un magistrat CSAF peut poser via `CsafService.gelerParcelle`
+  (ET.8 : « aucune action admin ne peut se substituer » a l'autorite competente).
+
+Le depot d'un signalement exige d'etre connecte (CITOYEN/VENDEUR/ACHETEUR/MANDATAIRE_FAMILIAL,
+liste d'acteurs d'E8.1) plutot que reellement anonyme comme le suggere la formulation d'E2.6(«
+accessible sans compte transactionnel ») : la tracabilite d'ET.6 (toute action importante horodatee
+et attribuee) l'emporte sur l'anonymat total, qui aurait aussi ouvert la porte a des signalements
+non tracables donc invérifiables.
+
+Point d'entree unique en l'etat : le formulaire de signalement n'existe que depuis le detail d'une
+annonce (`AnnonceDetailView.vue`), avec un choix de type (probleme d'annonce / litige foncier). Il
+n'existe pas encore de page de detail generique par parcelle en dehors d'une annonce publiee : un
+litige sur une parcelle qui n'a jamais ete mise en vente ne peut pas encore etre signale par ce
+canal. A elargir si le besoin se confirme.
+
+Pas de notification (email/SMS/push) envoyee au signalant ou aux parties lors de la qualification :
+coherent avec la decision « Notifications » ci-dessous (in-app uniquement, aucune passerelle
+integree). Le signalant peut consulter l'etat de ses signalements via `/signalements/mes-signalements`
+(expose cote API, pas encore relie a une vue dediee cote frontend).
+
+## Anti double-negociation sur une annonce (esprit E5.7)
+
+Des qu'un interet est retenu sur une annonce (une cession ACCEPTEE existe deja), toute nouvelle
+manifestation d'interet et toute nouvelle retenue sur la meme annonce sont refusees tant que
+l'annonce reste ACTIVE (elle ne passe VENDUE qu'a la validation ANDF). Sans ce verrou, un second
+acheteur aurait pu manifester son interet — voire etre retenu a son tour par erreur — sur une
+parcelle deja en cours de cession, ce qui aurait pu produire deux Convention concurrentes pour la
+meme parcelle.
+
+## Avis reciproque et coffre numerique (E7.7, E7.1, E3.4)
+
+Un avis (1 a 5, commentaire optionnel) ne peut etre depose que par une des deux parties reelles
+d'une `Convention` deja `VALIDEE`, sur l'autre partie, une seule fois (contrainte unique
+`conventionId`+`auteurId`). Publie **immediatement**, sans file de moderation prealable (a la
+difference de ce que suggere le CA d'E7.7) : construire une moderation dediee pour une seule
+fonctionnalite secondaire n'etait pas justifie dans le temps imparti, et la plateforme n'a nulle
+part ailleurs de pipeline de moderation de contenu generique reutilisable (les signalements, eux,
+ont leur propre flux explicite de qualification admin — voir plus haut). A reconsiderer si les avis
+deviennent un vecteur d'abus.
+
+Le "coffre numerique" (E7.1) reste circonscrit a ce qui existe reellement en base : les `Titre`
+delivres a l'acquereur, exportables en JSON (memes donnees reelles — hash, signature Ed25519 —
+que le dossier de preuves CSAF, pas un document PDF fabrique). Pas de gestion de bail/location/
+revente (E7.3, P2) ni de surveillance periodique (E7.2, P2) dans cette iteration.
+
+Le profil vendeur consultable depuis une annonce (E3.4 : "anciennete, ventes passees, avis") se
+limite a la note moyenne, au nombre d'avis et au nombre de ventes conclues (`Convention.creeParId`
++ `statutCession: VALIDEE`) — pas de page de profil dediee ni de liste paginee des avis, juste un
+resume affiche sur la fiche d'annonce.
 
 ## Estimation de prix (E1.9)
 

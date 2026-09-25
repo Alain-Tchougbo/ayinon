@@ -35,6 +35,19 @@ export class CessionsController {
     return this.cessions.mesCessionsEmises(utilisateur.id);
   }
 
+  @Roles(RoleUtilisateur.ACHETEUR)
+  @Get("mes-cessions-acquises")
+  async mesCessionsAcquises(@CurrentUser() utilisateur: UtilisateurAuthentifie) {
+    return this.cessions.mesCessionsAcquises(utilisateur.id);
+  }
+
+  /** E7.1 : coffre numerique — les titres reellement obtenus par cet acquereur, en un seul endroit. */
+  @Roles(RoleUtilisateur.ACHETEUR, RoleUtilisateur.CITOYEN)
+  @Get("mes-titres")
+  async mesTitres(@CurrentUser() utilisateur: UtilisateurAuthentifie) {
+    return this.cessions.mesTitres(utilisateur.id);
+  }
+
   @Roles(RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.ADMIN)
   @Get("a-valider")
   async aValider() {

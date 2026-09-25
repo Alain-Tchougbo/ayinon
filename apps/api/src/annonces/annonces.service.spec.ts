@@ -10,6 +10,7 @@ function creerService(options: {
   annonce?: Record<string, unknown> | null;
   interet?: Record<string, unknown> | null;
   parcelleGelee?: boolean;
+  autreInteretRetenu?: boolean;
 } = {}) {
   const parcelle =
     options.parcelle === null ? null : { id: "parcelle-1", proprietaireId: "prop-vendeur", verrouAntiVente: false, ...options.parcelle };
@@ -33,6 +34,10 @@ function creerService(options: {
     },
     interetAchat: {
       findUnique: async () => interet,
+      findFirst: async ({ where }: any) =>
+        where.statut === StatutInteret.RETENU && options.autreInteretRetenu
+          ? { id: "interet-retenu-existant", annonceId: where.annonceId, statut: StatutInteret.RETENU }
+          : null,
       create: async ({ data }: any) => {
         interet = { id: "interet-1", statut: StatutInteret.EN_ATTENTE, acheteur: ACHETEUR, ...data };
         return interet;
@@ -100,6 +105,25 @@ describe("AnnoncesService — vitrine publique et manifestations d'interet", () 
   it("refuse de manifester un interet sur une annonce retiree", async () => {
     const { service } = creerService({ annonce: { id: "annonce-1", parcelleId: "parcelle-1", publieeParId: VENDEUR.id, statut: StatutAnnonce.RETIREE } });
     await expect(service.manifesterInteret("annonce-1", {}, ACHETEUR)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("refuse un nouvel interet si un autre est deja retenu sur l'annonce (anti double-vente)", async () => {
+    const { service } = creerService({
+      annonce: { id: "annonce-1", parcelleId: "parcelle-1", publieeParId: VENDEUR.id, statut: StatutAnnonce.ACTIVE },
+      autreInteretRetenu: true,
+    });
+    await expect(service.manifesterInteret("annonce-1", {}, ACHETEUR)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("refuse de retenir un interet si un autre est deja retenu sur l'annonce (anti double-vente)", async () => {
+    const { service } = creerService({
+      annonce: { id: "annonce-1", parcelleId: "parcelle-1", publieeParId: VENDEUR.id, statut: StatutAnnonce.ACTIVE },
+      interet: { id: "interet-1", annonceId: "annonce-1", acheteurId: ACHETEUR.id, statut: StatutInteret.EN_ATTENTE, acheteur: ACHETEUR },
+      autreInteretRetenu: true,
+    });
+    await expect(
+      service.retenirInteret("annonce-1", "interet-1", { montantFcfa: 10_000_000 }, VENDEUR),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it("retient un interet et scelle une cession ACCEPTEE des la retenue", async () => {

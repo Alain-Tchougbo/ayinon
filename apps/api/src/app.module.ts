@@ -6,6 +6,7 @@ import { AdminModule } from "./admin/admin.module";
 import { AndfModule } from "./andf/andf.module";
 import { AnnoncesModule } from "./annonces/annonces.module";
 import { AuthModule } from "./auth/auth.module";
+import { AvisModule } from "./avis/avis.module";
 import { CessionsModule } from "./cessions/cessions.module";
 import { CsrfGuard } from "./common/guards/csrf.guard";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
@@ -19,6 +20,8 @@ import { HypothequesModule } from "./hypotheques/hypotheques.module";
 import { OtpModule } from "./otp/otp.module";
 import { ParcellesModule } from "./parcelles/parcelles.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { SequestresModule } from "./sequestres/sequestres.module";
+import { SignalementsModule } from "./signalements/signalements.module";
 import { SyncModule } from "./sync/sync.module";
 
 @Module({
@@ -39,6 +42,9 @@ import { SyncModule } from "./sync/sync.module";
     HypothequesModule,
     AdminModule,
     AnnoncesModule,
+    SignalementsModule,
+    AvisModule,
+    SequestresModule,
     SyncModule,
   ],
   providers: [
