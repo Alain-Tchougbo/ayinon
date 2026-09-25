@@ -1,7 +1,16 @@
 /* eslint-disable no-console */
 import { PrismaClient, Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
-import { RoleFamilial, RoleUtilisateur, StatutCession, StatutDeclarantVendeur, StatutParcelle, PoleTerritorial } from "@ayinon/shared";
+import {
+  RoleFamilial,
+  RoleUtilisateur,
+  StatutCession,
+  StatutConflitCsaf,
+  StatutDeclarantVendeur,
+  StatutParcelle,
+  PoleTerritorial,
+  TypeDecisionCsaf,
+} from "@ayinon/shared";
 import { hacherMotDePasse } from "../src/auth/password.util";
 
 const prisma = new PrismaClient();
@@ -239,6 +248,41 @@ async function main() {
     kodjo.id,
   );
 
+  console.log("Publication d'annonces de demonstration (vitrine des terrains a vendre)...");
+  const vendeur1 = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "vendeur1@ayinon.bj" } });
+  const andfLittoral = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "andf.littoral@ayinon.bj" } });
+  const acheteur1 = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "acheteur1@ayinon.bj" } });
+  const parcellePortoNovo = await prisma.parcelle.findUniqueOrThrow({ where: { nup: "BJ-OUE-PN-0004" } });
+  const parcelleLokossa = await prisma.parcelle.findUniqueOrThrow({ where: { nup: "BJ-MOC-LOK-0008" } });
+  await prisma.annonce.createMany({
+    data: [
+      {
+        // Vitrine complete : badge ANDF + exclusivite temporaire en cours (E4.5), pour verifier
+        // le rendu de tous les badges simultanement sur une meme carte.
+        parcelleId: parcelleVendeur,
+        publieeParId: vendeur1.id,
+        prixIndicatifFcfa: 35_000_000,
+        description: "Parcelle titree, viabilisee, proche de la voie bitumee — ideale pour habitation.",
+        verifieeParAndfId: andfLittoral.id,
+        dateVerificationAndf: new Date(),
+        exclusiviteAcheteurId: acheteur1.id,
+        exclusiviteJusqua: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      },
+      {
+        // Carte simple, sans badge : prix indicatif renseigne, aucune verification ANDF encore.
+        parcelleId: parcellePortoNovo.id,
+        publieeParId: vendeur1.id,
+        prixIndicatifFcfa: 12_500_000,
+      },
+      {
+        // Prix "a discuter" (prixIndicatifFcfa null) : verifie ce cas d'affichage specifique.
+        parcelleId: parcelleLokossa.id,
+        publieeParId: vendeur1.id,
+        description: "Terrain agricole en bordure de route nationale, potentiel construction.",
+      },
+    ],
+  });
+
   console.log("Insertion d'une cession historique validee (peuple l'estimation de prix par commune)...");
   await prisma.convention.create({
     data: {
@@ -253,6 +297,40 @@ async function main() {
     },
   });
 
+  console.log("Insertion d'un historique proprietaires + litige judiciaire resolu sur des parcelles avec annonce active...");
+  const csaf = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "csaf1@ayinon.bj" } });
+  // Demontre l'historique public consulte par un acheteur (GET /parcelles/:id/historique) sur une
+  // parcelle reellement en vitrine : mutation anterieure vers le vendeur actuel.
+  await prisma.convention.create({
+    data: {
+      parcelleId: parcelleVendeur,
+      vendeurNom: "Ancien proprietaire (avant AYINON)",
+      acquereurNom: roukayath.nomComplet,
+      montantFcfa: 22_000_000,
+      hashSha256: "0".repeat(64),
+      signatureEd25519: "",
+      qrPayload: {},
+      statutCession: StatutCession.VALIDEE,
+      createdAt: new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000),
+    },
+  });
+  // Litige judiciaire deja resolu (pas actif) sur une autre parcelle en vitrine, pour verifier le
+  // rendu "transparence apres resolution" plutot que le seul cas de gel bloquant.
+  await prisma.conflitCsaf.create({
+    data: {
+      parcelleId: parcelleLokossa.id,
+      motif: "Opposition d'un voisin sur la delimitation lors du bornage initial",
+      referenceDossierJudiciaire: "CSAF-2024-000017",
+      statut: StatutConflitCsaf.LEVE,
+      statutParcelleAvantGel: StatutParcelle.TITREE,
+      ouvertParId: csaf.id,
+      dateGel: new Date(Date.now() - 730 * 24 * 60 * 60 * 1000),
+      dateLevee: new Date(Date.now() - 545 * 24 * 60 * 60 * 1000),
+      motifLevee: "Bornage contradictoire realise, limites confirmees par le geometre — opposition levee",
+      typeDecision: TypeDecisionCsaf.LEVEE_SIMPLE,
+    },
+  });
+
   console.log("Ouverture d'un protocole de multi-signature familiale sur une parcelle hereditaire...");
   await prisma.signatureFamille.createMany({
     data: [
@@ -263,7 +341,6 @@ async function main() {
   });
 
   console.log("Ouverture d'un conflit CSAF de demonstration...");
-  const csaf = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "csaf1@ayinon.bj" } });
   await prisma.$transaction([
     prisma.conflitCsaf.create({
       data: {

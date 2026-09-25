@@ -23,6 +23,26 @@ export interface ParcelleAvecGeometrie {
   proprietaireNom: string | null;
 }
 
+export interface EvenementJudiciairePublic {
+  statut: string;
+  dateGel: Date;
+  dateLevee: Date | null;
+  motifLevee: string | null;
+  typeDecision: string | null;
+}
+
+export interface MutationProprietePublique {
+  vendeurNom: string;
+  acquereurNom: string;
+  date: Date;
+}
+
+export interface HistoriqueParcellePublic {
+  statutJudiciaire: "AUCUN_LITIGE" | "GEL_EN_COURS" | "ANTECEDENT_LEVE";
+  evenementsJudiciaires: EvenementJudiciairePublic[];
+  proprietairesSuccessifs: MutationProprietePublique[];
+}
+
 @Injectable()
 export class ParcellesService {
   constructor(
@@ -72,6 +92,58 @@ export class ParcellesService {
       throw new NotFoundException("Parcelle introuvable");
     }
     return parcelle;
+  }
+
+  /**
+   * Historique public d'une parcelle pour un acheteur potentiel : volet judiciaire (gels CSAF) et
+   * volet proprietaires successifs (via les conventions finalisees). Version deliberement
+   * anonymisee/resumee — le dossier judiciaire complet (reference de dossier, motif tant que le
+   * gel est actif, chemin de la decision) reste reserve aux roles regaliens via
+   * GET /audit/parcelles/:id/historique et GET /csaf/conflits-actifs.
+   */
+  async obtenirHistoriquePublic(id: string): Promise<HistoriqueParcellePublic> {
+    const parcelleExiste = await this.prisma.parcelle.findUnique({ where: { id }, select: { id: true } });
+    if (!parcelleExiste) {
+      throw new NotFoundException("Parcelle introuvable");
+    }
+
+    const [conflits, conventions] = await Promise.all([
+      this.prisma.conflitCsaf.findMany({
+        where: { parcelleId: id },
+        orderBy: { dateGel: "asc" },
+        select: { statut: true, dateGel: true, dateLevee: true, motifLevee: true, typeDecision: true },
+      }),
+      this.prisma.convention.findMany({
+        where: { parcelleId: id, statutCession: "VALIDEE" },
+        orderBy: { createdAt: "asc" },
+        select: { vendeurNom: true, acquereurNom: true, dateValidation: true, createdAt: true },
+      }),
+    ]);
+
+    const gelActif = conflits.some((conflit) => conflit.statut === "ACTIF");
+    const statutJudiciaire: HistoriqueParcellePublic["statutJudiciaire"] = gelActif
+      ? "GEL_EN_COURS"
+      : conflits.length > 0
+        ? "ANTECEDENT_LEVE"
+        : "AUCUN_LITIGE";
+
+    return {
+      statutJudiciaire,
+      evenementsJudiciaires: conflits.map((conflit) => ({
+        statut: conflit.statut,
+        dateGel: conflit.dateGel,
+        // Le motif et le type de decision ne sont restitues qu'une fois le gel leve (transparence
+        // sur l'issue), jamais pendant une procedure en cours (allegations non tranchees).
+        dateLevee: conflit.dateLevee,
+        motifLevee: conflit.statut === "LEVE" ? conflit.motifLevee : null,
+        typeDecision: conflit.statut === "LEVE" ? conflit.typeDecision : null,
+      })),
+      proprietairesSuccessifs: conventions.map((convention) => ({
+        vendeurNom: convention.vendeurNom,
+        acquereurNom: convention.acquereurNom,
+        date: convention.dateValidation ?? convention.createdAt,
+      })),
+    };
   }
 
   async rechercher(dto: RechercheParcelleDto): Promise<ParcelleAvecGeometrie[]> {

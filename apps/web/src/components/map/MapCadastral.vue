@@ -26,26 +26,28 @@ const SVG_CADENAS =
 
 /**
  * Le popup MapLibre est du HTML brut ajoute au document (hors rendu Vue) : on reference les
- * variables CSS de tokens.css (var(--color-...)) plutot que des couleurs figees, pour que le
+ * variables CSS de tokens.css (rgb(var(--color-...))) plutot que des couleurs figees, pour que le
  * popup suive fidelement le theme actif (clair/sombre/plein-soleil) au lieu de rester fige en blanc.
+ * Ces variables sont des triplets "R G B" (pas des #hex, voir tokens.css) : il faut donc toujours
+ * les envelopper dans rgb(...) ici, jamais les utiliser seules comme valeur de couleur directe.
  */
 function construirePopupHtml(parcelle: ParcelleCache): string {
   const couleurStatut = COULEUR_STATUT_PARCELLE[parcelle.statut];
   return `
-    <div style="font-family:system-ui,sans-serif;font-size:13px;line-height:1.6;min-width:200px;background:var(--color-surface);color:var(--color-texte);margin:-10px;padding:10px;border-radius:0.5rem">
+    <div style="font-family:system-ui,sans-serif;font-size:13px;line-height:1.6;min-width:200px;background:rgb(var(--color-surface));color:rgb(var(--color-texte));margin:-10px;padding:10px;border-radius:0.5rem">
       <div style="font-weight:700;font-size:14px;margin-bottom:2px">${parcelle.nup}</div>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
         <span style="width:9px;height:9px;border-radius:999px;background:${couleurStatut};display:inline-block"></span>
         <span>${LIBELLE_STATUT[parcelle.statut]}</span>
       </div>
-      <div style="color:var(--color-texte-attenue)">
+      <div style="color:rgb(var(--color-texte-attenue))">
         ${parcelle.commune}${parcelle.arrondissement ? " — " + parcelle.arrondissement : ""}<br/>
         Superficie : ${parcelle.superficieM2.toLocaleString("fr-FR")} m²<br/>
         Proprietaire : ${parcelle.proprietaireNom ?? "Non renseigne"}
       </div>
       ${
         parcelle.verrouAntiVente
-          ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--color-succes);color:var(--color-succes);padding:2px 8px;border-radius:999px;font-weight:600;font-size:12px">${SVG_CADENAS} Verrou anti-vente actif</div>`
+          ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:5px;border:1px solid rgb(var(--color-succes));color:rgb(var(--color-succes));padding:2px 8px;border-radius:999px;font-weight:600;font-size:12px">${SVG_CADENAS} Verrou anti-vente actif</div>`
           : ""
       }
     </div>`;
