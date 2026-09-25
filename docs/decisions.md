@@ -53,9 +53,12 @@ frais notaries) ne sont pas construits.
 Le vendeur retient un interet -> une Convention est creee directement au statut ACCEPTEE
 (pas PROPOSEE), puisque les deux parties ont deja convenu via l'annonce et la
 manifestation d'interet. Elle rejoint ensuite le pipeline de validation ANDF existant
-(`/cessions/a-valider`, `CessionsService.valider`) sans aucune modification de ce
-service : la vitrine est une seconde porte d'entree vers le meme pipeline de cession deja
-construit et verifie, pas un pipeline parallele.
+(`/cessions/a-valider`, `CessionsService.valider`) : la vitrine est une seconde porte
+d'entree vers le meme pipeline de cession deja construit et verifie, pas un pipeline
+parallele. Seul ajout a `valider()` : quand la cession validee provient d'une annonce
+(`annonceId` renseigne), l'annonce passe au statut VENDUE dans la meme transaction, pour
+qu'elle disparaisse de la vitrine et qu'aucun autre acheteur ne manifeste son interet sur
+une parcelle deja transferee.
 
 Le badge "limites certifiees" (E2.3) n'est jamais stocke comme un booleen dedie : il se
 deduit a chaque lecture de l'existence d'un `PlanBornage` signe et non conflictuel, pour

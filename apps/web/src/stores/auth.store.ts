@@ -1,4 +1,4 @@
-import type { RoleUtilisateur } from "@ayinon/shared";
+import type { InscriptionDto, RoleUtilisateur } from "@ayinon/shared";
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { ApiError, api } from "../services/api";
@@ -40,6 +40,29 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  /** E0.1 : inscription en libre-service. Ne connecte pas encore — un code de confirmation doit
+   * d'abord etre valide (voir confirmerInscription). */
+  async function inscription(dto: InscriptionDto) {
+    erreur.value = null;
+    try {
+      return await api.post<{ message: string; codeDebug?: string }>("/auth/inscription", dto);
+    } catch (e) {
+      erreur.value = e instanceof ApiError ? e.message : "Inscription impossible";
+      return null;
+    }
+  }
+
+  async function confirmerInscription(email: string, code: string) {
+    erreur.value = null;
+    try {
+      utilisateur.value = await api.post<UtilisateurConnecte>("/auth/inscription/confirmer", { email, code });
+      return true;
+    } catch (e) {
+      erreur.value = e instanceof ApiError ? e.message : "Code de confirmation invalide";
+      return false;
+    }
+  }
+
   async function deconnexion() {
     try {
       await api.post("/auth/deconnexion");
@@ -48,5 +71,16 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  return { utilisateur, chargementInitial, erreur, estConnecte, role, chargerSession, connexion, deconnexion };
+  return {
+    utilisateur,
+    chargementInitial,
+    erreur,
+    estConnecte,
+    role,
+    chargerSession,
+    connexion,
+    inscription,
+    confirmerInscription,
+    deconnexion,
+  };
 });

@@ -22,6 +22,8 @@ const enCours = ref(false);
 
 const COMPTES_DEMO = [
   { email: "citoyen1@ayinon.bj", label: "Citoyen (proprietaire)" },
+  { email: "vendeur1@ayinon.bj", label: "Vendeur (Roukayath ALAO)" },
+  { email: "acheteur1@ayinon.bj", label: "Acheteur (Ganiou SALIFOU)" },
   { email: "geometre1@ayinon.bj", label: "Geometre-expert" },
   { email: "mandataire.aine@ayinon.bj", label: "Mandataire familial (Aine)" },
   { email: "andf.littoral@ayinon.bj", label: "Agent ANDF" },
@@ -61,6 +63,11 @@ async function seConnecter() {
         </BaseButton>
       </form>
     </BaseCard>
+
+    <p class="mt-4 text-center text-sm text-texte-attenue">
+      Pas encore de compte ?
+      <RouterLink to="/inscription" class="font-medium text-primaire underline underline-offset-2">Creer un compte</RouterLink>
+    </p>
 
     <div class="mt-6 rounded-carte border border-dashed border-bordure p-4 text-xs text-texte-attenue">
       <p class="mb-2 font-semibold text-texte">Comptes de demonstration (mot de passe : Ayinon@2026)</p>

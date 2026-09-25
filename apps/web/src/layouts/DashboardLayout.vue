@@ -11,12 +11,14 @@ import {
   LayoutDashboard,
   LogOut,
   Map,
+  Megaphone,
   Menu,
   Ruler,
   ScanLine,
   Search,
   Shield,
   ShieldCheck,
+  Store,
   SunMoon,
   Users,
   Wifi,
@@ -44,6 +46,8 @@ const notifications = useNotifications();
 
 const LIBELLE_ROLE: Record<RoleUtilisateur, string> = {
   CITOYEN: "Citoyen",
+  VENDEUR: "Vendeur",
+  ACHETEUR: "Acheteur",
   GEOMETRE: "Geometre-expert",
   NOTAIRE: "Notaire",
   MANDATAIRE_FAMILIAL: "Mandataire familial",
@@ -62,12 +66,21 @@ const champRecherche = ref<HTMLInputElement>();
 
 /** Liens de nav reellement adaptes au role, pas un menu identique pour tout le monde. */
 const liensNav = computed(() => {
-  const items: Array<{ to: string; label: string; icone: unknown }> = [{ to: "/carte", label: "Carte cadastrale", icone: Map }];
+  const items: Array<{ to: string; label: string; icone: unknown }> = [
+    { to: "/carte", label: "Carte cadastrale", icone: Map },
+    { to: "/annonces", label: "Vitrine des annonces", icone: Store },
+  ];
   if (auth.role === RoleUtilisateur.CITOYEN) {
     items.push({ to: "/scanner", label: "Scanner anti-fraude", icone: ScanLine });
     items.push({ to: "/simulateur-frais", label: "Simulateur de frais", icone: Calculator });
     items.push({ to: "/passeport-foncier", label: "Passeport foncier", icone: ShieldCheck });
     items.push({ to: "/cession", label: "Ceder un terrain", icone: Handshake });
+  }
+  if (auth.role === RoleUtilisateur.VENDEUR) {
+    items.push({ to: "/vendre", label: "Vendre un terrain", icone: Megaphone });
+  }
+  if (auth.role === RoleUtilisateur.ACHETEUR) {
+    items.push({ to: "/acheter", label: "Acheter un terrain", icone: Handshake });
   }
   if (auth.role === RoleUtilisateur.MANDATAIRE_FAMILIAL) {
     items.push({ to: "/famille", label: "Mes mandats", icone: Users });

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  Award,
   Banknote,
   Calculator,
   CircleCheck,
@@ -11,10 +12,12 @@ import {
   LayoutDashboard,
   ListClock,
   Map,
+  Megaphone,
   Ruler,
   ScanLine,
   Search,
   ShieldCheck,
+  Store,
   TriangleAlert,
   Users,
 } from "@lucide/vue";
@@ -54,6 +57,17 @@ interface PropositionCession {
   montantFcfa: number;
   parcelle: { id: string; nup: string; commune: string };
 }
+interface AnnonceAvecInterets {
+  id: string;
+  statut: "ACTIVE" | "RETIREE" | "VENDUE";
+  parcelle: { nup: string; commune: string };
+  interets: Array<{ statut: string }>;
+}
+interface InteretExprime {
+  id: string;
+  statut: "EN_ATTENTE" | "RETENU" | "DECLINE";
+  annonce: { id: string; parcelle: { nup: string; commune: string } };
+}
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -65,6 +79,8 @@ const mesSignatures = ref<SignatureEnAttente[]>([]);
 const mesImports = ref<MonImport[]>([]);
 const conflitsActifs = ref<ConflitCsaf[]>([]);
 const propositionsCession = ref<PropositionCession[]>([]);
+const mesAnnonces = ref<AnnonceAvecInterets[]>([]);
+const mesInterets = ref<InteretExprime[]>([]);
 const chargementEspace = ref(false);
 
 const mesParcelles = computed(() => parcelles.parcelles.filter((p) => p.proprietaireId === auth.utilisateur?.proprietaireId));
@@ -81,6 +97,10 @@ onMounted(async () => {
     if (auth.role === RoleUtilisateur.CITOYEN) {
       await parcelles.chargerToutes();
       propositionsCession.value = await api.get<PropositionCession[]>("/cessions/mes-propositions-recues");
+    } else if (auth.role === RoleUtilisateur.VENDEUR) {
+      mesAnnonces.value = await api.get<AnnonceAvecInterets[]>("/annonces/mes-annonces");
+    } else if (auth.role === RoleUtilisateur.ACHETEUR) {
+      mesInterets.value = await api.get<InteretExprime[]>("/annonces/mes-interets");
     } else if (auth.role === RoleUtilisateur.MANDATAIRE_FAMILIAL) {
       mesSignatures.value = await api.get<SignatureEnAttente[]>("/familles/mes-signatures-en-attente");
     } else if (auth.role === RoleUtilisateur.GEOMETRE) {
@@ -100,7 +120,10 @@ function rechercherEtOuvrirCarte() {
 
 /** Raccourcis affiches : varient reellement selon le role connecte, pas un menu generique identique pour tous. */
 const raccourcis = computed(() => {
-  const items = [{ to: "/carte", icone: Map, titre: "Carte cadastrale", description: "Statut de chaque parcelle, code couleur national." }];
+  const items = [
+    { to: "/carte", icone: Map, titre: "Carte cadastrale", description: "Statut de chaque parcelle, code couleur national." },
+    { to: "/annonces", icone: Store, titre: "Vitrine des annonces", description: "Parcourez les terrains publies par des vendeurs verifies." },
+  ];
   if (!auth.estConnecte || auth.role === RoleUtilisateur.CITOYEN) {
     items.push({ to: "/scanner", icone: ScanLine, titre: "Scanner anti-fraude", description: "Verifiez l'authenticite d'une convention de vente." });
     items.push({ to: "/simulateur-frais", icone: Calculator, titre: "Simulateur de frais", description: "Fini les rackets des demarcheurs illegaux." });
@@ -109,6 +132,12 @@ const raccourcis = computed(() => {
     items.push({ to: "/passeport-foncier", icone: ShieldCheck, titre: "Passeport foncier", description: "Verrouillez votre parcelle contre toute vente non consentie." });
     items.push({ to: "/cession", icone: Handshake, titre: "Ceder ou acquerir un terrain", description: "Proposez une vente ou repondez a une proposition d'achat." });
     items.push({ to: "/famille", icone: Users, titre: "Terre familiale", description: "Multi-signature et affichage de ban sur une parcelle hereditaire." });
+  }
+  if (auth.role === RoleUtilisateur.VENDEUR) {
+    items.push({ to: "/vendre", icone: Megaphone, titre: "Vendre un terrain", description: "Publiez une parcelle et suivez les acheteurs interesses." });
+  }
+  if (auth.role === RoleUtilisateur.ACHETEUR) {
+    items.push({ to: "/acheter", icone: Handshake, titre: "Acheter un terrain", description: "Suivez vos manifestations d'interet et leur statut." });
   }
   if (auth.role === RoleUtilisateur.MANDATAIRE_FAMILIAL) {
     items.push({ to: "/famille", icone: Users, titre: "Mes mandats familiaux", description: "Signez ou refusez les mutations qui vous sont soumises." });
@@ -210,6 +239,42 @@ const raccourcis = computed(() => {
             >
               {{ p.verrouAntiVente ? "Verrouillee" : "Non verrouillee" }}
             </span>
+          </BaseCard>
+        </li>
+      </ul>
+    </section>
+
+    <!-- VENDEUR : interets en attente sur ses annonces actives. -->
+    <section v-if="auth.role === RoleUtilisateur.VENDEUR">
+      <h2 class="mb-3 flex items-center gap-2 text-lg font-semibold text-texte">
+        <Megaphone :size="18" class="text-primaire" aria-hidden="true" />
+        Vos annonces
+      </h2>
+      <p v-if="chargementEspace" class="text-sm text-texte-attenue" role="status">Chargement…</p>
+      <p v-else-if="mesAnnonces.length === 0" class="text-sm text-texte-attenue">Aucune annonce publiee pour le moment.</p>
+      <ul v-else class="grid gap-3 sm:grid-cols-2">
+        <li v-for="a in mesAnnonces" :key="a.id">
+          <BaseCard to="/vendre" rembourrage="sm">
+            <p class="font-medium text-texte">{{ a.parcelle.nup }} — {{ a.parcelle.commune }}</p>
+            <p class="mt-0.5 text-xs text-texte-attenue">
+              {{ a.interets.filter((i) => i.statut === "EN_ATTENTE").length }} interet(s) en attente
+            </p>
+          </BaseCard>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ACHETEUR : manifestations d'interet retenues par un vendeur. -->
+    <section v-if="auth.role === RoleUtilisateur.ACHETEUR && mesInterets.some((i) => i.statut === 'RETENU')">
+      <h2 class="mb-3 flex items-center gap-2 text-lg font-semibold text-texte">
+        <Award :size="18" class="text-succes" aria-hidden="true" />
+        Interets retenus par un vendeur
+      </h2>
+      <ul class="space-y-2">
+        <li v-for="i in mesInterets.filter((x) => x.statut === 'RETENU')" :key="i.id">
+          <BaseCard :to="`/annonces/${i.annonce.id}`" accentue="succes" rembourrage="sm">
+            <p class="font-medium text-texte">{{ i.annonce.parcelle.nup }} — {{ i.annonce.parcelle.commune }}</p>
+            <p class="mt-0.5 text-xs text-texte-attenue">Cession en cours de validation ANDF</p>
           </BaseCard>
         </li>
       </ul>

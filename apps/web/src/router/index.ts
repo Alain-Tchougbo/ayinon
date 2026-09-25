@@ -28,6 +28,31 @@ const router = createRouter({
       meta: { titre: "Simulateur de frais" },
     },
     { path: "/connexion", name: "connexion", component: () => import("../views/auth/LoginView.vue"), meta: { titre: "Connexion" } },
+    { path: "/inscription", name: "inscription", component: () => import("../views/auth/InscriptionView.vue"), meta: { titre: "Creer un compte" } },
+    {
+      path: "/annonces",
+      name: "annonces",
+      component: () => import("../views/annonces/AnnoncesListeView.vue"),
+      meta: { titre: "Vitrine des annonces" },
+    },
+    {
+      path: "/annonces/:id",
+      name: "annonce-detail",
+      component: () => import("../views/annonces/AnnonceDetailView.vue"),
+      meta: { titre: "Annonce" },
+    },
+    {
+      path: "/vendre",
+      name: "vendre",
+      component: () => import("../views/vendeur/VendreView.vue"),
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.VENDEUR], titre: "Vendre un terrain" },
+    },
+    {
+      path: "/acheter",
+      name: "acheter",
+      component: () => import("../views/acheteur/AcheterView.vue"),
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.ACHETEUR], titre: "Acheter un terrain" },
+    },
     {
       path: "/passeport-foncier",
       name: "passeport-foncier",
@@ -112,10 +137,10 @@ router.beforeEach(async (to) => {
     return { name: "connexion", query: { redirection: to.fullPath } };
   }
 
-  // Un utilisateur deja connecte n'a rien a faire sur l'ecran de connexion (favori, bouton
-  // precedent) : y rester l'afficherait dans le chrome "tableau de bord" avec, absurdement, un
-  // formulaire lui redemandant de se connecter alors que son identite est deja visible partout.
-  if (to.name === "connexion" && auth.estConnecte) {
+  // Un utilisateur deja connecte n'a rien a faire sur l'ecran de connexion ou d'inscription
+  // (favori, bouton precedent) : y rester l'afficherait dans le chrome "tableau de bord" avec,
+  // absurdement, un formulaire lui redemandant de se connecter/creer un compte.
+  if ((to.name === "connexion" || to.name === "inscription") && auth.estConnecte) {
     return { name: "accueil" };
   }
 

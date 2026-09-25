@@ -28,6 +28,16 @@ export function useNotifications() {
         compte.value = propositions.length;
         lien.value = "/cession";
         libelle.value = "proposition(s) de cession recue(s)";
+      } else if (auth.role === RoleUtilisateur.VENDEUR) {
+        const mesAnnonces = await api.get<Array<{ interets: Array<{ statut: string }> }>>("/annonces/mes-annonces");
+        compte.value = mesAnnonces.reduce((total, a) => total + a.interets.filter((i) => i.statut === "EN_ATTENTE").length, 0);
+        lien.value = "/vendre";
+        libelle.value = "interet(s) recu(s) sur vos annonces";
+      } else if (auth.role === RoleUtilisateur.ACHETEUR) {
+        const mesInterets = await api.get<Array<{ statut: string }>>("/annonces/mes-interets");
+        compte.value = mesInterets.filter((i) => i.statut === "RETENU").length;
+        lien.value = "/acheter";
+        libelle.value = "interet(s) retenu(s) par un vendeur";
       } else if (auth.role === RoleUtilisateur.MANDATAIRE_FAMILIAL) {
         const signatures = await api.get<unknown[]>("/familles/mes-signatures-en-attente");
         compte.value = signatures.length;

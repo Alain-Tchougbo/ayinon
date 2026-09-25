@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { createHash } from "node:crypto";
 import {
   RoleUtilisateur,
+  StatutAnnonce,
   StatutCession,
   StatutParcelle,
   TypeOperationAudit,
@@ -231,6 +232,13 @@ export class CessionsService {
         data: { statutCession: StatutCession.VALIDEE, valideParId: agent.id, dateValidation: dateDelivrance },
         include: INCLUSION_CESSION,
       });
+
+      // Cession issue de la vitrine (E6) : l'annonce d'origine ne doit plus apparaitre comme active
+      // une fois la vente actee, sinon d'autres acheteurs pourraient manifester leur interet sur une
+      // parcelle deja transferee.
+      if (convention.annonceId) {
+        await tx.annonce.update({ where: { id: convention.annonceId }, data: { statut: StatutAnnonce.VENDUE } });
+      }
 
       return { convention: conventionValidee, titre: titreCree };
     });
