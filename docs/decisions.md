@@ -317,3 +317,20 @@ propagation de clic avec la navigation vers le detail. Comparaison sur prix, sup
 les deux badges (controle ANDF, limites certifiees) — le CA mentionne aussi la "distance", non
 retenue : aucune position de reference (l'utilisateur n'a pas fourni sa propre localisation) dont
 calculer une distance pertinente dans cette iteration.
+
+## Recherche sauvegardee avec alerte (E3.2)
+
+Meme filtres combinables que `GET /annonces`, figes au moment de l'enregistrement
+(`RechercheSauvegardee`, un acheteur peut en sauvegarder plusieurs). "Alerte" = in-app
+uniquement : chaque recherche porte une `derniereConsultation`, et `GET /recherches-sauvegardees`
+recalcule a la volee le nombre d'annonces actives publiees depuis cette date qui correspondent
+encore aux filtres (`prisma.annonce.count`), sans file d'attente ni tache planifiee — coherent
+avec l'absence de passerelle SMS/email/push deja actee ("Notifications" plus haut). Cliquer sur
+une recherche sauvegardee applique ses filtres a la vitrine et remet son compteur a zero
+(`PATCH .../consulter`). Le filtre "limites certifiees" est enregistre mais **ignore dans le
+comptage des nouveautes** : comme pour `listerActives`, c'est un badge derive du plan de bornage
+(pas une colonne de la table `Annonce`), non filtrable directement dans un `count()` — le
+compteur peut donc legerement sur-estimer si ce filtre est actif, un compromis honnete plutot
+qu'une jointure couteuse pour une fonctionnalite secondaire. Aucune entree dans le registre
+d'audit crypto : contrairement aux operations sur une parcelle/transaction (ET.6), une recherche
+sauvegardee est une preference personnelle sans aucune portee legale.

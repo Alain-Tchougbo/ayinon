@@ -66,5 +66,6 @@ export const api = {
   get: <T>(chemin: string) => requete<T>(chemin),
   post: <T>(chemin: string, body?: unknown) => requete<T>(chemin, { method: "POST", body }),
   patch: <T>(chemin: string, body?: unknown) => requete<T>(chemin, { method: "PATCH", body }),
+  delete: <T>(chemin: string) => requete<T>(chemin, { method: "DELETE" }),
   postForm: <T>(chemin: string, formData: FormData) => requete<T>(chemin, { method: "POST", formData }),
 };

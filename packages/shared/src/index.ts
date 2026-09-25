@@ -16,3 +16,4 @@ export * from "./schemas/sync.schema";
 export * from "./calculs/gain-net";
 export * from "./schemas/visite.schema";
 export * from "./schemas/financement.schema";
+export * from "./schemas/recherche-sauvegardee.schema";

@@ -260,28 +260,29 @@ model Utilisateur {
   proprietaireId String?       @unique
   proprietaire   Proprietaire? @relation(fields: [proprietaireId], references: [id])
 
-  refreshTokens         RefreshToken[]
-  codesOtp              CodeOtp[]
-  plansBornageSignes    PlanBornage[]        @relation("GeometreSignataire")
-  plansBornageImportes  PlanBornage[]        @relation("GeometreImportateur")
-  conflitsOuverts       ConflitCsaf[]        @relation("MagistratOuvrant")
-  cessionsAcquises      Convention[]         @relation("CessionAcquereur")
-  hypothequesInscrites  Hypotheque[]         @relation("HypothequeInscripteur")
-  hypothequesLevees     Hypotheque[]         @relation("HypothequeLeveur")
-  cessionsValidees      Convention[]         @relation("CessionValidateur")
-  annoncesPubliees      Annonce[]            @relation("AnnoncePubliee")
-  annoncesVerifiees     Annonce[]            @relation("AnnonceVerifieeAndf")
-  exclusivitesRecues    Annonce[]            @relation("AnnonceExclusivite")
-  interetsExprimes      InteretAchat[]       @relation("InteretAcheteur")
-  signalementsDeposes   Signalement[]        @relation("SignalementAuteur")
-  signalementsQualifies Signalement[]        @relation("SignalementQualificateur")
-  avisDeposes           Avis[]               @relation("AvisAuteur")
-  avisRecus             Avis[]               @relation("AvisCite")
-  sequestresDeclares    Sequestre[]          @relation("SequestreDeclarant")
-  sequestresConfirmes   Sequestre[]          @relation("SequestreConfirmateur")
-  visitesDemandees      Visite[]             @relation("VisiteAcheteur")
-  demandesFinancement   DemandeFinancement[] @relation("FinancementAcheteur")
-  financementsTraites   DemandeFinancement[] @relation("FinancementTraite")
+  refreshTokens          RefreshToken[]
+  codesOtp               CodeOtp[]
+  plansBornageSignes     PlanBornage[]          @relation("GeometreSignataire")
+  plansBornageImportes   PlanBornage[]          @relation("GeometreImportateur")
+  conflitsOuverts        ConflitCsaf[]          @relation("MagistratOuvrant")
+  cessionsAcquises       Convention[]           @relation("CessionAcquereur")
+  hypothequesInscrites   Hypotheque[]           @relation("HypothequeInscripteur")
+  hypothequesLevees      Hypotheque[]           @relation("HypothequeLeveur")
+  cessionsValidees       Convention[]           @relation("CessionValidateur")
+  annoncesPubliees       Annonce[]              @relation("AnnoncePubliee")
+  annoncesVerifiees      Annonce[]              @relation("AnnonceVerifieeAndf")
+  exclusivitesRecues     Annonce[]              @relation("AnnonceExclusivite")
+  recherchesSauvegardees RechercheSauvegardee[] @relation("RechercheSauvegardeeAcheteur")
+  interetsExprimes       InteretAchat[]         @relation("InteretAcheteur")
+  signalementsDeposes    Signalement[]          @relation("SignalementAuteur")
+  signalementsQualifies  Signalement[]          @relation("SignalementQualificateur")
+  avisDeposes            Avis[]                 @relation("AvisAuteur")
+  avisRecus              Avis[]                 @relation("AvisCite")
+  sequestresDeclares     Sequestre[]            @relation("SequestreDeclarant")
+  sequestresConfirmes    Sequestre[]            @relation("SequestreConfirmateur")
+  visitesDemandees       Visite[]               @relation("VisiteAcheteur")
+  demandesFinancement    DemandeFinancement[]   @relation("FinancementAcheteur")
+  financementsTraites    DemandeFinancement[]   @relation("FinancementTraite")
 
   /// Declare uniquement par un VENDEUR (E0.3) : adapte les pieces demandees lors de la publication.
   statutDeclarant StatutDeclarantVendeur?
@@ -481,6 +482,29 @@ model Annonce {
 
   @@index([parcelleId])
   @@index([statut])
+}
+
+/// Recherche sauvegardee avec alerte (E3.2) : les memes filtres combinables que GET /annonces,
+/// figes au moment de l'enregistrement. "Alerte" = in-app uniquement (nombre de nouvelles annonces
+/// correspondantes depuis la derniere consultation), coherent avec l'absence de passerelle SMS/
+/// email/push reelle deja actee (voir docs/decisions.md, "Notifications").
+model RechercheSauvegardee {
+  id                   String   @id @default(uuid())
+  nom                  String
+  commune              String?
+  prixMinFcfa          Float?
+  prixMaxFcfa          Float?
+  superficieMinM2      Float?
+  superficieMaxM2      Float?
+  verifieeAndf         Boolean?
+  limitesCertifiees    Boolean?
+  createdAt            DateTime @default(now())
+  derniereConsultation DateTime @default(now())
+
+  acheteurId String
+  acheteur   Utilisateur @relation("RechercheSauvegardeeAcheteur", fields: [acheteurId], references: [id])
+
+  @@index([acheteurId])
 }
 
 /// Manifestation d'interet d'un ACHETEUR sur une annonce : le vendeur voit tous les interets

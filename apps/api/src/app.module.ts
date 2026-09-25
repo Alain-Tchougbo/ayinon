@@ -21,6 +21,7 @@ import { HypothequesModule } from "./hypotheques/hypotheques.module";
 import { OtpModule } from "./otp/otp.module";
 import { ParcellesModule } from "./parcelles/parcelles.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { RecherchesSauvegardeesModule } from "./recherches-sauvegardees/recherches-sauvegardees.module";
 import { SequestresModule } from "./sequestres/sequestres.module";
 import { SignalementsModule } from "./signalements/signalements.module";
 import { SyncModule } from "./sync/sync.module";
@@ -49,6 +50,7 @@ import { VisitesModule } from "./visites/visites.module";
     SequestresModule,
     VisitesModule,
     FinancementsModule,
+    RecherchesSauvegardeesModule,
     SyncModule,
   ],
   providers: [

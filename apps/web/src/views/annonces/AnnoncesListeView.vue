@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { Calculator, MapPin, Scale, Search, ShieldCheck, Store, X } from "@lucide/vue";
+import { Bell, BellRing, Calculator, MapPin, Scale, Search, ShieldCheck, Store, Trash2, X } from "@lucide/vue";
+import { RoleUtilisateur } from "@ayinon/shared";
 import { computed, onMounted, ref } from "vue";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 import { ApiError, api } from "../../services/api";
+import { useAuthStore } from "../../stores/auth.store";
 
 interface AnnonceResume {
   id: string;
@@ -22,9 +24,24 @@ interface EstimationPrix {
   message: string;
 }
 
+interface RechercheSauvegardee {
+  id: string;
+  nom: string;
+  commune: string | null;
+  prixMinFcfa: number | null;
+  prixMaxFcfa: number | null;
+  superficieMinM2: number | null;
+  superficieMaxM2: number | null;
+  verifieeAndf: boolean | null;
+  limitesCertifiees: boolean | null;
+  nombreNouvelles: number;
+}
+
+const auth = useAuthStore();
 const annonces = ref<AnnonceResume[]>([]);
 const chargement = ref(false);
 const erreur = ref<string | null>(null);
+const message = ref<string | null>(null);
 
 // E3.3 : comparaison cote a cote, jusqu'a 3 annonces a la fois.
 const MAX_COMPARAISON = 3;
@@ -58,6 +75,12 @@ const filtres = ref({ ...FILTRES_VIDES });
 // string malgre le typage initial : String(v) avant .trim() evite un plantage du rendu.
 const filtresActifs = computed(() => Object.values(filtres.value).some((v) => (typeof v === "boolean" ? v : String(v).trim() !== "")));
 
+// E3.2 : recherche sauvegardee avec alerte in-app (pas de SMS/email/push reel, voir docs/decisions.md).
+const mesRecherches = ref<RechercheSauvegardee[]>([]);
+const nomRecherche = ref("");
+const sauvegardeOuverte = ref(false);
+const actionRechercheEnCours = ref(false);
+
 async function charger() {
   chargement.value = true;
   erreur.value = null;
@@ -84,7 +107,77 @@ function reinitialiserFiltres() {
   charger();
 }
 
-onMounted(charger);
+async function chargerMesRecherches() {
+  if (auth.role !== RoleUtilisateur.ACHETEUR) return;
+  try {
+    mesRecherches.value = await api.get<RechercheSauvegardee[]>("/recherches-sauvegardees");
+  } catch {
+    // Silencieux : la vitrine reste utilisable meme si les recherches sauvegardees ne chargent pas.
+  }
+}
+
+onMounted(() => {
+  charger();
+  chargerMesRecherches();
+});
+
+async function sauvegarderRecherche() {
+  erreur.value = null;
+  message.value = null;
+  if (!nomRecherche.value.trim()) return;
+  actionRechercheEnCours.value = true;
+  try {
+    await api.post("/recherches-sauvegardees", {
+      nom: nomRecherche.value.trim(),
+      commune: filtres.value.commune.trim() || undefined,
+      prixMinFcfa: filtres.value.prixMinFcfa || undefined,
+      prixMaxFcfa: filtres.value.prixMaxFcfa || undefined,
+      superficieMinM2: filtres.value.superficieMinM2 || undefined,
+      superficieMaxM2: filtres.value.superficieMaxM2 || undefined,
+      verifieeAndf: filtres.value.verifieeAndf || undefined,
+      limitesCertifiees: filtres.value.limitesCertifiees || undefined,
+    });
+    message.value = "Recherche sauvegardee. Vous serez alerte des qu'une nouvelle annonce correspond.";
+    nomRecherche.value = "";
+    sauvegardeOuverte.value = false;
+    await chargerMesRecherches();
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Impossible de sauvegarder cette recherche";
+  } finally {
+    actionRechercheEnCours.value = false;
+  }
+}
+
+async function appliquerRecherche(r: RechercheSauvegardee) {
+  filtres.value = {
+    commune: r.commune ?? "",
+    prixMinFcfa: r.prixMinFcfa ?? "",
+    prixMaxFcfa: r.prixMaxFcfa ?? "",
+    superficieMinM2: r.superficieMinM2 ?? "",
+    superficieMaxM2: r.superficieMaxM2 ?? "",
+    verifieeAndf: Boolean(r.verifieeAndf),
+    limitesCertifiees: Boolean(r.limitesCertifiees),
+  };
+  await charger();
+  try {
+    await api.patch(`/recherches-sauvegardees/${r.id}/consulter`);
+    await chargerMesRecherches();
+  } catch {
+    // L'alerte n'a pas pu etre remise a zero : sans consequence sur la recherche elle-meme.
+  }
+}
+
+async function supprimerRecherche(id: string) {
+  actionRechercheEnCours.value = true;
+  try {
+    await api.delete(`/recherches-sauvegardees/${id}`);
+    await chargerMesRecherches();
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Suppression impossible";
+  } finally {
+    actionRechercheEnCours.value = false;
+  }
+}
 
 async function estimer() {
   const commune = communeEstimation.value.trim();
@@ -182,8 +275,49 @@ async function estimer() {
             <X :size="12" aria-hidden="true" />
             Reinitialiser
           </BaseButton>
+          <BaseButton
+            v-if="auth.role === RoleUtilisateur.ACHETEUR && filtresActifs && !sauvegardeOuverte"
+            type="button"
+            taille="sm"
+            variant="secondaire"
+            @click="sauvegardeOuverte = true"
+          >
+            <Bell :size="12" aria-hidden="true" />
+            Sauvegarder cette recherche
+          </BaseButton>
+        </div>
+        <div v-if="sauvegardeOuverte" class="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-4">
+          <input
+            v-model="nomRecherche"
+            placeholder="Nom de cette recherche (ex. Terrains a Cotonou)"
+            class="min-w-[12rem] flex-1 rounded-carte border border-bordure bg-fond px-3.5 py-2 text-sm text-texte placeholder:text-texte-attenue"
+          />
+          <BaseButton taille="sm" :disabled="actionRechercheEnCours || !nomRecherche.trim()" @click="sauvegarderRecherche">Enregistrer</BaseButton>
+          <BaseButton taille="sm" variant="secondaire" @click="sauvegardeOuverte = false">Annuler</BaseButton>
         </div>
       </form>
+    </BaseCard>
+
+    <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes" role="status">{{ message }}</p>
+
+    <!-- E3.2 : recherches sauvegardees, avec alerte in-app sur les nouvelles annonces correspondantes. -->
+    <BaseCard v-if="mesRecherches.length > 0" rembourrage="sm">
+      <h2 class="mb-3 text-sm font-semibold text-texte">Vos recherches sauvegardees</h2>
+      <ul class="space-y-2">
+        <li v-for="r in mesRecherches" :key="r.id" class="flex flex-wrap items-center justify-between gap-2 rounded-carte bg-fond px-3 py-2">
+          <button type="button" class="flex items-center gap-2 text-sm text-texte hover:underline" @click="appliquerRecherche(r)">
+            <BellRing v-if="r.nombreNouvelles > 0" :size="14" class="text-accent" aria-hidden="true" />
+            <Bell v-else :size="14" class="text-texte-attenue" aria-hidden="true" />
+            {{ r.nom }}
+            <span v-if="r.nombreNouvelles > 0" class="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-accent-contraste">
+              {{ r.nombreNouvelles }} nouvelle(s)
+            </span>
+          </button>
+          <button type="button" class="text-texte-attenue hover:text-danger" aria-label="Supprimer cette recherche" @click="supprimerRecherche(r.id)">
+            <Trash2 :size="14" aria-hidden="true" />
+          </button>
+        </li>
+      </ul>
     </BaseCard>
 
     <!-- E3.3 : comparaison cote a cote, jusqu'a 3 annonces selectionnees via la case "Comparer". -->
