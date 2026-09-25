@@ -1,10 +1,10 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { LeveeGelSchema, StatutConflitCsaf, StatutParcelle } from "@ayinon/shared";
+import { LeveeGelSchema, StatutConflitCsaf, StatutParcelle, StatutSequestre } from "@ayinon/shared";
 import { CsafService } from "./csaf.service";
 
 const MAGISTRAT = { id: "magistrat-1", role: "MAGISTRAT_CSAF", nomComplet: "Magistrat Test" } as any;
 
-function creerService(options: { conflit?: Record<string, unknown> | null } = {}) {
+function creerService(options: { conflit?: Record<string, unknown> | null; conventionsAnnulees?: Array<{ id: string }>; sequestres?: Array<Record<string, unknown>> } = {}) {
   const conflit =
     options.conflit === null
       ? null
@@ -16,8 +16,11 @@ function creerService(options: { conflit?: Record<string, unknown> | null } = {}
           ...options.conflit,
         };
   let parcelle: Record<string, unknown> = { id: "parcelle-1", statut: StatutParcelle.GEL_CSAF, proprietaireId: "prop-ancien" };
+  const conventionsAnnulees = options.conventionsAnnulees ?? [];
+  let sequestres = options.sequestres ?? [];
   const conventionUpdateManyAppels: unknown[] = [];
   const annonceUpdateManyAppels: unknown[] = [];
+  const sequestreUpdateManyAppels: unknown[] = [];
   const auditAppels: unknown[] = [];
 
   const prisma = {
@@ -35,6 +38,7 @@ function creerService(options: { conflit?: Record<string, unknown> | null } = {}
       create: async ({ data }: any) => ({ id: "prop-nouveau", ...data }),
     },
     convention: {
+      findMany: async () => conventionsAnnulees,
       updateMany: async (args: any) => {
         conventionUpdateManyAppels.push(args);
         return { count: 0 };
@@ -43,6 +47,14 @@ function creerService(options: { conflit?: Record<string, unknown> | null } = {}
     annonce: {
       updateMany: async (args: any) => {
         annonceUpdateManyAppels.push(args);
+        return { count: 0 };
+      },
+    },
+    sequestre: {
+      findMany: async ({ where }: any) => sequestres.filter((s) => where.conventionId.in.includes(s.conventionId) && !where.statut.notIn.includes(s.statut)),
+      updateMany: async (args: any) => {
+        sequestreUpdateManyAppels.push(args);
+        sequestres = sequestres.map((s) => (args.where.id.in.includes(s.id) ? { ...s, ...args.data } : s));
         return { count: 0 };
       },
     },
@@ -57,7 +69,15 @@ function creerService(options: { conflit?: Record<string, unknown> | null } = {}
   };
 
   const service = new CsafService(prisma as any, cryptoAudit as any);
-  return { service, auditAppels, obtenirParcelle: () => parcelle, conventionUpdateManyAppels, annonceUpdateManyAppels };
+  return {
+    service,
+    auditAppels,
+    obtenirParcelle: () => parcelle,
+    conventionUpdateManyAppels,
+    annonceUpdateManyAppels,
+    sequestreUpdateManyAppels,
+    obtenirSequestres: () => sequestres,
+  };
 }
 
 describe("CsafService.leverGel — decision definitive (E8.8)", () => {
@@ -92,6 +112,42 @@ describe("CsafService.leverGel — decision definitive (E8.8)", () => {
     );
     expect(conventionUpdateManyAppels).toHaveLength(1);
     expect(annonceUpdateManyAppels).toHaveLength(1);
+  });
+
+  it("ANNULATION_VENTE rembourse un sequestre non finalise lie a une cession annulee (E5.8/E8.5)", async () => {
+    const { service, sequestreUpdateManyAppels, obtenirSequestres, auditAppels } = creerService({
+      conventionsAnnulees: [{ id: "convention-1" }],
+      sequestres: [{ id: "sequestre-1", conventionId: "convention-1", statut: StatutSequestre.DEPOT_CONFIRME }],
+    });
+    await service.leverGel(
+      { conflitId: "conflit-1", motifLevee: "Vente frauduleuse averee", typeDecision: "ANNULATION_VENTE" } as any,
+      undefined,
+      MAGISTRAT,
+    );
+    expect(sequestreUpdateManyAppels).toHaveLength(1);
+    expect((obtenirSequestres()[0] as any).statut).toBe(StatutSequestre.REMBOURSE);
+    expect(auditAppels.some((a) => (a as any).typeOperation === "REMBOURSEMENT_SEQUESTRE")).toBe(true);
+  });
+
+  it("ANNULATION_VENTE ne touche pas a un sequestre deja libere ou rembourse", async () => {
+    const { service, sequestreUpdateManyAppels } = creerService({
+      conventionsAnnulees: [{ id: "convention-1" }],
+      sequestres: [{ id: "sequestre-1", conventionId: "convention-1", statut: StatutSequestre.LIBERE }],
+    });
+    await service.leverGel(
+      { conflitId: "conflit-1", motifLevee: "Vente frauduleuse averee", typeDecision: "ANNULATION_VENTE" } as any,
+      undefined,
+      MAGISTRAT,
+    );
+    expect(sequestreUpdateManyAppels).toHaveLength(0);
+  });
+
+  it("LEVEE_SIMPLE ne rembourse jamais un sequestre (aucune cession annulee)", async () => {
+    const { service, sequestreUpdateManyAppels } = creerService({
+      sequestres: [{ id: "sequestre-1", conventionId: "convention-1", statut: StatutSequestre.DEPOT_CONFIRME }],
+    });
+    await service.leverGel({ conflitId: "conflit-1", motifLevee: "Litige resolu a l'amiable", typeDecision: "LEVEE_SIMPLE" } as any, undefined, MAGISTRAT);
+    expect(sequestreUpdateManyAppels).toHaveLength(0);
   });
 
   it("LeveeGelSchema (packages/shared) refuse un TRANSFERT_FORCE sans nom de proprietaire", () => {

@@ -258,3 +258,18 @@ sans generation de PDF ni document formel — le vendeur saisit le code dans une
 minimale (nom de l'acheteur, montant accorde). Comme pour les documents CSAF, aucune route
 ne sert le fichier justificatif televerse en telechargement — limitation deja actee pour les
 autres uploads de la plateforme, pas specifique a cette fonctionnalite.
+
+## Remboursement du sequestre sur decision CSAF (E5.8/E8.5)
+
+Bug reel trouve en relisant `CsafService.leverGel()` a la lumiere d'E8.5 ("geler les fonds
+concernes... afin de preserver les interets des parties en attendant la decision") : quand
+un magistrat annule une vente (ANNULATION_VENTE/TRANSFERT_FORCE), les `Convention`
+concernees passent bien en `REJETEE`, mais le `Sequestre` associe n'etait jamais mis a jour —
+un depot deja declare ou confirme par la banque serait reste bloque indefiniment a
+`DEPOT_DECLARE`/`DEPOT_CONFIRME`, sans qu'aucune autorite ne le solde. Corrige en repliquant
+exactement le mecanisme deja utilise par `CessionsService.valider()` lors d'un rejet ANDF :
+tout sequestre non deja `LIBERE`/`REMBOURSE` lie a une cession annulee par le CSAF passe a
+`REMBOURSE`, avec un `motifRemboursement` citant la decision et une entree d'audit dediee.
+Aucun changement frontend necessaire : `AcheterView.vue`/`VendreView.vue` affichent deja le
+statut du sequestre de facon generique (`LIBELLE_STATUT_SEQUESTRE`), REMBOURSE s'y reflete
+donc automatiquement.

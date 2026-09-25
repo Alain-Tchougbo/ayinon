@@ -7,6 +7,7 @@ import {
   StatutCession,
   StatutConflitCsaf,
   StatutParcelle,
+  StatutSequestre,
   TypeDecisionCsaf,
   TypeOperationAudit,
   type GelConservatoireDto,
@@ -86,6 +87,7 @@ export class CsafService {
     }
 
     const invalideMutationsEnCours = dto.typeDecision !== TypeDecisionCsaf.LEVEE_SIMPLE;
+    let sequestresRembourses: Array<{ id: string; conventionId: string }> = [];
 
     const conflitLeve = await this.prisma.$transaction(async (tx) => {
       const misAJour = await tx.conflitCsaf.update({
@@ -104,6 +106,10 @@ export class CsafService {
       }
 
       if (invalideMutationsEnCours) {
+        const conventionsAnnulees = await tx.convention.findMany({
+          where: { parcelleId: conflit.parcelleId, statutCession: { in: [StatutCession.PROPOSEE, StatutCession.ACCEPTEE] } },
+          select: { id: true },
+        });
         await tx.convention.updateMany({
           where: { parcelleId: conflit.parcelleId, statutCession: { in: [StatutCession.PROPOSEE, StatutCession.ACCEPTEE] } },
           data: { statutCession: StatutCession.REJETEE, motifRejet: `Annulee par decision CSAF : ${dto.motifLevee}` },
@@ -112,6 +118,23 @@ export class CsafService {
           where: { parcelleId: conflit.parcelleId, statut: "ACTIVE" },
           data: { statut: "RETIREE", retireeLe: new Date() },
         });
+
+        // E5.8/E8.5 : un depot deja declare/confirme sur une cession que le CSAF annule doit
+        // etre rembourse, comme pour un rejet ANDF classique (voir CessionsService.valider) —
+        // sinon les fonds resteraient bloques indefiniment sans qu'aucune autorite ne les libere.
+        const conventionIds = conventionsAnnulees.map((c: { id: string }) => c.id);
+        if (conventionIds.length > 0) {
+          const sequestresARembourser = await tx.sequestre.findMany({
+            where: { conventionId: { in: conventionIds }, statut: { notIn: [StatutSequestre.LIBERE, StatutSequestre.REMBOURSE] } },
+          });
+          if (sequestresARembourser.length > 0) {
+            await tx.sequestre.updateMany({
+              where: { id: { in: sequestresARembourser.map((s: { id: string }) => s.id) } },
+              data: { statut: StatutSequestre.REMBOURSE, dateRemboursement: new Date(), motifRemboursement: `Annulee par decision CSAF : ${dto.motifLevee}` },
+            });
+            sequestresRembourses = sequestresARembourser.map((s: { id: string; conventionId: string }) => ({ id: s.id, conventionId: s.conventionId }));
+          }
+        }
       }
 
       return misAJour;
@@ -129,6 +152,16 @@ export class CsafService {
       roleActeur: magistrat.role as RoleUtilisateur,
       payload: { conflitId: dto.conflitId, motifLevee: dto.motifLevee, typeDecision: dto.typeDecision },
     });
+
+    for (const sequestre of sequestresRembourses) {
+      await this.cryptoAudit.enregistrer({
+        parcelleId: conflit.parcelleId,
+        typeOperation: TypeOperationAudit.REMBOURSEMENT_SEQUESTRE,
+        acteurId: magistrat.id,
+        roleActeur: magistrat.role as RoleUtilisateur,
+        payload: { sequestreId: sequestre.id, conventionId: sequestre.conventionId, motif: `Annulee par decision CSAF : ${dto.motifLevee}` },
+      });
+    }
 
     return conflitLeve;
   }
