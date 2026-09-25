@@ -8,6 +8,7 @@ import {
   TypeOperationAudit,
   type CreerAnnonceDto,
   type ManifesterInteretDto,
+  type RechercheAnnonceDto,
   type RetenirInteretDto,
   type VerifierAnnonceDto,
 } from "@ayinon/shared";
@@ -83,13 +84,31 @@ export class AnnoncesService {
     return this.avecBadges(annonce);
   }
 
-  async listerActives() {
+  /** E3.1 : filtres combinables (zone, prix, superficie, niveau de verification). Le filtre
+   * "limites certifiees" s'applique apres coup, car ce badge est derive (voir avecBadges) et non
+   * une colonne interrogeable directement en base. */
+  async listerActives(filtres: RechercheAnnonceDto = {}) {
     const annonces = await this.prisma.annonce.findMany({
-      where: { statut: StatutAnnonce.ACTIVE },
+      where: {
+        statut: StatutAnnonce.ACTIVE,
+        parcelle: {
+          commune: filtres.commune ? { equals: filtres.commune, mode: "insensitive" } : undefined,
+          superficieM2:
+            filtres.superficieMinM2 !== undefined || filtres.superficieMaxM2 !== undefined
+              ? { gte: filtres.superficieMinM2, lte: filtres.superficieMaxM2 }
+              : undefined,
+        },
+        prixIndicatifFcfa:
+          filtres.prixMinFcfa !== undefined || filtres.prixMaxFcfa !== undefined
+            ? { gte: filtres.prixMinFcfa, lte: filtres.prixMaxFcfa }
+            : undefined,
+        verifieeParAndfId: filtres.verifieeAndf === "true" ? { not: null } : undefined,
+      },
       include: INCLUSION_ANNONCE,
       orderBy: { createdAt: "desc" },
     });
-    return Promise.all(annonces.map((a) => this.avecBadges(a)));
+    const resultats = await Promise.all(annonces.map((a) => this.avecBadges(a)));
+    return filtres.limitesCertifiees === "true" ? resultats.filter((a) => a.limitesCertifiees) : resultats;
   }
 
   async obtenirParId(id: string) {

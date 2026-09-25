@@ -2,11 +2,13 @@ import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common
 import {
   CreerAnnonceSchema,
   ManifesterInteretSchema,
+  RechercheAnnonceSchema,
   RetenirInteretSchema,
   RoleUtilisateur,
   VerifierAnnonceSchema,
   type CreerAnnonceDto,
   type ManifesterInteretDto,
+  type RechercheAnnonceDto,
   type RetenirInteretDto,
   type VerifierAnnonceDto,
 } from "@ayinon/shared";
@@ -22,8 +24,8 @@ export class AnnoncesController {
 
   @Public()
   @Get()
-  async listerActives() {
-    return this.annonces.listerActives();
+  async listerActives(@Query(new ZodValidationPipe(RechercheAnnonceSchema)) filtres: RechercheAnnonceDto) {
+    return this.annonces.listerActives(filtres);
   }
 
   @Public()

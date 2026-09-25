@@ -26,3 +26,17 @@ export const VerifierAnnonceSchema = z.object({
   motif: z.string().trim().min(10).optional(),
 });
 export type VerifierAnnonceDto = z.infer<typeof VerifierAnnonceSchema>;
+
+/** Filtres de la vitrine (E3.1) : tous optionnels, combinables. Les booleens arrivent en
+ * querystring sous forme de chaine ("true"/absent) plutot que z.coerce.boolean(), qui coercerait
+ * a tort la chaine "false" en true (comportement natif de Boolean("false")). */
+export const RechercheAnnonceSchema = z.object({
+  commune: z.string().trim().min(1).optional(),
+  prixMinFcfa: z.coerce.number().nonnegative().optional(),
+  prixMaxFcfa: z.coerce.number().positive().optional(),
+  superficieMinM2: z.coerce.number().nonnegative().optional(),
+  superficieMaxM2: z.coerce.number().positive().optional(),
+  verifieeAndf: z.string().optional(),
+  limitesCertifiees: z.string().optional(),
+});
+export type RechercheAnnonceDto = z.infer<typeof RechercheAnnonceSchema>;

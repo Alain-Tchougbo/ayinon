@@ -158,6 +158,17 @@ limite a la note moyenne, au nombre d'avis et au nombre de ventes conclues (`Con
 + `statutCession: VALIDEE`) — pas de page de profil dediee ni de liste paginee des avis, juste un
 resume affiche sur la fiche d'annonce.
 
+## Recherche et filtres sur la vitrine (E3.1)
+
+Filtres combinables (commune, prix min/max, superficie min/max, badges "situation controlee
+ANDF"/"limites certifiees") sur `GET /annonces`, en querystring plutot qu'un `POST /recherche`
+dedie : coherent avec `estimation-prix`, deja en querystring sur la meme ressource. Le CA
+mentionne aussi un affichage "sur carte" en plus de la liste — non construit dans cette
+iteration (la carte existante, `CarteView.vue`, affiche toutes les parcelles cadastrales, pas
+specifiquement les annonces actives ni leurs filtres) ; la liste filtrable couvre le besoin
+principal (trouver rapidement un bien qui correspond). Recherche sauvegardee avec alerte (E3.2)
+et comparaison cote a cote (E3.3), toutes deux P1, restent hors perimetre.
+
 ## Simulateur de gain net vendeur (E1.10)
 
 Trois taux forfaitaires indicatifs (commission plateforme 2%, frais notariaux vendeur 1%, taxe

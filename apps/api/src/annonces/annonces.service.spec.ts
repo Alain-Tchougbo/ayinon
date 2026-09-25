@@ -11,18 +11,25 @@ function creerService(options: {
   interet?: Record<string, unknown> | null;
   parcelleGelee?: boolean;
   autreInteretRetenu?: boolean;
+  annoncesListe?: Array<Record<string, unknown>>;
+  parcellesLimitesCertifiees?: string[];
 } = {}) {
   const parcelle =
     options.parcelle === null ? null : { id: "parcelle-1", proprietaireId: "prop-vendeur", verrouAntiVente: false, ...options.parcelle };
   let annonce: Record<string, unknown> | null = options.annonce ?? null;
   let interet: Record<string, unknown> | null = options.interet ?? null;
   const auditAppels: unknown[] = [];
+  let dernierWhereListerActives: unknown = null;
 
   const prisma = {
     parcelle: { findUnique: async () => parcelle },
     annonce: {
       findFirst: async () => null,
       findUnique: async () => annonce,
+      findMany: async ({ where }: any) => {
+        dernierWhereListerActives = where;
+        return options.annoncesListe ?? [];
+      },
       create: async ({ data }: any) => {
         annonce = { id: "annonce-1", statut: StatutAnnonce.ACTIVE, ...data };
         return annonce;
@@ -49,7 +56,10 @@ function creerService(options: {
       updateMany: async () => ({ count: 0 }),
     },
     convention: { create: async ({ data }: any) => ({ id: "convention-1", ...data }), findMany: async () => [] },
-    planBornage: { findFirst: async () => null },
+    planBornage: {
+      findFirst: async ({ where }: any) =>
+        options.parcellesLimitesCertifiees?.includes(where.parcelleId) ? { id: `plan-${where.parcelleId}` } : null,
+    },
     $transaction: async (ops: unknown[]) => Promise.all(ops as any),
   };
 
@@ -70,7 +80,7 @@ function creerService(options: {
   };
 
   const service = new AnnoncesService(prisma as any, cryptoAudit as any, csaf as any);
-  return { service, auditAppels };
+  return { service, auditAppels, obtenirDernierWhereListerActives: () => dernierWhereListerActives };
 }
 
 describe("AnnoncesService — vitrine publique et manifestations d'interet", () => {
@@ -149,5 +159,44 @@ describe("AnnoncesService — vitrine publique et manifestations d'interet", () 
     const estimation = await service.estimerPrix("VilleSansHistorique");
     expect(estimation.nombreReferences).toBe(0);
     expect(estimation.moyenneFcfaParM2).toBeNull();
+  });
+
+  it("construit les clauses where a partir des filtres de recherche (E3.1)", async () => {
+    const { service, obtenirDernierWhereListerActives } = creerService();
+    await service.listerActives({
+      commune: "Cotonou",
+      prixMinFcfa: 1_000_000,
+      prixMaxFcfa: 5_000_000,
+      superficieMinM2: 100,
+      superficieMaxM2: 500,
+      verifieeAndf: "true",
+    });
+    const where = obtenirDernierWhereListerActives() as any;
+    expect(where.parcelle.commune).toEqual({ equals: "Cotonou", mode: "insensitive" });
+    expect(where.parcelle.superficieM2).toEqual({ gte: 100, lte: 500 });
+    expect(where.prixIndicatifFcfa).toEqual({ gte: 1_000_000, lte: 5_000_000 });
+    expect(where.verifieeParAndfId).toEqual({ not: null });
+  });
+
+  it("ne filtre rien quand aucun filtre n'est fourni", async () => {
+    const { service, obtenirDernierWhereListerActives } = creerService();
+    await service.listerActives();
+    const where = obtenirDernierWhereListerActives() as any;
+    expect(where.parcelle.commune).toBeUndefined();
+    expect(where.prixIndicatifFcfa).toBeUndefined();
+    expect(where.verifieeParAndfId).toBeUndefined();
+  });
+
+  it("filtre sur le badge limites certifiees derive, apres coup", async () => {
+    const { service } = creerService({
+      annoncesListe: [
+        { id: "annonce-certifiee", parcelleId: "parcelle-certifiee", statut: StatutAnnonce.ACTIVE },
+        { id: "annonce-non-certifiee", parcelleId: "parcelle-non-certifiee", statut: StatutAnnonce.ACTIVE },
+      ],
+      parcellesLimitesCertifiees: ["parcelle-certifiee"],
+    });
+    const resultats = await service.listerActives({ limitesCertifiees: "true" });
+    expect(resultats).toHaveLength(1);
+    expect((resultats[0] as any).id).toBe("annonce-certifiee");
   });
 });

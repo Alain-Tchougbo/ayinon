@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Calculator, MapPin, ShieldCheck, Store } from "@lucide/vue";
-import { onMounted, ref } from "vue";
+import { Calculator, MapPin, Search, ShieldCheck, Store, X } from "@lucide/vue";
+import { computed, onMounted, ref } from "vue";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
@@ -29,16 +29,47 @@ const communeEstimation = ref("");
 const estimation = ref<EstimationPrix | null>(null);
 const estimationEnCours = ref(false);
 
-onMounted(async () => {
+const FILTRES_VIDES = {
+  commune: "",
+  prixMinFcfa: "",
+  prixMaxFcfa: "",
+  superficieMinM2: "",
+  superficieMaxM2: "",
+  verifieeAndf: false,
+  limitesCertifiees: false,
+};
+const filtres = ref({ ...FILTRES_VIDES });
+// Les champs type="number" font caster leur valeur en Number par Vue (v-model natif), pas une
+// string malgre le typage initial : String(v) avant .trim() evite un plantage du rendu.
+const filtresActifs = computed(() => Object.values(filtres.value).some((v) => (typeof v === "boolean" ? v : String(v).trim() !== "")));
+
+async function charger() {
   chargement.value = true;
+  erreur.value = null;
   try {
-    annonces.value = await api.get<AnnonceResume[]>("/annonces");
+    const params = new URLSearchParams();
+    if (filtres.value.commune.trim()) params.set("commune", filtres.value.commune.trim());
+    if (filtres.value.prixMinFcfa) params.set("prixMinFcfa", filtres.value.prixMinFcfa);
+    if (filtres.value.prixMaxFcfa) params.set("prixMaxFcfa", filtres.value.prixMaxFcfa);
+    if (filtres.value.superficieMinM2) params.set("superficieMinM2", filtres.value.superficieMinM2);
+    if (filtres.value.superficieMaxM2) params.set("superficieMaxM2", filtres.value.superficieMaxM2);
+    if (filtres.value.verifieeAndf) params.set("verifieeAndf", "true");
+    if (filtres.value.limitesCertifiees) params.set("limitesCertifiees", "true");
+    const qs = params.toString();
+    annonces.value = await api.get<AnnonceResume[]>(`/annonces${qs ? `?${qs}` : ""}`);
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Impossible de charger la vitrine des annonces";
   } finally {
     chargement.value = false;
   }
-});
+}
+
+function reinitialiserFiltres() {
+  filtres.value = { ...FILTRES_VIDES };
+  charger();
+}
+
+onMounted(charger);
 
 async function estimer() {
   const commune = communeEstimation.value.trim();
@@ -86,9 +117,65 @@ async function estimer() {
       </div>
     </BaseCard>
 
+    <!-- E3.1 : filtres combinables (zone, prix, superficie, niveau de verification). -->
+    <BaseCard rembourrage="sm">
+      <h2 class="mb-3 flex items-center gap-2 text-sm font-semibold text-texte">
+        <Search :size="16" class="text-primaire" aria-hidden="true" />
+        Filtrer les annonces
+      </h2>
+      <form class="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4" @submit.prevent="charger">
+        <input
+          v-model="filtres.commune"
+          placeholder="Commune"
+          class="rounded-carte border border-bordure bg-fond px-3.5 py-2 text-sm text-texte placeholder:text-texte-attenue"
+        />
+        <input
+          v-model="filtres.prixMinFcfa"
+          type="number"
+          placeholder="Prix min (FCFA)"
+          class="rounded-carte border border-bordure bg-fond px-3.5 py-2 text-sm text-texte placeholder:text-texte-attenue"
+        />
+        <input
+          v-model="filtres.prixMaxFcfa"
+          type="number"
+          placeholder="Prix max (FCFA)"
+          class="rounded-carte border border-bordure bg-fond px-3.5 py-2 text-sm text-texte placeholder:text-texte-attenue"
+        />
+        <input
+          v-model="filtres.superficieMinM2"
+          type="number"
+          placeholder="Superficie min (m²)"
+          class="rounded-carte border border-bordure bg-fond px-3.5 py-2 text-sm text-texte placeholder:text-texte-attenue"
+        />
+        <input
+          v-model="filtres.superficieMaxM2"
+          type="number"
+          placeholder="Superficie max (m²)"
+          class="rounded-carte border border-bordure bg-fond px-3.5 py-2 text-sm text-texte placeholder:text-texte-attenue"
+        />
+        <label class="flex items-center gap-2 text-sm text-texte">
+          <input v-model="filtres.verifieeAndf" type="checkbox" class="h-4 w-4" />
+          Situation controlee ANDF
+        </label>
+        <label class="flex items-center gap-2 text-sm text-texte">
+          <input v-model="filtres.limitesCertifiees" type="checkbox" class="h-4 w-4" />
+          Limites certifiees
+        </label>
+        <div class="flex gap-2">
+          <BaseButton type="submit" taille="sm" :disabled="chargement">Rechercher</BaseButton>
+          <BaseButton v-if="filtresActifs" type="button" taille="sm" variant="secondaire" @click="reinitialiserFiltres">
+            <X :size="12" aria-hidden="true" />
+            Reinitialiser
+          </BaseButton>
+        </div>
+      </form>
+    </BaseCard>
+
     <section>
       <p v-if="chargement" class="text-sm text-texte-attenue" role="status">Chargement…</p>
-      <p v-else-if="annonces.length === 0" class="text-sm text-texte-attenue">Aucune annonce active pour le moment.</p>
+      <p v-else-if="annonces.length === 0" class="text-sm text-texte-attenue">
+        {{ filtresActifs ? "Aucune annonce ne correspond a ces filtres." : "Aucune annonce active pour le moment." }}
+      </p>
       <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <BaseCard v-for="a in annonces" :key="a.id" :to="`/annonces/${a.id}`">
           <p class="font-semibold text-texte">{{ a.parcelle.nup }}</p>
