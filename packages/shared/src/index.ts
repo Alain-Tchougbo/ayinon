@@ -1,6 +1,7 @@
 export * from "./enums";
 export * from "./schemas/geo.schema";
 export * from "./schemas/auth.schema";
+export * from "./schemas/admin.schema";
 export * from "./schemas/parcelle.schema";
 export * from "./schemas/geometre.schema";
 export * from "./schemas/famille.schema";

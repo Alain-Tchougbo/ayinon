@@ -158,6 +158,23 @@ limite a la note moyenne, au nombre d'avis et au nombre de ventes conclues (`Con
 + `statutCession: VALIDEE`) — pas de page de profil dediee ni de liste paginee des avis, juste un
 resume affiche sur la fiche d'annonce.
 
+## Inscription professionnelle et validation admin (E0.5/E0.6)
+
+GEOMETRE, NOTAIRE et AGENT_BANQUE peuvent desormais s'inscrire en libre-service comme
+CITOYEN/VENDEUR/ACHETEUR (avec numero d'agrement/d'ordre obligatoire), mais leur compte reste
+bloque a la connexion (`StatutValidationPro.EN_ATTENTE`) meme apres confirmation du code envoye
+par e-mail, tant qu'un admin ne l'a pas approuve depuis une file dediee (`/admin`, onglet
+"Demandes professionnelles"). Ceci corrige une incoherence trouvee dans le code existant : les
+comptes professionnels n'avaient jamais que la voie "admin cree tout directement", ce qui ne
+correspond pas au parcours reel du backlog (E0.5 : le professionnel se presente lui-meme, E0.6 :
+l'admin verifie ensuite). Les comptes institutionnels (AGENT_ANDF/MAGISTRAT_CSAF/ADMIN, E0.7)
+restent, eux, exclusivement crees par un admin — jamais d'auto-inscription, sur exigence d'une
+demande officielle de l'institution.
+
+Aucune notification (e-mail/SMS) n'avertit le professionnel de la decision de l'admin, coherent
+avec la decision "Notifications" plus bas (aucune passerelle reelle integree) : il decouvre le
+resultat en retentant de se connecter, avec le motif de rejet affiche le cas echeant.
+
 ## Recherche et filtres sur la vitrine (E3.1)
 
 Filtres combinables (commune, prix min/max, superficie min/max, badges "situation controlee

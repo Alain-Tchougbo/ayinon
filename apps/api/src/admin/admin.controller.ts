@@ -1,5 +1,11 @@
 import { Body, Controller, Get, Param, Patch } from "@nestjs/common";
-import { ModifierParcelleAdminSchema, RoleUtilisateur, type ModifierParcelleAdminDto } from "@ayinon/shared";
+import {
+  ModifierParcelleAdminSchema,
+  RoleUtilisateur,
+  TraiterDemandeProSchema,
+  type ModifierParcelleAdminDto,
+  type TraiterDemandeProDto,
+} from "@ayinon/shared";
 import { CurrentUser, type UtilisateurAuthentifie } from "../common/decorators/current-user.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
@@ -42,5 +48,20 @@ export class AdminController {
     @CurrentUser() utilisateur: UtilisateurAuthentifie,
   ) {
     return this.admin.modifierParcelle(id, dto, utilisateur);
+  }
+
+  /** E0.6 : file d'attente des demandes de compte professionnel. */
+  @Get("demandes-professionnelles")
+  async demandesProfessionnelles() {
+    return this.admin.demandesProfessionnellesEnAttente();
+  }
+
+  @Patch("demandes-professionnelles/:id")
+  async traiterDemandePro(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(TraiterDemandeProSchema)) dto: TraiterDemandeProDto,
+    @CurrentUser() utilisateur: UtilisateurAuthentifie,
+  ) {
+    return this.admin.traiterDemandePro(id, dto, utilisateur);
   }
 }

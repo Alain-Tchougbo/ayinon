@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { RoleUtilisateur, TypeOperationAudit, type ModifierParcelleAdminDto } from "@ayinon/shared";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { RoleUtilisateur, StatutValidationPro, TypeOperationAudit, type ModifierParcelleAdminDto, type TraiterDemandeProDto } from "@ayinon/shared";
 import type { UtilisateurAuthentifie } from "../common/decorators/current-user.decorator";
 import { CryptoAuditService } from "../crypto-audit/crypto-audit.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -107,6 +107,47 @@ export class AdminService {
       acteurId: admin.id,
       roleActeur: admin.role as RoleUtilisateur,
       payload: { champsModifies: dto },
+    });
+
+    return misAJour;
+  }
+
+  /** E0.6 : file d'attente des demandes de compte professionnel (E0.5) en attente de validation. */
+  async demandesProfessionnellesEnAttente() {
+    return this.prisma.utilisateur.findMany({
+      where: { statutValidationPro: StatutValidationPro.EN_ATTENTE },
+      select: { id: true, email: true, nomComplet: true, telephone: true, role: true, numeroAgrement: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  async traiterDemandePro(id: string, dto: TraiterDemandeProDto, admin: UtilisateurAuthentifie) {
+    const utilisateur = await this.prisma.utilisateur.findUnique({ where: { id } });
+    if (!utilisateur) {
+      throw new NotFoundException("Compte introuvable");
+    }
+    if (utilisateur.statutValidationPro !== StatutValidationPro.EN_ATTENTE) {
+      throw new BadRequestException("Cette demande a deja ete traitee");
+    }
+    if (!dto.approuver && !dto.motifRejet) {
+      throw new BadRequestException("Un motif est requis pour rejeter une demande de compte professionnel");
+    }
+
+    const misAJour = await this.prisma.utilisateur.update({
+      where: { id },
+      data: {
+        statutValidationPro: dto.approuver ? StatutValidationPro.APPROUVE : StatutValidationPro.REJETE,
+        motifRejetPro: dto.approuver ? null : dto.motifRejet,
+        valideParId: admin.id,
+      },
+      select: { id: true, email: true, nomComplet: true, role: true, statutValidationPro: true },
+    });
+
+    await this.cryptoAudit.enregistrer({
+      typeOperation: dto.approuver ? TypeOperationAudit.VALIDATION_COMPTE_PRO : TypeOperationAudit.REJET_COMPTE_PRO,
+      acteurId: admin.id,
+      roleActeur: admin.role as RoleUtilisateur,
+      payload: { compteId: id, motifRejet: dto.motifRejet ?? null },
     });
 
     return misAJour;

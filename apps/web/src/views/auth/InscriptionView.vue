@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ChevronDown, KeyRound, Shield, UserPlus } from "@lucide/vue";
-import { ROLES_INSCRIPTIBLES, StatutDeclarantVendeur } from "@ayinon/shared";
-import { ref } from "vue";
+import { ChevronDown, Clock, KeyRound, Shield, UserPlus } from "@lucide/vue";
+import { ROLES_INSCRIPTIBLES, ROLES_PROFESSIONNELS_INSCRIPTIBLES, StatutDeclarantVendeur } from "@ayinon/shared";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
@@ -11,12 +11,15 @@ import { useAuthStore } from "../../stores/auth.store";
 const auth = useAuthStore();
 const router = useRouter();
 
-type RoleInscriptible = (typeof ROLES_INSCRIPTIBLES)[number];
+type RoleInscriptible = (typeof ROLES_INSCRIPTIBLES)[number] | (typeof ROLES_PROFESSIONNELS_INSCRIPTIBLES)[number];
 
 const LIBELLE_ROLE_INSCRIPTIBLE: Record<RoleInscriptible, string> = {
   CITOYEN: "Citoyen (gerer mes parcelles, mon passeport foncier)",
   VENDEUR: "Vendeur (publier une parcelle a vendre)",
   ACHETEUR: "Acheteur (parcourir la vitrine, manifester un interet)",
+  GEOMETRE: "Geometre-expert",
+  NOTAIRE: "Notaire",
+  AGENT_BANQUE: "Agent banque / microfinance",
 };
 
 const LIBELLE_STATUT_DECLARANT: Record<StatutDeclarantVendeur, string> = {
@@ -26,16 +29,19 @@ const LIBELLE_STATUT_DECLARANT: Record<StatutDeclarantVendeur, string> = {
   AGENCE: "Agence immobiliere",
 };
 
-const etape = ref<"formulaire" | "confirmation">("formulaire");
+const etape = ref<"formulaire" | "confirmation" | "en-attente">("formulaire");
 const nomComplet = ref("");
 const email = ref("");
 const telephone = ref("");
 const motDePasse = ref("");
 const role = ref<RoleInscriptible>("CITOYEN");
 const statutDeclarant = ref<StatutDeclarantVendeur | "">("");
+const numeroAgrement = ref("");
 const code = ref("");
 const codeDebug = ref<string | null>(null);
 const enCours = ref(false);
+
+const estRoleProfessionnel = computed(() => (ROLES_PROFESSIONNELS_INSCRIPTIBLES as readonly string[]).includes(role.value));
 
 async function sInscrire() {
   enCours.value = true;
@@ -46,6 +52,7 @@ async function sInscrire() {
     motDePasse: motDePasse.value,
     role: role.value,
     statutDeclarant: role.value === "VENDEUR" && statutDeclarant.value ? statutDeclarant.value : undefined,
+    numeroAgrement: estRoleProfessionnel.value ? numeroAgrement.value.trim() || undefined : undefined,
   });
   enCours.value = false;
   if (reponse) {
@@ -56,10 +63,12 @@ async function sInscrire() {
 
 async function confirmer() {
   enCours.value = true;
-  const succes = await auth.confirmerInscription(email.value, code.value);
+  const resultat = await auth.confirmerInscription(email.value, code.value);
   enCours.value = false;
-  if (succes) {
+  if (resultat === "connecte") {
     router.push("/");
+  } else if (resultat === "en-attente") {
+    etape.value = "en-attente";
   }
 }
 </script>
@@ -88,11 +97,25 @@ async function confirmer() {
               v-model="role"
               class="w-full appearance-none rounded-carte border border-bordure bg-fond px-3.5 py-2.5 pr-9 text-sm text-texte"
             >
-              <option v-for="r in ROLES_INSCRIPTIBLES" :key="r" :value="r">{{ LIBELLE_ROLE_INSCRIPTIBLE[r] }}</option>
+              <optgroup label="Grand public">
+                <option v-for="r in ROLES_INSCRIPTIBLES" :key="r" :value="r">{{ LIBELLE_ROLE_INSCRIPTIBLE[r] }}</option>
+              </optgroup>
+              <optgroup label="Professionnel (soumis a validation admin)">
+                <option v-for="r in ROLES_PROFESSIONNELS_INSCRIPTIBLES" :key="r" :value="r">{{ LIBELLE_ROLE_INSCRIPTIBLE[r] }}</option>
+              </optgroup>
             </select>
             <ChevronDown :size="16" class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
           </div>
         </div>
+
+        <BaseInput
+          v-if="estRoleProfessionnel"
+          id="numero-agrement"
+          v-model="numeroAgrement"
+          label="Numero d'agrement ou d'ordre professionnel"
+          aide="Votre compte restera bloque tant qu'un administrateur n'aura pas verifie ce numero."
+          required
+        />
 
         <div v-if="role === 'VENDEUR'">
           <label for="statut-declarant" class="mb-1 block text-sm font-medium text-texte">Vous declarez etre</label>
@@ -116,6 +139,20 @@ async function confirmer() {
           Creer mon compte
         </BaseButton>
       </form>
+    </BaseCard>
+
+    <BaseCard v-else-if="etape === 'en-attente'">
+      <div class="flex flex-col items-center gap-3 py-4 text-center">
+        <span class="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent">
+          <Clock :size="24" aria-hidden="true" />
+        </span>
+        <p class="font-semibold text-texte">E-mail confirme</p>
+        <p class="text-sm text-texte-attenue">
+          Votre compte professionnel est desormais en attente de validation par un administrateur, qui verifiera
+          votre numero d'agrement. Vous pourrez vous connecter une fois votre compte approuve.
+        </p>
+        <RouterLink to="/connexion" class="text-sm font-medium text-primaire underline underline-offset-2">Retour a la connexion</RouterLink>
+      </div>
     </BaseCard>
 
     <BaseCard v-else>

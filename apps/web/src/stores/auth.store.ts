@@ -52,14 +52,24 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  async function confirmerInscription(email: string, code: string) {
+  /** Renvoie "connecte" (session ouverte immediatement), "en-attente" (E0.6 : compte
+   * professionnel confirme mais encore soumis a validation admin, aucune session ouverte) ou
+   * null en cas d'echec (voir erreur). */
+  async function confirmerInscription(email: string, code: string): Promise<"connecte" | "en-attente" | null> {
     erreur.value = null;
     try {
-      utilisateur.value = await api.post<UtilisateurConnecte>("/auth/inscription/confirmer", { email, code });
-      return true;
+      const reponse = await api.post<UtilisateurConnecte | { enAttenteValidation: true; message: string }>(
+        "/auth/inscription/confirmer",
+        { email, code },
+      );
+      if ("enAttenteValidation" in reponse) {
+        return "en-attente";
+      }
+      utilisateur.value = reponse;
+      return "connecte";
     } catch (e) {
       erreur.value = e instanceof ApiError ? e.message : "Code de confirmation invalide";
-      return false;
+      return null;
     }
   }
 

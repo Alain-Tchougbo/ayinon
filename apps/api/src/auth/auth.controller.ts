@@ -46,6 +46,14 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const { utilisateur, jetons } = await this.authService.confirmerInscription(dto.email, dto.code);
+    if (!jetons) {
+      // Compte professionnel confirme mais encore en attente de validation admin (E0.6) : pas de
+      // session ouverte, l'utilisateur doit repasser par /connexion une fois approuve.
+      return {
+        enAttenteValidation: true,
+        message: "E-mail confirme. Votre compte professionnel est desormais en attente de validation par un administrateur.",
+      };
+    }
     this.poserCookiesSession(res, jetons);
     return this.serialiserUtilisateur(utilisateur);
   }

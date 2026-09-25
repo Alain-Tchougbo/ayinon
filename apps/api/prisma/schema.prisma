@@ -106,6 +106,9 @@ enum TypeOperationAudit {
   CONFIRMATION_SEQUESTRE
   LIBERATION_SEQUESTRE
   REMBOURSEMENT_SEQUESTRE
+  DEMANDE_VALIDATION_PRO
+  VALIDATION_COMPTE_PRO
+  REJET_COMPTE_PRO
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
@@ -145,6 +148,16 @@ enum StatutDeclarantVendeur {
   HERITIER
   MANDATAIRE
   AGENCE
+}
+
+/// File d'attente de validation des comptes professionnels (E0.5/E0.6). NON_APPLICABLE pour tout
+/// compte non professionnel (CITOYEN/VENDEUR/ACHETEUR) ou cree directement par un admin — seul un
+/// geometre/notaire/agent banque en auto-inscription passe par EN_ATTENTE.
+enum StatutValidationPro {
+  NON_APPLICABLE
+  EN_ATTENTE
+  APPROUVE
+  REJETE
 }
 
 /// Portee d'un signalement (E2.6/E8.1) : ANNONCE pour un probleme sur une annonce publiee
@@ -226,7 +239,18 @@ model Utilisateur {
   /// Declare uniquement par un VENDEUR (E0.3) : adapte les pieces demandees lors de la publication.
   statutDeclarant StatutDeclarantVendeur?
 
+  /// E0.5/E0.6 : numero d'agrement/d'ordre declare par un GEOMETRE/NOTAIRE/AGENT_BANQUE en
+  /// auto-inscription, et statut de la validation admin qui en decoule. NON_APPLICABLE (par
+  /// defaut) pour tout compte non concerne (grand public, ou cree directement par un admin).
+  numeroAgrement      String?
+  statutValidationPro StatutValidationPro @default(NON_APPLICABLE)
+  motifRejetPro       String?
+  valideParId         String?
+  validePar           Utilisateur?        @relation("ValidationProAdmin", fields: [valideParId], references: [id])
+  comptesProValides   Utilisateur[]       @relation("ValidationProAdmin")
+
   @@index([role])
+  @@index([statutValidationPro])
 }
 
 model RefreshToken {

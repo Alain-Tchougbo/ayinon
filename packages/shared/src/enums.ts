@@ -108,6 +108,9 @@ export const TypeOperationAudit = {
   CONFIRMATION_SEQUESTRE: "CONFIRMATION_SEQUESTRE",
   LIBERATION_SEQUESTRE: "LIBERATION_SEQUESTRE",
   REMBOURSEMENT_SEQUESTRE: "REMBOURSEMENT_SEQUESTRE",
+  DEMANDE_VALIDATION_PRO: "DEMANDE_VALIDATION_PRO",
+  VALIDATION_COMPTE_PRO: "VALIDATION_COMPTE_PRO",
+  REJET_COMPTE_PRO: "REJET_COMPTE_PRO",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
 
@@ -185,6 +188,15 @@ export const StatutDeclarantVendeur = {
   AGENCE: "AGENCE",
 } as const;
 export type StatutDeclarantVendeur = (typeof StatutDeclarantVendeur)[keyof typeof StatutDeclarantVendeur];
+
+/** File d'attente de validation des comptes professionnels (E0.5/E0.6). */
+export const StatutValidationPro = {
+  NON_APPLICABLE: "NON_APPLICABLE",
+  EN_ATTENTE: "EN_ATTENTE",
+  APPROUVE: "APPROUVE",
+  REJETE: "REJETE",
+} as const;
+export type StatutValidationPro = (typeof StatutValidationPro)[keyof typeof StatutValidationPro];
 
 /** Portee d'un signalement : ANNONCE (probleme sur une annonce publiee) ou LITIGE_FONCIER
  * (contestation sur la parcelle elle-meme, susceptible d'aboutir a un gel CSAF). */

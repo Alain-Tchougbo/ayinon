@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, FileStack, Flag, LayoutDashboard, MapPin, Pencil, Users, X } from "@lucide/vue";
+import { BadgeCheck, Check, FileStack, Flag, LayoutDashboard, MapPin, Pencil, Users, X } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
@@ -47,6 +47,15 @@ interface Documents {
   conventions: Array<{ id: string; vendeurNom: string; acquereurNom: string; montantFcfa: number; statutCession: string; parcelle: { nup: string } }>;
   titres: Array<{ id: string; numeroTitre: string; dateDelivrance: string; parcelle: { nup: string } }>;
 }
+interface DemandePro {
+  id: string;
+  email: string;
+  nomComplet: string;
+  telephone: string | null;
+  role: string;
+  numeroAgrement: string | null;
+  createdAt: string;
+}
 interface Signalement {
   id: string;
   type: "ANNONCE" | "LITIGE_FONCIER";
@@ -62,6 +71,7 @@ interface Signalement {
 
 const ONGLETS = [
   { cle: "vue-ensemble", label: "Vue d'ensemble" },
+  { cle: "demandes-pro", label: "Demandes professionnelles" },
   { cle: "utilisateurs", label: "Utilisateurs" },
   { cle: "proprietaires", label: "Proprietaires" },
   { cle: "parcelles", label: "Parcelles" },
@@ -78,6 +88,7 @@ const utilisateurs = ref<Utilisateur[]>([]);
 const proprietaires = ref<Proprietaire[]>([]);
 const parcelles = ref<ParcelleAdmin[]>([]);
 const documents = ref<Documents | null>(null);
+const demandesPro = ref<DemandePro[]>([]);
 const signalements = ref<Signalement[]>([]);
 const chargement = ref(false);
 const erreur = ref<string | null>(null);
@@ -91,6 +102,9 @@ const qualificationEnCours = ref<string | null>(null);
 const motifQualification = ref("");
 const actionEnCours = ref(false);
 
+const traitementProEnCours = ref<string | null>(null);
+const motifRejetPro = ref("");
+
 onMounted(async () => {
   definirPhraseCourante(PHRASES.adminIntro);
   await charger("vue-ensemble");
@@ -102,6 +116,7 @@ async function charger(onglet: Onglet) {
   erreur.value = null;
   try {
     if (onglet === "vue-ensemble") vueEnsemble.value = await api.get<VueEnsemble>("/admin/vue-ensemble");
+    else if (onglet === "demandes-pro") demandesPro.value = await api.get<DemandePro[]>("/admin/demandes-professionnelles");
     else if (onglet === "utilisateurs") utilisateurs.value = await api.get<Utilisateur[]>("/admin/utilisateurs");
     else if (onglet === "proprietaires") proprietaires.value = await api.get<Proprietaire[]>("/admin/proprietaires");
     else if (onglet === "parcelles") parcelles.value = await api.get<ParcelleAdmin[]>("/admin/parcelles");
@@ -150,6 +165,28 @@ async function qualifier(id: string, fonde: boolean) {
     await charger("signalements");
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Qualification impossible";
+  } finally {
+    actionEnCours.value = false;
+  }
+}
+
+async function traiterDemandePro(id: string, approuver: boolean) {
+  erreur.value = null;
+  message.value = null;
+  const motifRejet = motifRejetPro.value.trim();
+  if (!approuver && motifRejet.length < 10) {
+    erreur.value = "Le motif de rejet doit compter au moins 10 caracteres";
+    return;
+  }
+  actionEnCours.value = true;
+  try {
+    await api.patch(`/admin/demandes-professionnelles/${id}`, { approuver, motifRejet: approuver ? undefined : motifRejet });
+    message.value = approuver ? "Compte professionnel approuve." : "Demande rejetee.";
+    traitementProEnCours.value = null;
+    motifRejetPro.value = "";
+    await charger("demandes-pro");
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Traitement impossible";
   } finally {
     actionEnCours.value = false;
   }
@@ -212,6 +249,49 @@ async function qualifier(id: string, fonde: boolean) {
         </ul>
       </BaseCard>
     </div>
+
+    <!-- Demandes professionnelles (E0.6) -->
+    <ul v-if="!chargement && ongletActif === 'demandes-pro'" class="space-y-2.5">
+      <li v-if="demandesPro.length === 0" class="text-sm text-texte-attenue">Aucune demande en attente.</li>
+      <li v-for="d in demandesPro" :key="d.id">
+        <BaseCard accentue="accent" rembourrage="sm">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p class="flex items-center gap-1.5 font-medium text-texte">
+                <BadgeCheck :size="13" aria-hidden="true" />
+                {{ d.nomComplet }} — {{ d.role.replaceAll("_", " ") }}
+              </p>
+              <p class="mt-0.5 text-xs text-texte-attenue">{{ d.email }}<span v-if="d.telephone"> — {{ d.telephone }}</span></p>
+              <p class="mt-1 text-sm text-texte">Numero d'agrement : {{ d.numeroAgrement ?? "non renseigne" }}</p>
+              <p class="mt-0.5 text-xs text-texte-attenue">Demande deposee le {{ new Date(d.createdAt).toLocaleDateString("fr-FR") }}</p>
+            </div>
+          </div>
+
+          <div v-if="traitementProEnCours === d.id" class="mt-3 space-y-2 rounded-carte border border-bordure bg-fond p-3">
+            <label :for="`motif-rejet-pro-${d.id}`" class="block text-xs font-medium text-texte">Motif du rejet (obligatoire pour rejeter)</label>
+            <textarea
+              :id="`motif-rejet-pro-${d.id}`"
+              v-model="motifRejetPro"
+              rows="2"
+              placeholder="Ex. numero d'agrement introuvable au registre professionnel"
+              class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
+            />
+            <div class="flex gap-2">
+              <BaseButton taille="sm" :disabled="actionEnCours" @click="traiterDemandePro(d.id, true)">
+                <Check :size="12" aria-hidden="true" />
+                Approuver
+              </BaseButton>
+              <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="traiterDemandePro(d.id, false)">
+                <X :size="12" aria-hidden="true" />
+                Rejeter
+              </BaseButton>
+              <BaseButton taille="sm" variant="secondaire" @click="traitementProEnCours = null">Annuler</BaseButton>
+            </div>
+          </div>
+          <BaseButton v-else taille="sm" class="mt-3" @click="traitementProEnCours = d.id">Traiter cette demande</BaseButton>
+        </BaseCard>
+      </li>
+    </ul>
 
     <!-- Utilisateurs -->
     <div v-if="!chargement && ongletActif === 'utilisateurs'" class="overflow-x-auto rounded-carte border border-bordure bg-surface">
