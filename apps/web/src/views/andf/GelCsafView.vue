@@ -8,6 +8,7 @@ import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface EntreeAudit {
@@ -329,7 +330,6 @@ async function confirmerLevee(conflitId: string) {
                 </td>
                 <td class="whitespace-nowrap px-4 py-3">
                   <BaseButton
-                    v-if="conflitEnLevee !== conflit.id"
                     variant="secondaire"
                     taille="sm"
                     @click="
@@ -342,66 +342,65 @@ async function confirmerLevee(conflitId: string) {
                   </BaseButton>
                 </td>
               </tr>
-              <tr v-if="conflitEnLevee === conflit.id">
-                <td colspan="2" class="bg-fond/40 px-4 py-3">
-                  <div class="space-y-2 rounded-carte border border-bordure bg-fond p-3">
-                    <div>
-                      <label :for="`type-decision-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">Effet de la decision</label>
-                      <select
-                        :id="`type-decision-${conflit.id}`"
-                        v-model="typeDecisionParConflit[conflit.id]"
-                        class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                      >
-                        <option value="LEVEE_SIMPLE">Levee simple (restaure le statut anterieur)</option>
-                        <option value="ANNULATION_VENTE">Annulation de la vente en cours</option>
-                        <option value="TRANSFERT_FORCE">Transfert force de propriete</option>
-                      </select>
-                    </div>
-                    <div v-if="typeDecisionParConflit[conflit.id] === 'TRANSFERT_FORCE'">
-                      <label :for="`nouveau-proprietaire-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">
-                        Nom du proprietaire designe par la decision
-                      </label>
-                      <input
-                        :id="`nouveau-proprietaire-${conflit.id}`"
-                        v-model="nouveauProprietaireParConflit[conflit.id]"
-                        class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                      />
-                    </div>
-                    <div>
-                      <label :for="`motif-levee-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">
-                        Motif de la levee (obligatoire)
-                      </label>
-                      <textarea
-                        :id="`motif-levee-${conflit.id}`"
-                        v-model="motifLeveeParConflit[conflit.id]"
-                        rows="2"
-                        placeholder="Ex. litige resolu par jugement du..."
-                        class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                      />
-                    </div>
-                    <div>
-                      <label :for="`fichier-decision-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">
-                        Document de la decision (optionnel)
-                      </label>
-                      <input
-                        :id="`fichier-decision-${conflit.id}`"
-                        type="file"
-                        class="w-full text-xs text-texte"
-                        @change="surChoixFichierDecision(conflit.id, $event)"
-                      />
-                    </div>
-                    <p class="text-xs text-texte-attenue">Confirmez-vous la levee du gel sur {{ conflit.parcelle.nup }} ?</p>
-                    <div class="flex gap-2">
-                      <BaseButton taille="sm" @click="confirmerLevee(conflit.id)">Oui, lever le gel</BaseButton>
-                      <BaseButton variant="secondaire" taille="sm" @click="conflitEnLevee = null">Annuler</BaseButton>
-                    </div>
-                  </div>
-                </td>
-              </tr>
             </template>
           </tbody>
         </table>
       </div>
     </div>
+
+    <BaseModal :model-value="conflitEnLevee !== null" titre="Lever le gel conservatoire" @update:model-value="conflitEnLevee = null">
+      <div v-if="conflitEnLevee" class="space-y-2">
+        <div>
+          <label for="type-decision" class="mb-1 block text-xs font-medium text-texte">Effet de la decision</label>
+          <select
+            id="type-decision"
+            v-model="typeDecisionParConflit[conflitEnLevee]"
+            class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+          >
+            <option value="LEVEE_SIMPLE">Levee simple (restaure le statut anterieur)</option>
+            <option value="ANNULATION_VENTE">Annulation de la vente en cours</option>
+            <option value="TRANSFERT_FORCE">Transfert force de propriete</option>
+          </select>
+        </div>
+        <div v-if="typeDecisionParConflit[conflitEnLevee] === 'TRANSFERT_FORCE'">
+          <label for="nouveau-proprietaire" class="mb-1 block text-xs font-medium text-texte">
+            Nom du proprietaire designe par la decision
+          </label>
+          <input
+            id="nouveau-proprietaire"
+            v-model="nouveauProprietaireParConflit[conflitEnLevee]"
+            class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+          />
+        </div>
+        <div>
+          <label for="motif-levee" class="mb-1 block text-xs font-medium text-texte">
+            Motif de la levee (obligatoire)
+          </label>
+          <textarea
+            id="motif-levee"
+            v-model="motifLeveeParConflit[conflitEnLevee]"
+            rows="2"
+            placeholder="Ex. litige resolu par jugement du..."
+            class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+          />
+        </div>
+        <div>
+          <label for="fichier-decision" class="mb-1 block text-xs font-medium text-texte">
+            Document de la decision (optionnel)
+          </label>
+          <input
+            id="fichier-decision"
+            type="file"
+            class="w-full text-xs text-texte"
+            @change="surChoixFichierDecision(conflitEnLevee, $event)"
+          />
+        </div>
+        <p class="text-xs text-texte-attenue">Confirmez-vous la levee du gel ?</p>
+        <div class="flex gap-2">
+          <BaseButton taille="sm" @click="confirmerLevee(conflitEnLevee)">Oui, lever le gel</BaseButton>
+          <BaseButton variant="secondaire" taille="sm" @click="conflitEnLevee = null">Annuler</BaseButton>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>

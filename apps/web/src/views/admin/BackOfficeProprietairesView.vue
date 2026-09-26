@@ -6,6 +6,7 @@ import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface Proprietaire {
@@ -92,25 +93,26 @@ async function enregistrerEdition(id: string) {
               </td>
               <td class="px-4 py-3 text-xs text-texte-attenue">{{ p.email ?? "—" }}<span v-if="p.telephone"> — {{ p.telephone }}</span></td>
               <td class="px-4 py-3">
-                <BaseButton v-if="editionEnCours !== p.id" taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
+                <BaseButton taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
                   <Pencil :size="13" aria-hidden="true" />
                   Modifier
                 </BaseButton>
-              </td>
-            </tr>
-            <tr v-if="editionEnCours === p.id">
-              <td colspan="3" class="bg-fond/40 px-4 py-3">
-                <div class="flex flex-wrap items-end gap-2">
-                  <div class="w-56"><BaseInput id="email-edition" v-model="emailEdition" label="Email" type="email" /></div>
-                  <div class="w-48"><BaseInput id="telephone-edition" v-model="telephoneEdition" label="Telephone" /></div>
-                  <BaseButton taille="sm" @click="enregistrerEdition(p.id)">Enregistrer</BaseButton>
-                  <BaseButton taille="sm" variant="secondaire" @click="editionEnCours = null">Annuler</BaseButton>
-                </div>
               </td>
             </tr>
           </template>
         </tbody>
       </table>
     </div>
+
+    <BaseModal :model-value="editionEnCours !== null" titre="Modifier le proprietaire" @update:model-value="editionEnCours = null">
+      <div class="space-y-3">
+        <BaseInput id="email-edition" v-model="emailEdition" label="Email" type="email" />
+        <BaseInput id="telephone-edition" v-model="telephoneEdition" label="Telephone" />
+        <div class="flex gap-2">
+          <BaseButton taille="sm" @click="enregistrerEdition(editionEnCours!)">Enregistrer</BaseButton>
+          <BaseButton taille="sm" variant="secondaire" @click="editionEnCours = null">Annuler</BaseButton>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>

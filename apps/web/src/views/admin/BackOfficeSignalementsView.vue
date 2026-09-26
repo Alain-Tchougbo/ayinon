@@ -5,6 +5,7 @@ import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface Signalement {
@@ -111,38 +112,37 @@ async function qualifier(id: string, fonde: boolean) {
                 </span>
               </td>
               <td class="px-4 py-3">
-                <BaseButton v-if="s.statut === 'DEPOSE' && qualificationEnCours !== s.id" taille="sm" @click="qualificationEnCours = s.id">
+                <BaseButton v-if="s.statut === 'DEPOSE'" taille="sm" @click="qualificationEnCours = s.id">
                   Qualifier
                 </BaseButton>
-              </td>
-            </tr>
-            <tr v-if="s.statut === 'DEPOSE' && qualificationEnCours === s.id">
-              <td colspan="3" class="bg-fond/40 px-4 py-3">
-                <div class="space-y-2 rounded-carte border border-bordure bg-fond p-3">
-                  <label :for="`motif-qualif-${s.id}`" class="block text-xs font-medium text-texte">Motif de la decision (obligatoire)</label>
-                  <textarea
-                    :id="`motif-qualif-${s.id}`"
-                    v-model="motifQualification"
-                    rows="2"
-                    class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                  />
-                  <div class="flex gap-2">
-                    <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="qualifier(s.id, true)">
-                      <Check :size="12" aria-hidden="true" />
-                      Retenir comme fonde
-                    </BaseButton>
-                    <BaseButton taille="sm" variant="secondaire" :disabled="actionEnCours" @click="qualifier(s.id, false)">
-                      <X :size="12" aria-hidden="true" />
-                      Rejeter
-                    </BaseButton>
-                    <BaseButton taille="sm" variant="ghost" @click="qualificationEnCours = null">Annuler</BaseButton>
-                  </div>
-                </div>
               </td>
             </tr>
           </template>
         </tbody>
       </table>
     </div>
+
+    <BaseModal :model-value="qualificationEnCours !== null" titre="Qualifier le signalement" @update:model-value="qualificationEnCours = null">
+      <div class="space-y-2">
+        <label for="motif-qualif" class="block text-xs font-medium text-texte">Motif de la decision (obligatoire)</label>
+        <textarea
+          id="motif-qualif"
+          v-model="motifQualification"
+          rows="3"
+          class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+        />
+        <div class="flex gap-2">
+          <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="qualifier(qualificationEnCours!, true)">
+            <Check :size="12" aria-hidden="true" />
+            Retenir comme fonde
+          </BaseButton>
+          <BaseButton taille="sm" variant="secondaire" :disabled="actionEnCours" @click="qualifier(qualificationEnCours!, false)">
+            <X :size="12" aria-hidden="true" />
+            Rejeter
+          </BaseButton>
+          <BaseButton taille="sm" variant="ghost" @click="qualificationEnCours = null">Annuler</BaseButton>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>

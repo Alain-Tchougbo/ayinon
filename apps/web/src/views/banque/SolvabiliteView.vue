@@ -7,6 +7,7 @@ import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface ResultatSolvabilite {
@@ -270,39 +271,38 @@ async function lever(hypothequeId: string) {
                   <p v-if="d.cheminDocument" class="mt-0.5 text-xs text-texte-attenue">Un justificatif a ete joint a cette demande.</p>
                 </td>
                 <td class="whitespace-nowrap px-4 py-3">
-                  <BaseButton v-if="decisionEnCoursId !== d.id" taille="sm" @click="examinerDemandeFinancement(d.id)">
+                  <BaseButton taille="sm" @click="examinerDemandeFinancement(d.id)">
                     Examiner
                   </BaseButton>
-                </td>
-              </tr>
-              <tr v-if="decisionEnCoursId === d.id">
-                <td colspan="2" class="bg-fond/40 px-4 py-3">
-                  <div class="space-y-2.5 rounded-carte border border-bordure bg-fond p-3">
-                    <BaseInput :id="`montant-accorde-${d.id}`" v-model="montantAccordeParDemande[d.id]!" type="number" label="Montant accorde (FCFA)" />
-                    <BaseButton taille="sm" :disabled="actionFinancementEnCours" @click="traiterDemandeFinancement(d.id, 'ACCORD_PRINCIPE')">
-                      Accorder un principe de financement
-                    </BaseButton>
-                    <div class="border-t border-bordure pt-2.5">
-                      <label :for="`motif-refus-financement-${d.id}`" class="mb-1 block text-xs font-medium text-texte">Ou refuser, avec motif</label>
-                      <textarea
-                        :id="`motif-refus-financement-${d.id}`"
-                        v-model="motifRefusParDemande[d.id]"
-                        rows="2"
-                        placeholder="Ex. revenus insuffisants au regard du montant demande"
-                        class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                      />
-                      <BaseButton taille="sm" variant="danger" class="mt-2" :disabled="actionFinancementEnCours" @click="traiterDemandeFinancement(d.id, 'REFUSER')">
-                        Refuser la demande
-                      </BaseButton>
-                    </div>
-                    <BaseButton taille="sm" variant="secondaire" @click="decisionEnCoursId = null">Annuler</BaseButton>
-                  </div>
                 </td>
               </tr>
             </template>
           </tbody>
         </table>
       </div>
+
+      <BaseModal :model-value="decisionEnCoursId !== null" titre="Examiner la demande de financement" @update:model-value="decisionEnCoursId = null">
+        <div v-if="decisionEnCoursId" class="space-y-2.5">
+          <BaseInput id="montant-accorde" v-model="montantAccordeParDemande[decisionEnCoursId]!" type="number" label="Montant accorde (FCFA)" />
+          <BaseButton taille="sm" :disabled="actionFinancementEnCours" @click="traiterDemandeFinancement(decisionEnCoursId, 'ACCORD_PRINCIPE')">
+            Accorder un principe de financement
+          </BaseButton>
+          <div class="border-t border-bordure pt-2.5">
+            <label for="motif-refus-financement" class="mb-1 block text-xs font-medium text-texte">Ou refuser, avec motif</label>
+            <textarea
+              id="motif-refus-financement"
+              v-model="motifRefusParDemande[decisionEnCoursId]"
+              rows="2"
+              placeholder="Ex. revenus insuffisants au regard du montant demande"
+              class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+            />
+            <BaseButton taille="sm" variant="danger" class="mt-2" :disabled="actionFinancementEnCours" @click="traiterDemandeFinancement(decisionEnCoursId, 'REFUSER')">
+              Refuser la demande
+            </BaseButton>
+          </div>
+          <BaseButton taille="sm" variant="secondaire" @click="decisionEnCoursId = null">Annuler</BaseButton>
+        </div>
+      </BaseModal>
     </section>
 
     <form class="flex gap-2" @submit.prevent="rechercher">
@@ -394,27 +394,9 @@ async function lever(hypothequeId: string) {
                   </span>
                 </td>
                 <td class="px-4 py-3">
-                  <BaseButton v-if="h.statut === 'ACTIVE' && leveeEnCoursId !== h.id" taille="sm" variant="secondaire" @click="leveeEnCoursId = h.id">
+                  <BaseButton v-if="h.statut === 'ACTIVE'" taille="sm" variant="secondaire" @click="leveeEnCoursId = h.id">
                     Lever l'hypotheque
                   </BaseButton>
-                </td>
-              </tr>
-              <tr v-if="h.statut === 'ACTIVE' && leveeEnCoursId === h.id">
-                <td colspan="3" class="bg-fond/40 px-4 py-3">
-                  <div class="space-y-2 rounded-carte border border-bordure bg-fond p-3">
-                    <label :for="`motif-levee-${h.id}`" class="block text-xs font-medium text-texte">Motif de la levee (obligatoire)</label>
-                    <textarea
-                      :id="`motif-levee-${h.id}`"
-                      v-model="motifLeveeParHypotheque[h.id]"
-                      rows="2"
-                      placeholder="Ex. credit rembourse integralement"
-                      class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                    />
-                    <div class="flex gap-2">
-                      <BaseButton taille="sm" @click="lever(h.id)">Confirmer la levee</BaseButton>
-                      <BaseButton taille="sm" variant="secondaire" @click="leveeEnCoursId = null">Annuler</BaseButton>
-                    </div>
-                  </div>
                 </td>
               </tr>
             </template>
@@ -422,5 +404,22 @@ async function lever(hypothequeId: string) {
         </table>
       </div>
     </section>
+
+    <BaseModal :model-value="leveeEnCoursId !== null" titre="Lever l'hypotheque" @update:model-value="leveeEnCoursId = null">
+      <div v-if="leveeEnCoursId" class="space-y-2">
+        <label for="motif-levee-hyp" class="block text-xs font-medium text-texte">Motif de la levee (obligatoire)</label>
+        <textarea
+          id="motif-levee-hyp"
+          v-model="motifLeveeParHypotheque[leveeEnCoursId]"
+          rows="3"
+          placeholder="Ex. credit rembourse integralement"
+          class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+        />
+        <div class="flex gap-2">
+          <BaseButton taille="sm" @click="lever(leveeEnCoursId)">Confirmer la levee</BaseButton>
+          <BaseButton taille="sm" variant="secondaire" @click="leveeEnCoursId = null">Annuler</BaseButton>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>
