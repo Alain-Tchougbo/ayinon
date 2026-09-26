@@ -193,7 +193,7 @@ async function deposerOpposition() {
           class="flex items-center justify-between gap-2 rounded-carte border border-bordure bg-surface p-3"
         >
           <div class="text-sm">
-            <p class="font-medium text-texte">{{ s.parcelle.nup }} — {{ s.parcelle.commune }}</p>
+            <p class="font-medium text-texte">{{ s.parcelle.nup }} - {{ s.parcelle.commune }}</p>
             <p class="text-xs text-texte-attenue">En tant que {{ s.role }}</p>
           </div>
           <BaseButton taille="sm" @click="ouvrirDepuisSignatureEnAttente(s)">Voir et signer</BaseButton>
@@ -234,7 +234,7 @@ async function deposerOpposition() {
         </ul>
         <p class="mt-4 flex items-center gap-1.5 text-sm font-medium" :class="etat.quorumAtteint ? 'text-succes' : 'text-texte-attenue'">
           <CircleCheck v-if="etat.quorumAtteint" :size="16" aria-hidden="true" />
-          {{ etat.quorumAtteint ? "Quorum atteint — periode d'opposition ouverte" : "En attente de toutes les signatures" }}
+          {{ etat.quorumAtteint ? "Quorum atteint - periode d'opposition ouverte" : "En attente de toutes les signatures" }}
         </p>
       </BaseCard>
 
@@ -279,7 +279,7 @@ async function deposerOpposition() {
         </form>
 
         <ul v-if="banOuvert.oppositions.length > 0" class="mt-4 space-y-1 border-t border-bordure pt-3 text-xs text-texte-attenue">
-          <li v-for="(o, i) in banOuvert.oppositions" :key="i">{{ o.opposantNom }} — {{ o.motif }}</li>
+          <li v-for="(o, i) in banOuvert.oppositions" :key="i">{{ o.opposantNom }} - {{ o.motif }}</li>
         </ul>
       </BaseCard>
     </div>

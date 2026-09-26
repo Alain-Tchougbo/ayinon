@@ -192,7 +192,7 @@ async function signerPlan() {
       </p>
       <p v-if="chargementMesImports" class="text-sm text-texte-attenue" role="status">Chargement…</p>
       <p v-else-if="mesImports.length === 0" class="text-sm text-texte-attenue">
-        Aucun plan de bornage importe pour le moment — le premier apparaitra ici.
+        Aucun plan de bornage importe pour le moment - le premier apparaitra ici.
       </p>
       <div v-else class="overflow-x-auto rounded-carte border border-bordure bg-surface">
         <table class="w-full text-left text-sm">
@@ -205,7 +205,7 @@ async function signerPlan() {
           </thead>
           <tbody class="divide-y divide-bordure">
             <tr v-for="i in mesImports" :key="i.id" class="align-top">
-              <td class="px-4 py-3 font-medium text-texte">{{ i.parcelle.nup }} — {{ i.parcelle.commune }}</td>
+              <td class="px-4 py-3 font-medium text-texte">{{ i.parcelle.nup }} - {{ i.parcelle.commune }}</td>
               <td class="px-4 py-3 text-xs text-texte-attenue">
                 {{ i.referenceDossier }} · {{ new Date(i.createdAt).toLocaleDateString("fr-FR") }}
               </td>
@@ -230,7 +230,7 @@ async function signerPlan() {
           <label for="parcelle" class="mb-1 block text-sm font-medium text-texte">Parcelle concernee</label>
           <select id="parcelle" v-model="parcelleId" class="w-full rounded-carte border border-bordure bg-fond px-3.5 py-2.5 text-sm text-texte">
             <option value="" disabled>Choisir une parcelle (NUP)</option>
-            <option v-for="p in parcelles.parcelles" :key="p.id" :value="p.id">{{ p.nup }} — {{ p.commune }}</option>
+            <option v-for="p in parcelles.parcelles" :key="p.id" :value="p.id">{{ p.nup }} - {{ p.commune }}</option>
           </select>
         </div>
 
@@ -300,7 +300,7 @@ async function signerPlan() {
       </p>
       <ul v-if="resultatServeur.chevauchementDetecte" class="mt-2 space-y-0.5 text-sm text-texte">
         <li v-for="conflit in resultatServeur.parcellesEnConflit" :key="conflit.id">
-          Parcelle {{ conflit.nup }} — intersection de {{ Math.round(conflit.aireIntersectionM2) }} m²
+          Parcelle {{ conflit.nup }} - intersection de {{ Math.round(conflit.aireIntersectionM2) }} m²
         </li>
       </ul>
 

@@ -22,7 +22,7 @@ const chargement = ref(false);
 const erreur = ref<string | null>(null);
 
 /** Registre foncier : les 4 seuls compteurs qui sont de vraies mesures uniques (pas une
- * repartition) — cartes stats, meme langage visuel que le tableau de bord (voir AccueilView.vue). */
+ * repartition) - cartes stats, meme langage visuel que le tableau de bord (voir AccueilView.vue). */
 const statistiques = computed(() => {
   if (!vueEnsemble.value) return [];
   return [

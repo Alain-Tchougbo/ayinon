@@ -109,7 +109,7 @@ async function voirHistorique(parcelleId: string) {
     <p v-if="chargement" class="text-sm text-texte-attenue" role="status">Chargement…</p>
 
     <div v-if="!chargement" class="overflow-x-auto rounded-carte border border-bordure bg-surface">
-      <table class="w-full text-left text-sm">
+      <table class="w-full table-fixed text-left text-sm">
         <thead>
           <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
             <th class="px-4 py-3 font-semibold">Parcelle</th>
@@ -121,14 +121,14 @@ async function voirHistorique(parcelleId: string) {
           <template v-for="p in parcelles" :key="p.id">
             <tr class="align-top">
               <td class="px-4 py-3">
-                <p class="font-medium text-texte">{{ p.nup }} — {{ p.commune }}<span v-if="p.arrondissement"> ({{ p.arrondissement }})</span></p>
+                <p class="font-medium text-texte">{{ p.nup }} - {{ p.commune }}<span v-if="p.arrondissement"> ({{ p.arrondissement }})</span></p>
               </td>
               <td class="px-4 py-3">
                 <p class="text-texte">{{ p.proprietaire?.nomComplet ?? "Sans proprietaire" }}</p>
-                <p class="text-xs text-texte-attenue">{{ p.superficieM2.toLocaleString("fr-FR") }} m² — {{ p.statut.replaceAll("_", " ") }}</p>
+                <p class="text-xs text-texte-attenue">{{ p.superficieM2.toLocaleString("fr-FR") }} m² - {{ p.statut.replaceAll("_", " ") }}</p>
               </td>
               <td class="px-4 py-3">
-                <div class="flex gap-2">
+                <div class="flex flex-col gap-2 sm:flex-row">
                   <BaseButton taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
                     <Pencil :size="13" aria-hidden="true" />
                     Modifier
@@ -150,7 +150,7 @@ async function voirHistorique(parcelleId: string) {
                     <p class="font-medium text-texte">{{ entree.typeOperation.replaceAll("_", " ") }}</p>
                     <p class="text-xs text-texte-attenue">
                       {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}
-                      <template v-if="entree.roleActeur"> — {{ entree.roleActeur.replaceAll("_", " ") }}</template>
+                      <template v-if="entree.roleActeur"> - {{ entree.roleActeur.replaceAll("_", " ") }}</template>
                     </p>
                     <p class="mt-0.5 font-mono text-[0.65rem] text-texte-attenue">hash bloc : {{ entree.hashBloc.slice(0, 24) }}…</p>
                   </li>

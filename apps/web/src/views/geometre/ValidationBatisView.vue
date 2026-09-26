@@ -106,7 +106,7 @@ async function creerBati() {
     <p v-else-if="batisAValider.length === 0" class="text-sm text-texte-attenue">Aucun bati en attente de validation.</p>
 
     <div v-else class="overflow-x-auto rounded-carte border border-bordure bg-surface">
-      <table class="w-full text-left text-sm">
+      <table class="w-full table-fixed text-left text-sm">
         <thead>
           <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
             <th class="px-4 py-3 font-semibold">Bati</th>
@@ -119,12 +119,12 @@ async function creerBati() {
             <td class="px-4 py-3 font-medium text-texte">{{ nupParcelle(b.parcelleId) }}</td>
             <td class="px-4 py-3 text-xs text-texte-attenue">
               <span v-if="b.source === 'IMPORT_IA'">
-                Detection IA — confiance {{ b.scoreConfiance !== null ? Math.round(b.scoreConfiance * 100) + "%" : "inconnue" }}
+                Detection IA - confiance {{ b.scoreConfiance !== null ? Math.round(b.scoreConfiance * 100) + "%" : "inconnue" }}
               </span>
               <span v-else>Saisie manuelle</span>
             </td>
             <td class="px-4 py-3">
-              <div class="flex gap-2">
+              <div class="flex flex-col gap-2 sm:flex-row">
                 <BaseButton taille="sm" variant="succes" :disabled="enCoursId === b.id" @click="valider(b.id)">
                   <CheckCheck :size="14" aria-hidden="true" /> Valider
                 </BaseButton>
@@ -147,7 +147,7 @@ async function creerBati() {
           <label for="parcelle-bati" class="mb-1 block text-sm font-medium text-texte">Parcelle concernee (optionnel)</label>
           <select id="parcelle-bati" v-model="parcelleIdSaisie" class="w-full rounded-carte border border-bordure bg-fond px-3.5 py-2.5 text-sm text-texte">
             <option value="">Aucune parcelle particuliere</option>
-            <option v-for="p in parcelles.parcelles" :key="p.id" :value="p.id">{{ p.nup }} — {{ p.commune }}</option>
+            <option v-for="p in parcelles.parcelles" :key="p.id" :value="p.id">{{ p.nup }} - {{ p.commune }}</option>
           </select>
         </div>
         <div>

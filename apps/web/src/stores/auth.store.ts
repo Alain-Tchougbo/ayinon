@@ -40,7 +40,7 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  /** E0.1 : inscription en libre-service. Ne connecte pas encore — un code de confirmation doit
+  /** E0.1 : inscription en libre-service. Ne connecte pas encore - un code de confirmation doit
    * d'abord etre valide (voir confirmerInscription). */
   async function inscription(dto: InscriptionDto) {
     erreur.value = null;
