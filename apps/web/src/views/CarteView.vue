@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Map, Search, X } from "@lucide/vue";
+import { ChevronDown, Map, Search, X } from "@lucide/vue";
+import { StatutParcelle } from "@ayinon/shared";
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import LegendeStatuts from "../components/map/LegendeStatuts.vue";
@@ -22,7 +23,24 @@ const resultatsRecherche = ref<ParcelleCache[] | null>(null);
 const rechercheEnCours = ref(false);
 const aucunResultat = ref(false);
 
-const parcellesAffichees = computed(() => resultatsRecherche.value ?? parcelles.parcelles);
+// Filtres complementaires a la recherche NUP/proprietaire (se combinent avec elle) : reels,
+// derives des donnees deja chargees, jamais une liste inventee de communes/statuts.
+const communeFiltre = ref("");
+const statutFiltre = ref<StatutParcelle | "">("");
+const LIBELLE_STATUT: Record<StatutParcelle, string> = {
+  TITREE: "Titree et securisee",
+  EN_COURS: "En cours de securisation",
+  GEL_CSAF: "Gel conservatoire (CSAF)",
+  DOMAINE_PUBLIC: "Domaine public",
+};
+const communesDisponibles = computed(() => [...new Set(parcelles.parcelles.map((p) => p.commune))].sort((a, b) => a.localeCompare(b, "fr")));
+
+const parcellesAffichees = computed(() => {
+  const base = resultatsRecherche.value ?? parcelles.parcelles;
+  return base.filter(
+    (p) => (!communeFiltre.value || p.commune === communeFiltre.value) && (!statutFiltre.value || p.statut === statutFiltre.value),
+  );
+});
 
 onMounted(async () => {
   definirPhraseCourante(PHRASES.carteIntro);
@@ -117,6 +135,38 @@ function surSelection(parcelle: { statut: string }) {
         Voir toutes les parcelles
       </BaseButton>
     </form>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="relative">
+        <select
+          v-model="communeFiltre"
+          class="min-h-0 appearance-none rounded-carte border border-bordure bg-surface py-2 pl-3 pr-8 text-xs font-medium text-texte"
+        >
+          <option value="">Toutes les communes</option>
+          <option v-for="commune in communesDisponibles" :key="commune" :value="commune">{{ commune }}</option>
+        </select>
+        <ChevronDown :size="13" class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
+      </div>
+      <div class="relative">
+        <select
+          v-model="statutFiltre"
+          class="min-h-0 appearance-none rounded-carte border border-bordure bg-surface py-2 pl-3 pr-8 text-xs font-medium text-texte"
+        >
+          <option value="">Tous les statuts</option>
+          <option v-for="statut in Object.values(StatutParcelle)" :key="statut" :value="statut">{{ LIBELLE_STATUT[statut] }}</option>
+        </select>
+        <ChevronDown :size="13" class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-texte-attenue" aria-hidden="true" />
+      </div>
+      <span v-if="communeFiltre || statutFiltre" class="text-xs text-texte-attenue">{{ parcellesAffichees.length }} parcelle(s) affichee(s)</span>
+      <button
+        v-if="communeFiltre || statutFiltre"
+        type="button"
+        class="text-xs font-semibold text-primaire"
+        @click="communeFiltre = ''; statutFiltre = '';"
+      >
+        Reinitialiser les filtres
+      </button>
+    </div>
     <p v-if="resultatsRecherche && !aucunResultat" class="text-xs text-texte-attenue">
       {{ resultatsRecherche.length }} parcelle(s) trouvee(s).
     </p>
