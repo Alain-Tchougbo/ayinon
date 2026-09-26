@@ -91,7 +91,7 @@ async function enregistrerEdition(id: string) {
                 <p class="font-medium text-texte">{{ p.nomComplet }}<span v-if="p.estDiaspora" class="ml-2 text-xs font-semibold text-accent">Diaspora</span></p>
                 <p class="text-xs text-texte-attenue">{{ p.nombreParcelles }} parcelle(s)</p>
               </td>
-              <td class="break-words px-4 py-3 text-xs text-texte-attenue">{{ p.email ?? "—" }}<span v-if="p.telephone"> — {{ p.telephone }}</span></td>
+              <td class="break-words px-4 py-3 text-xs text-texte-attenue">{{ p.email ?? "-" }}<span v-if="p.telephone"> - {{ p.telephone }}</span></td>
               <td class="px-4 py-3">
                 <BaseButton taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
                   <Pencil :size="13" aria-hidden="true" />

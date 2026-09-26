@@ -96,7 +96,7 @@ async function qualifier(id: string, fonde: boolean) {
               <td class="px-4 py-3">
                 <p class="flex items-center gap-1.5 font-medium text-texte">
                   <Flag :size="13" aria-hidden="true" />
-                  {{ s.type === "ANNONCE" ? "Probleme sur une annonce" : "Litige foncier" }} — {{ s.parcelle.nup }} ({{ s.parcelle.commune }})
+                  {{ s.type === "ANNONCE" ? "Probleme sur une annonce" : "Litige foncier" }} - {{ s.parcelle.nup }} ({{ s.parcelle.commune }})
                 </p>
                 <p class="mt-0.5 text-xs text-texte-attenue">Signale par {{ s.signalant.nomComplet }} ({{ s.signalant.role.replaceAll("_", " ") }})</p>
                 <p class="mt-1.5 text-sm text-texte">{{ s.motif }}</p>

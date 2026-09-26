@@ -263,7 +263,7 @@ function formaterDate(date: string): string {
             <h1>Parcelle a {{ annonce.parcelle.commune }}</h1>
             <p class="lieu">
               <MapPin :size="14" aria-hidden="true" />
-              <span v-if="annonce.parcelle.arrondissement">{{ annonce.parcelle.arrondissement }} — </span>{{ annonce.parcelle.superficieM2.toLocaleString("fr-FR") }} m²
+              <span v-if="annonce.parcelle.arrondissement">{{ annonce.parcelle.arrondissement }} - </span>{{ annonce.parcelle.superficieM2.toLocaleString("fr-FR") }} m²
             </p>
 
             <p v-if="erreur" class="alerte alerte-danger" role="alert">{{ erreur }}</p>
@@ -306,13 +306,13 @@ function formaterDate(date: string): string {
                 <p class="historique-libelle"><Scale :size="14" aria-hidden="true" /> Situation judiciaire</p>
                 <p v-if="historique.statutJudiciaire === 'AUCUN_LITIGE'" class="pastille pastille-ok">Aucun litige ni gel judiciaire connu sur cette parcelle</p>
                 <template v-else>
-                  <p v-if="historique.statutJudiciaire === 'GEL_EN_COURS'" class="pastille pastille-alerte">Gel conservatoire en cours — mutation bloquee</p>
+                  <p v-if="historique.statutJudiciaire === 'GEL_EN_COURS'" class="pastille pastille-alerte">Gel conservatoire en cours - mutation bloquee</p>
                   <p v-else class="pastille pastille-info">Litige anterieur, aujourd'hui leve</p>
                   <ul class="liste-evenements">
                     <li v-for="(evenement, i) in historique.evenementsJudiciaires" :key="i">
                       <template v-if="evenement.statut === 'ACTIF'">Gel conservatoire ouvert le {{ formaterDate(evenement.dateGel) }}, procedure en cours.</template>
                       <template v-else>
-                        Gel du {{ formaterDate(evenement.dateGel) }} leve le {{ formaterDate(evenement.dateLevee!) }}<template v-if="evenement.motifLevee">&nbsp;— {{ evenement.motifLevee }}</template>.
+                        Gel du {{ formaterDate(evenement.dateGel) }} leve le {{ formaterDate(evenement.dateLevee!) }}<template v-if="evenement.motifLevee">&nbsp;- {{ evenement.motifLevee }}</template>.
                       </template>
                     </li>
                   </ul>
@@ -411,7 +411,7 @@ function formaterDate(date: string): string {
 </template>
 
 <style scoped>
-/* Meme identite scopee "Vitrine editoriale" que AnnoncesListeView.vue — voir ce fichier pour le
+/* Meme identite scopee "Vitrine editoriale" que AnnoncesListeView.vue - voir ce fichier pour le
    contexte de la decision (en-tete partage reste foret & or, seul le contenu change). */
 .detail-editorial {
   --ivoire: #faf6ee;

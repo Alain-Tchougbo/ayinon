@@ -221,7 +221,7 @@ async function confirmerLevee(conflitId: string) {
           <tbody class="divide-y divide-bordure">
             <tr v-for="litige in litigesFondes" :key="litige.id" class="align-top">
               <td class="px-4 py-3">
-                <p class="font-semibold text-texte">{{ litige.parcelle.nup }} — {{ litige.parcelle.commune }}</p>
+                <p class="font-semibold text-texte">{{ litige.parcelle.nup }} - {{ litige.parcelle.commune }}</p>
                 <p class="mt-0.5 text-sm text-texte-attenue">{{ litige.motif }}</p>
                 <p v-if="litige.decisionMotif" class="mt-0.5 text-xs italic text-texte-attenue">Qualification admin : {{ litige.decisionMotif }}</p>
               </td>
@@ -247,7 +247,7 @@ async function confirmerLevee(conflitId: string) {
     </form>
 
     <BaseCard v-if="parcelleCible" accentue="danger">
-      <p class="font-semibold text-texte">Parcelle : {{ parcelleCible.nup }} — statut actuel : {{ parcelleCible.statut }}</p>
+      <p class="font-semibold text-texte">Parcelle : {{ parcelleCible.nup }} - statut actuel : {{ parcelleCible.statut }}</p>
       <div class="mt-3 space-y-2.5">
         <BaseInput id="dossier-judiciaire" v-model="referenceDossierJudiciaire" label="Reference du dossier judiciaire" />
         <div>
@@ -285,7 +285,7 @@ async function confirmerLevee(conflitId: string) {
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="flex items-center gap-2 font-semibold text-texte">
           <FileText :size="18" class="text-primaire" aria-hidden="true" />
-          Dossier de preuves — {{ parcelleCible.nup }}
+          Dossier de preuves - {{ parcelleCible.nup }}
         </h2>
         <BaseButton v-if="historiqueDossier && historiqueDossier.length > 0" taille="sm" variant="secondaire" @click="telechargerDossier">
           <Download :size="14" aria-hidden="true" />
@@ -302,7 +302,7 @@ async function confirmerLevee(conflitId: string) {
           <p class="font-medium text-texte">{{ entree.typeOperation.replaceAll("_", " ") }}</p>
           <p class="text-xs text-texte-attenue">
             {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}
-            <template v-if="entree.roleActeur"> — {{ entree.roleActeur.replaceAll("_", " ") }}</template>
+            <template v-if="entree.roleActeur"> - {{ entree.roleActeur.replaceAll("_", " ") }}</template>
           </p>
           <p class="mt-0.5 font-mono text-[0.65rem] text-texte-attenue">hash bloc : {{ entree.hashBloc.slice(0, 24) }}…</p>
         </li>
@@ -324,7 +324,7 @@ async function confirmerLevee(conflitId: string) {
             <template v-for="conflit in conflitsActifs" :key="conflit.id">
               <tr class="align-top">
                 <td class="px-4 py-3">
-                  <p class="font-semibold text-texte">{{ conflit.parcelle.nup }} — {{ conflit.parcelle.commune }}</p>
+                  <p class="font-semibold text-texte">{{ conflit.parcelle.nup }} - {{ conflit.parcelle.commune }}</p>
                   <p class="mt-0.5 text-sm text-texte-attenue">{{ conflit.motif }} (dossier {{ conflit.referenceDossierJudiciaire }})</p>
                   <p class="mt-0.5 text-xs text-texte-attenue">Gele le {{ new Date(conflit.dateGel).toLocaleDateString("fr-FR") }}</p>
                 </td>
