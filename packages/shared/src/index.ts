@@ -17,3 +17,4 @@ export * from "./calculs/gain-net";
 export * from "./schemas/visite.schema";
 export * from "./schemas/financement.schema";
 export * from "./schemas/recherche-sauvegardee.schema";
+export * from "./schemas/bati.schema";

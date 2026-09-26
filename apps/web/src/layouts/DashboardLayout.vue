@@ -2,6 +2,7 @@
 import {
   Banknote,
   Bell,
+  Building,
   Calculator,
   ChevronDown,
   Gavel,
@@ -18,6 +19,7 @@ import {
   Search,
   Shield,
   ShieldCheck,
+  Sprout,
   Store,
   SunMoon,
   Users,
@@ -86,10 +88,13 @@ const liensNav = computed(() => {
   }
   if (auth.role === RoleUtilisateur.GEOMETRE) {
     items.push({ to: "/geometre", label: "Import de bornage", icone: Ruler });
+    items.push({ to: "/geometre/batis", label: "Validation des batis", icone: Building });
   }
   if (auth.role === RoleUtilisateur.AGENT_ANDF || auth.role === RoleUtilisateur.ADMIN) {
     items.push({ to: "/andf", label: "Console des poles", icone: Landmark });
     items.push({ to: "/andf/cessions", label: "Cessions a valider", icone: Handshake });
+    items.push({ to: "/geometre/batis", label: "Validation des batis", icone: Building });
+    items.push({ to: "/andf/usage-sol", label: "Usage du sol", icone: Sprout });
   }
   if (auth.role === RoleUtilisateur.MAGISTRAT_CSAF) {
     items.push({ to: "/andf", label: "Console des poles", icone: Landmark });

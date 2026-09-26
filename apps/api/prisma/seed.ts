@@ -4,12 +4,14 @@ import { randomUUID } from "node:crypto";
 import {
   RoleFamilial,
   RoleUtilisateur,
+  SourceBati,
   StatutCession,
   StatutConflitCsaf,
   StatutDeclarantVendeur,
   StatutParcelle,
   PoleTerritorial,
   TypeDecisionCsaf,
+  TypeUsageSol,
 } from "@ayinon/shared";
 import { hacherMotDePasse } from "../src/auth/password.util";
 
@@ -60,12 +62,53 @@ async function inserer(
   return id;
 }
 
+async function insererBati(
+  centre: [number, number],
+  source: SourceBati,
+  options: { parcelleId?: string | null; scoreConfiance?: number; valide?: boolean; valideParId?: string } = {},
+) {
+  const id = randomUUID();
+  const geometrie = carre(centre, 0.00008);
+
+  await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO "Bati" (id, geom, source, "scoreConfiance", "parcelleId", valide, "valideParId", "createdAt", "updatedAt")
+    VALUES (
+      ${id},
+      ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geometrie)}), 4326),
+      ${source}::"SourceBati",
+      ${options.scoreConfiance ?? null},
+      ${options.parcelleId ?? null},
+      ${options.valide ?? false},
+      ${options.valideParId ?? null},
+      now(), now()
+    )
+  `);
+  return id;
+}
+
+async function insererZoneOccupationSol(centre: [number, number], typeUsage: TypeUsageSol, demiCoteDeg = 0.004) {
+  const id = randomUUID();
+  const geometrie = carre(centre, demiCoteDeg);
+
+  await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO "ZoneOccupationSol" (id, geom, "typeUsage", source, "createdAt")
+    VALUES (
+      ${id},
+      ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geometrie)}), 4326),
+      ${typeUsage}::"TypeUsageSol",
+      'ESA_WORLDCOVER_2021',
+      now()
+    )
+  `);
+  return id;
+}
+
 async function main() {
   console.log("Nettoyage de la base (TRUNCATE CASCADE)...");
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE "MutationAudit","ConflitCsaf","Opposition","BanOpposition","SignatureFamille",
-      "MandataireFamille","PlanBornage","Convention","Titre","Parcelle","CodeOtp","RefreshToken",
-      "Utilisateur","Proprietaire" CASCADE
+      "MandataireFamille","PlanBornage","Convention","Titre","Bati","ZoneOccupationSol","Parcelle",
+      "CodeOtp","RefreshToken","Utilisateur","Proprietaire" CASCADE
   `);
 
   console.log("Creation des proprietaires...");
@@ -353,6 +396,32 @@ async function main() {
     }),
     prisma.parcelle.update({ where: { id: parcelleLitige }, data: { statut: StatutParcelle.GEL_CSAF } }),
   ]);
+
+  console.log("Identification des batis de demonstration (import IA + saisie manuelle)...");
+  const geometre1 = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "geometre1@ayinon.bj" } });
+  // Detecte par IA (type Google Open Buildings) sur une parcelle en vitrine, pas encore valide.
+  await insererBati([2.3945, 6.3688], SourceBati.IMPORT_IA, { parcelleId: parcelleVendeur, scoreConfiance: 0.91 });
+  // Dessine directement par un geometre sur la carte : valide d'emblee.
+  await insererBati([1.7167, 6.6389], SourceBati.SAISIE_MANUELLE, {
+    parcelleId: parcelleLokossa.id,
+    valide: true,
+    valideParId: geometre1.id,
+  });
+  // Detection IA isolee, ne recoupant aucune parcelle cadastree connue (cas frequent en pratique).
+  await insererBati([1.3816, 10.3062], SourceBati.IMPORT_IA, { scoreConfiance: 0.62 });
+
+  console.log("Occupation du sol indicative (calque satellite type ESA WorldCover)...");
+  // Zone agricole recoupant la parcelle de Lokossa, deja decrite comme terrain agricole dans son annonce.
+  await insererZoneOccupationSol([1.7167, 6.6389], TypeUsageSol.AGRICOLE);
+  await prisma.parcelle.update({ where: { id: parcelleLokossa.id }, data: { usageSolIndicatif: TypeUsageSol.AGRICOLE } });
+  // Zone urbaine recoupant la parcelle vendeur de Cotonou, encore en attente de confirmation ANDF.
+  await insererZoneOccupationSol([2.3945, 6.3688], TypeUsageSol.URBAIN);
+  await prisma.parcelle.update({ where: { id: parcelleVendeur }, data: { usageSolIndicatif: TypeUsageSol.URBAIN } });
+  // Parcelle dont l'usage indicatif a deja ete confirme par un agent ANDF (etat final du workflow).
+  await prisma.parcelle.update({
+    where: { id: parcelleVenteHistorique },
+    data: { usageSolIndicatif: TypeUsageSol.URBAIN, usageSolValide: TypeUsageSol.URBAIN, usageSolValideParId: andfLittoral.id },
+  });
 
   console.log("Cree :");
   console.log(`  - Parcelle titree prete pour le scenario 'import de bornage en chevauchement' : ${cotonouTitree}`);

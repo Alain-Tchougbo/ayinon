@@ -67,6 +67,16 @@ const router = createRouter({
       meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.GEOMETRE], titre: "Import de bornage" },
     },
     {
+      path: "/geometre/batis",
+      name: "geometre-batis",
+      component: () => import("../views/geometre/ValidationBatisView.vue"),
+      meta: {
+        necessiteAuth: true,
+        rolesAutorises: [RoleUtilisateur.GEOMETRE, RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.ADMIN],
+        titre: "Validation des batis",
+      },
+    },
+    {
       path: "/famille",
       name: "famille",
       component: () => import("../views/famille/MultiSignatureView.vue"),
@@ -94,6 +104,16 @@ const router = createRouter({
         necessiteAuth: true,
         rolesAutorises: [RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.ADMIN],
         titre: "Validation des cessions",
+      },
+    },
+    {
+      path: "/andf/usage-sol",
+      name: "andf-usage-sol",
+      component: () => import("../views/andf/ValidationUsageSolView.vue"),
+      meta: {
+        necessiteAuth: true,
+        rolesAutorises: [RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.ADMIN],
+        titre: "Validation usage du sol",
       },
     },
     {
