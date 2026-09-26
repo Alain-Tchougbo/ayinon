@@ -211,6 +211,12 @@ export const LIBELLE_TYPE_USAGE_SOL: Record<TypeUsageSol, string> = {
   AUTRE: "Autre",
 };
 
+export const RoleMessageChatbot = {
+  UTILISATEUR: "UTILISATEUR",
+  ASSISTANT: "ASSISTANT",
+} as const;
+export type RoleMessageChatbot = (typeof RoleMessageChatbot)[keyof typeof RoleMessageChatbot];
+
 export const LangueAssistantVocal = {
   FR: "FR",
   FON: "FON",

@@ -263,6 +263,11 @@ enum TypeUsageSol {
   AUTRE
 }
 
+enum RoleMessageChatbot {
+  UTILISATEUR
+  ASSISTANT
+}
+
 // ---------------------------------------------------------------------------
 // Identite & acces
 // ---------------------------------------------------------------------------
@@ -309,6 +314,7 @@ model Utilisateur {
   financementsTraites    DemandeFinancement[]   @relation("FinancementTraite")
   batisValides           Bati[]                 @relation("BatiValidateur")
   parcellesUsageSolValidees Parcelle[]          @relation("UsageSolValidateur")
+  conversationsChatbot   ConversationChatbot[]
 
   /// Declare uniquement par un VENDEUR (E0.3) : adapte les pieces demandees lors de la publication.
   statutDeclarant StatutDeclarantVendeur?
@@ -896,4 +902,39 @@ model MutationAudit {
 
   @@index([parcelleId])
   @@index([horodatage])
+}
+
+// ---------------------------------------------------------------------------
+// Assistant conversationnel (chatbot Gemini, tool-calling sur les donnees reelles)
+// ---------------------------------------------------------------------------
+
+/// Regroupe les messages d'un fil de discussion. Anonyme (utilisateurId null, identifie par
+/// sessionAnonymeId cote client) ou lie a un compte — voir ChatbotOrchestrationService pour la
+/// verification de propriete avant de reprendre une conversation existante.
+model ConversationChatbot {
+  id               String    @id @default(uuid())
+  utilisateurId    String?
+  utilisateur      Utilisateur? @relation(fields: [utilisateurId], references: [id])
+  sessionAnonymeId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  messages MessageChatbot[]
+
+  @@index([utilisateurId])
+  @@index([sessionAnonymeId])
+}
+
+model MessageChatbot {
+  id             String              @id @default(uuid())
+  conversationId String
+  conversation   ConversationChatbot @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           RoleMessageChatbot
+  contenu        String
+  /// Nom + arguments des tools appeles pour produire ce message (tracabilite), jamais affiche
+  /// tel quel dans l'interface.
+  appelsOutils   Json?
+  createdAt      DateTime            @default(now())
+
+  @@index([conversationId])
 }
