@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { createHash } from "node:crypto";
+import * as QRCode from "qrcode";
 import {
   RoleUtilisateur,
   StatutAnnonce,
@@ -9,6 +10,7 @@ import {
   StatutSequestre,
   TypeOperationAudit,
   type ProposerCessionDto,
+  type QrConventionPayload,
   type RepondreCessionDto,
   type ValiderCessionDto,
 } from "@ayinon/shared";
@@ -62,29 +64,40 @@ export class CessionsService {
       throw new BadRequestException("Vous ne pouvez pas vous proposer une cession a vous-meme");
     }
 
-    const donnees = {
-      parcelleId: dto.parcelleId,
-      vendeurId: vendeur.id,
-      acquereurId: acquereur.id,
-      montantFcfa: dto.montantFcfa,
-      horodatage: new Date().toISOString(),
-    };
-    const hashSha256 = createHash("sha256").update(JSON.stringify(donnees)).digest("hex");
-    const signatureEd25519 = this.cryptoAudit.signerDonnees(Buffer.from(hashSha256, "hex"));
+    const hashSha256 = createHash("sha256")
+      .update(
+        JSON.stringify({
+          parcelleId: dto.parcelleId,
+          vendeurId: vendeur.id,
+          acquereurId: acquereur.id,
+          montantFcfa: dto.montantFcfa,
+          horodatage: new Date().toISOString(),
+        }),
+      )
+      .digest("hex");
 
-    const convention = await this.prisma.convention.create({
+    const brouillon = await this.prisma.convention.create({
       data: {
         parcelleId: dto.parcelleId,
         vendeurNom: vendeur.nomComplet,
         acquereurNom: acquereur.nomComplet,
         montantFcfa: dto.montantFcfa,
         hashSha256,
-        signatureEd25519,
+        signatureEd25519: "",
         qrPayload: {},
         statutCession: StatutCession.PROPOSEE,
         creeParId: vendeur.id,
         acquereurId: acquereur.id,
       },
+    });
+
+    // Meme schema de scellement que ConventionsService.enregistrer() (payload JSON signe, pas le
+    // hash brut) : c'est ce que ConventionsService.verifier() (Scanner Anti-Fraude) attend.
+    const payload: QrConventionPayload = { conventionId: brouillon.id, hashSha256, horodatage: brouillon.createdAt.toISOString() };
+    const signatureEd25519 = this.cryptoAudit.signerDonnees(Buffer.from(JSON.stringify(payload)));
+    const convention = await this.prisma.convention.update({
+      where: { id: brouillon.id },
+      data: { qrPayload: payload, signatureEd25519 },
       include: INCLUSION_CESSION,
     });
 
@@ -154,6 +167,16 @@ export class CessionsService {
       throw new ForbiddenException("Vous n'etes pas partie a cette cession");
     }
     return convention;
+  }
+
+  /** Regenere l'image du QR anti-fraude a partir du payload deja scelle (jamais recalcule) :
+   * meme document verifiable via le Scanner Anti-Fraude (POST /conventions/verifier). */
+  async obtenirQrCode(id: string, utilisateur: UtilisateurAuthentifie) {
+    const convention = await this.obtenirParId(id, utilisateur);
+    const qrCodeDataUrl = await QRCode.toDataURL(
+      JSON.stringify({ payload: convention.qrPayload, signatureEd25519: convention.signatureEd25519 }),
+    );
+    return { qrCodeDataUrl };
   }
 
   async repondre(id: string, dto: RepondreCessionDto, acquereur: UtilisateurAuthentifie) {
