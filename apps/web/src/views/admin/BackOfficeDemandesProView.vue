@@ -5,7 +5,7 @@ import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
-import BaseCard from "../../components/ui/BaseCard.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface DemandePro {
@@ -68,7 +68,7 @@ async function traiterDemandePro(id: string, approuver: boolean) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+  <div class="w-full space-y-6 p-4 sm:p-6">
     <PageHeader titre="Demandes professionnelles" description="File d'attente des demandes de compte professionnel (geometre, notaire, agent banque).">
       <template #icone><BadgeCheck :size="22" class="text-primaire" aria-hidden="true" /></template>
     </PageHeader>
@@ -76,47 +76,62 @@ async function traiterDemandePro(id: string, approuver: boolean) {
     <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ erreur }}</p>
     <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes" role="status">{{ message }}</p>
     <p v-if="chargement" class="text-sm text-texte-attenue" role="status">Chargement…</p>
+    <p v-else-if="demandesPro.length === 0" class="text-sm text-texte-attenue">Aucune demande en attente.</p>
 
-    <ul v-if="!chargement" class="space-y-2.5">
-      <li v-if="demandesPro.length === 0" class="text-sm text-texte-attenue">Aucune demande en attente.</li>
-      <li v-for="d in demandesPro" :key="d.id">
-        <BaseCard accentue="accent" rembourrage="sm">
-          <div class="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <p class="flex items-center gap-1.5 font-medium text-texte">
-                <BadgeCheck :size="13" aria-hidden="true" />
-                {{ d.nomComplet }} — {{ d.role.replaceAll("_", " ") }}
-              </p>
-              <p class="mt-0.5 text-xs text-texte-attenue">{{ d.email }}<span v-if="d.telephone"> — {{ d.telephone }}</span></p>
-              <p class="mt-1 text-sm text-texte">Numero d'agrement : {{ d.numeroAgrement ?? "non renseigne" }}</p>
-              <p class="mt-0.5 text-xs text-texte-attenue">Demande deposee le {{ new Date(d.createdAt).toLocaleDateString("fr-FR") }}</p>
-            </div>
-          </div>
+    <div v-else class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+            <th class="px-4 py-3 font-semibold">Demandeur</th>
+            <th class="px-4 py-3 font-semibold">Agrement</th>
+            <th class="px-4 py-3 font-semibold">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-bordure">
+          <template v-for="d in demandesPro" :key="d.id">
+            <tr class="align-top">
+              <td class="px-4 py-3">
+                <p class="flex items-center gap-1.5 font-medium text-texte">
+                  <BadgeCheck :size="13" aria-hidden="true" />
+                  {{ d.nomComplet }} — {{ d.role.replaceAll("_", " ") }}
+                </p>
+                <p class="mt-0.5 text-xs text-texte-attenue">{{ d.email }}<span v-if="d.telephone"> — {{ d.telephone }}</span></p>
+              </td>
+              <td class="px-4 py-3">
+                <p class="text-sm text-texte">{{ d.numeroAgrement ?? "non renseigne" }}</p>
+                <p class="mt-0.5 text-xs text-texte-attenue">Demande deposee le {{ new Date(d.createdAt).toLocaleDateString("fr-FR") }}</p>
+              </td>
+              <td class="px-4 py-3">
+                <BaseButton taille="sm" @click="traitementProEnCours = d.id">Traiter</BaseButton>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
 
-          <div v-if="traitementProEnCours === d.id" class="mt-3 space-y-2 rounded-carte border border-bordure bg-fond p-3">
-            <label :for="`motif-rejet-pro-${d.id}`" class="block text-xs font-medium text-texte">Motif du rejet (obligatoire pour rejeter)</label>
-            <textarea
-              :id="`motif-rejet-pro-${d.id}`"
-              v-model="motifRejetPro"
-              rows="2"
-              placeholder="Ex. numero d'agrement introuvable au registre professionnel"
-              class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-            />
-            <div class="flex gap-2">
-              <BaseButton taille="sm" :disabled="actionEnCours" @click="traiterDemandePro(d.id, true)">
-                <Check :size="12" aria-hidden="true" />
-                Approuver
-              </BaseButton>
-              <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="traiterDemandePro(d.id, false)">
-                <X :size="12" aria-hidden="true" />
-                Rejeter
-              </BaseButton>
-              <BaseButton taille="sm" variant="secondaire" @click="traitementProEnCours = null">Annuler</BaseButton>
-            </div>
-          </div>
-          <BaseButton v-else taille="sm" class="mt-3" @click="traitementProEnCours = d.id">Traiter cette demande</BaseButton>
-        </BaseCard>
-      </li>
-    </ul>
+    <BaseModal :model-value="traitementProEnCours !== null" titre="Traiter la demande professionnelle" @update:model-value="traitementProEnCours = null">
+      <div class="space-y-2">
+        <BaseButton taille="sm" :disabled="actionEnCours" @click="traiterDemandePro(traitementProEnCours!, true)">
+          <Check :size="12" aria-hidden="true" />
+          Approuver
+        </BaseButton>
+        <div class="border-t border-bordure pt-2.5">
+          <label for="motif-rejet-pro" class="mb-1 block text-xs font-medium text-texte">Ou refuser, avec motif (obligatoire)</label>
+          <textarea
+            id="motif-rejet-pro"
+            v-model="motifRejetPro"
+            rows="2"
+            placeholder="Ex. numero d'agrement introuvable au registre professionnel"
+            class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+          />
+          <BaseButton taille="sm" variant="danger" class="mt-2" :disabled="actionEnCours" @click="traiterDemandePro(traitementProEnCours!, false)">
+            <X :size="12" aria-hidden="true" />
+            Rejeter
+          </BaseButton>
+        </div>
+        <BaseButton taille="sm" variant="secondaire" @click="traitementProEnCours = null">Annuler</BaseButton>
+      </div>
+    </BaseModal>
   </div>
 </template>

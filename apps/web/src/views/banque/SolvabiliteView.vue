@@ -7,6 +7,7 @@ import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface ResultatSolvabilite {
@@ -200,7 +201,7 @@ async function lever(hypothequeId: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl space-y-8 p-4 sm:p-6">
+  <div class="w-full space-y-8 p-4 sm:p-6">
     <PageHeader
       titre="Verification de solvabilite hypothecaire"
       description="Verifiez en un appel qu'une parcelle est titree, non gelee et libre de tout autre gage avant d'accorder un credit."
@@ -218,20 +219,32 @@ async function lever(hypothequeId: string) {
         <Banknote :size="16" class="text-accent" aria-hidden="true" />
         Depots a confirmer ({{ depotsAConfirmer.length }})
       </h2>
-      <ul class="space-y-2.5">
-        <li v-for="d in depotsAConfirmer" :key="d.id">
-          <BaseCard accentue="accent" rembourrage="sm">
-            <p class="font-semibold text-texte">{{ d.convention.parcelle.nup }} — {{ d.convention.parcelle.commune }}</p>
-            <p class="mt-0.5 text-sm text-texte-attenue">
-              {{ d.declarePar.nomComplet }} declare {{ d.montantFcfa.toLocaleString("fr-FR") }} FCFA le
-              {{ new Date(d.dateDeclaration).toLocaleDateString("fr-FR") }}
-            </p>
-            <BaseButton taille="sm" class="mt-2.5" :disabled="confirmationEnCoursId === d.id" @click="confirmerDepot(d.id)">
-              Confirmer l'encaissement
-            </BaseButton>
-          </BaseCard>
-        </li>
-      </ul>
+      <div class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+              <th class="px-4 py-3 font-semibold">Depot</th>
+              <th class="px-4 py-3 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-bordure">
+            <tr v-for="d in depotsAConfirmer" :key="d.id" class="align-top">
+              <td class="px-4 py-3">
+                <p class="font-semibold text-texte">{{ d.convention.parcelle.nup }} — {{ d.convention.parcelle.commune }}</p>
+                <p class="mt-0.5 text-sm text-texte-attenue">
+                  {{ d.declarePar.nomComplet }} declare {{ d.montantFcfa.toLocaleString("fr-FR") }} FCFA le
+                  {{ new Date(d.dateDeclaration).toLocaleDateString("fr-FR") }}
+                </p>
+              </td>
+              <td class="whitespace-nowrap px-4 py-3">
+                <BaseButton taille="sm" :disabled="confirmationEnCoursId === d.id" @click="confirmerDepot(d.id)">
+                  Confirmer l'encaissement
+                </BaseButton>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <!-- E4.6-E4.9 : dossier de financement bancaire des acheteurs, a examiner et trancher. -->
@@ -240,40 +253,56 @@ async function lever(hypothequeId: string) {
         <FileCheck :size="16" class="text-accent" aria-hidden="true" />
         Demandes de financement a traiter ({{ demandesFinancement.length }})
       </h2>
-      <ul class="space-y-2.5">
-        <li v-for="d in demandesFinancement" :key="d.id">
-          <BaseCard accentue="accent" rembourrage="sm">
-            <p class="font-semibold text-texte">{{ d.acheteur.nomComplet }} — {{ d.montantSouhaiteFcfa.toLocaleString("fr-FR") }} FCFA souhaites</p>
-            <p v-if="d.annonce" class="mt-0.5 text-xs text-texte-attenue">Pour {{ d.annonce.parcelle.nup }} — {{ d.annonce.parcelle.commune }}</p>
-            <p class="mt-0.5 text-xs text-texte-attenue">Demande le {{ new Date(d.createdAt).toLocaleDateString("fr-FR") }}</p>
-            <p v-if="d.cheminDocument" class="mt-0.5 text-xs text-texte-attenue">Un justificatif a ete joint a cette demande.</p>
+      <div class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+              <th class="px-4 py-3 font-semibold">Demande</th>
+              <th class="px-4 py-3 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-bordure">
+            <template v-for="d in demandesFinancement" :key="d.id">
+              <tr class="align-top">
+                <td class="px-4 py-3">
+                  <p class="font-semibold text-texte">{{ d.acheteur.nomComplet }} — {{ d.montantSouhaiteFcfa.toLocaleString("fr-FR") }} FCFA souhaites</p>
+                  <p v-if="d.annonce" class="mt-0.5 text-xs text-texte-attenue">Pour {{ d.annonce.parcelle.nup }} — {{ d.annonce.parcelle.commune }}</p>
+                  <p class="mt-0.5 text-xs text-texte-attenue">Demande le {{ new Date(d.createdAt).toLocaleDateString("fr-FR") }}</p>
+                  <p v-if="d.cheminDocument" class="mt-0.5 text-xs text-texte-attenue">Un justificatif a ete joint a cette demande.</p>
+                </td>
+                <td class="whitespace-nowrap px-4 py-3">
+                  <BaseButton taille="sm" @click="examinerDemandeFinancement(d.id)">
+                    Examiner
+                  </BaseButton>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
 
-            <BaseButton v-if="decisionEnCoursId !== d.id" taille="sm" class="mt-2.5" @click="examinerDemandeFinancement(d.id)">
-              Examiner
+      <BaseModal :model-value="decisionEnCoursId !== null" titre="Examiner la demande de financement" @update:model-value="decisionEnCoursId = null">
+        <div v-if="decisionEnCoursId" class="space-y-2.5">
+          <BaseInput id="montant-accorde" v-model="montantAccordeParDemande[decisionEnCoursId]!" type="number" label="Montant accorde (FCFA)" />
+          <BaseButton taille="sm" :disabled="actionFinancementEnCours" @click="traiterDemandeFinancement(decisionEnCoursId, 'ACCORD_PRINCIPE')">
+            Accorder un principe de financement
+          </BaseButton>
+          <div class="border-t border-bordure pt-2.5">
+            <label for="motif-refus-financement" class="mb-1 block text-xs font-medium text-texte">Ou refuser, avec motif</label>
+            <textarea
+              id="motif-refus-financement"
+              v-model="motifRefusParDemande[decisionEnCoursId]"
+              rows="2"
+              placeholder="Ex. revenus insuffisants au regard du montant demande"
+              class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+            />
+            <BaseButton taille="sm" variant="danger" class="mt-2" :disabled="actionFinancementEnCours" @click="traiterDemandeFinancement(decisionEnCoursId, 'REFUSER')">
+              Refuser la demande
             </BaseButton>
-            <div v-else class="mt-2.5 space-y-2.5 rounded-carte border border-bordure bg-fond p-3">
-              <BaseInput :id="`montant-accorde-${d.id}`" v-model="montantAccordeParDemande[d.id]!" type="number" label="Montant accorde (FCFA)" />
-              <BaseButton taille="sm" :disabled="actionFinancementEnCours" @click="traiterDemandeFinancement(d.id, 'ACCORD_PRINCIPE')">
-                Accorder un principe de financement
-              </BaseButton>
-              <div class="border-t border-bordure pt-2.5">
-                <label :for="`motif-refus-financement-${d.id}`" class="mb-1 block text-xs font-medium text-texte">Ou refuser, avec motif</label>
-                <textarea
-                  :id="`motif-refus-financement-${d.id}`"
-                  v-model="motifRefusParDemande[d.id]"
-                  rows="2"
-                  placeholder="Ex. revenus insuffisants au regard du montant demande"
-                  class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                />
-                <BaseButton taille="sm" variant="danger" class="mt-2" :disabled="actionFinancementEnCours" @click="traiterDemandeFinancement(d.id, 'REFUSER')">
-                  Refuser la demande
-                </BaseButton>
-              </div>
-              <BaseButton taille="sm" variant="secondaire" @click="decisionEnCoursId = null">Annuler</BaseButton>
-            </div>
-          </BaseCard>
-        </li>
-      </ul>
+          </div>
+          <BaseButton taille="sm" variant="secondaire" @click="decisionEnCoursId = null">Annuler</BaseButton>
+        </div>
+      </BaseModal>
     </section>
 
     <form class="flex gap-2" @submit.prevent="rechercher">
@@ -340,44 +369,57 @@ async function lever(hypothequeId: string) {
 
     <section v-if="mesInscriptions.length > 0">
       <h2 class="mb-3 font-semibold text-texte">Vos hypotheques inscrites</h2>
-      <ul class="space-y-2.5">
-        <li v-for="h in mesInscriptions" :key="h.id">
-          <BaseCard rembourrage="sm">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p class="font-medium text-texte">{{ h.parcelle.nup }} — {{ h.parcelle.commune }}</p>
-                <p class="text-xs text-texte-attenue">{{ h.montantGarantiFcfa.toLocaleString("fr-FR") }} FCFA — inscrite le {{ new Date(h.dateInscription).toLocaleDateString("fr-FR") }}</p>
-              </div>
-              <span
-                class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                :class="h.statut === 'ACTIVE' ? 'bg-accent/10 text-accent' : 'bg-succes/10 text-succes'"
-              >
-                {{ h.statut === "ACTIVE" ? "Active" : "Levee" }}
-              </span>
-            </div>
-
-            <template v-if="h.statut === 'ACTIVE'">
-              <BaseButton v-if="leveeEnCoursId !== h.id" taille="sm" variant="secondaire" class="mt-2.5" @click="leveeEnCoursId = h.id">
-                Lever l'hypotheque
-              </BaseButton>
-              <div v-else class="mt-2.5 space-y-2 rounded-carte border border-bordure bg-fond p-3">
-                <label :for="`motif-levee-${h.id}`" class="block text-xs font-medium text-texte">Motif de la levee (obligatoire)</label>
-                <textarea
-                  :id="`motif-levee-${h.id}`"
-                  v-model="motifLeveeParHypotheque[h.id]"
-                  rows="2"
-                  placeholder="Ex. credit rembourse integralement"
-                  class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                />
-                <div class="flex gap-2">
-                  <BaseButton taille="sm" @click="lever(h.id)">Confirmer la levee</BaseButton>
-                  <BaseButton taille="sm" variant="secondaire" @click="leveeEnCoursId = null">Annuler</BaseButton>
-                </div>
-              </div>
+      <div class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+              <th class="px-4 py-3 font-semibold">Hypotheque</th>
+              <th class="px-4 py-3 font-semibold">Statut</th>
+              <th class="px-4 py-3 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-bordure">
+            <template v-for="h in mesInscriptions" :key="h.id">
+              <tr class="align-top">
+                <td class="px-4 py-3">
+                  <p class="font-medium text-texte">{{ h.parcelle.nup }} — {{ h.parcelle.commune }}</p>
+                  <p class="text-xs text-texte-attenue">{{ h.montantGarantiFcfa.toLocaleString("fr-FR") }} FCFA — inscrite le {{ new Date(h.dateInscription).toLocaleDateString("fr-FR") }}</p>
+                </td>
+                <td class="whitespace-nowrap px-4 py-3">
+                  <span
+                    class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                    :class="h.statut === 'ACTIVE' ? 'bg-accent/10 text-accent' : 'bg-succes/10 text-succes'"
+                  >
+                    {{ h.statut === "ACTIVE" ? "Active" : "Levee" }}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <BaseButton v-if="h.statut === 'ACTIVE'" taille="sm" variant="secondaire" @click="leveeEnCoursId = h.id">
+                    Lever l'hypotheque
+                  </BaseButton>
+                </td>
+              </tr>
             </template>
-          </BaseCard>
-        </li>
-      </ul>
+          </tbody>
+        </table>
+      </div>
     </section>
+
+    <BaseModal :model-value="leveeEnCoursId !== null" titre="Lever l'hypotheque" @update:model-value="leveeEnCoursId = null">
+      <div v-if="leveeEnCoursId" class="space-y-2">
+        <label for="motif-levee-hyp" class="block text-xs font-medium text-texte">Motif de la levee (obligatoire)</label>
+        <textarea
+          id="motif-levee-hyp"
+          v-model="motifLeveeParHypotheque[leveeEnCoursId]"
+          rows="3"
+          placeholder="Ex. credit rembourse integralement"
+          class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+        />
+        <div class="flex gap-2">
+          <BaseButton taille="sm" @click="lever(leveeEnCoursId)">Confirmer la levee</BaseButton>
+          <BaseButton taille="sm" variant="secondaire" @click="leveeEnCoursId = null">Annuler</BaseButton>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>

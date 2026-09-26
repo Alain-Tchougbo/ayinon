@@ -263,8 +263,8 @@ function chargerNotificationsLues() {
  * jamais une liste inventee. Le CITOYEN n'a pas de flux dans useNotifications() (pas de role
  * regalien a valider) : on utilise a la place ses propres signalements qualifies et le rappel de
  * verrouillage. L'ACHETEUR beneficie en plus des alertes reelles de recherche sauvegardee (E3.2,
- * voir RecherchesSauvegardeesService.compterNouvelles). Les autres roles retombent sur le systeme
- * agrege de la cloche d'en-tete (voir useNotifications.ts). */
+ * voir RecherchesSauvegardeesService.compterNouvelles). Les autres roles affichent directement les
+ * notifications individuelles de la cloche d'en-tete (voir useNotifications.ts). */
 const notificationsRecentes = computed<NotificationAffichee[]>(() => {
   const items: NotificationAffichee[] = [];
 
@@ -293,8 +293,10 @@ const notificationsRecentes = computed<NotificationAffichee[]>(() => {
         lien: "/annonces",
       });
     }
-  } else if (notifications.lien.value && notifications.compte.value > 0) {
-    items.push({ id: "flux-agrege", texte: `${notifications.compte.value} ${notifications.libelle.value}`, lien: notifications.lien.value });
+  } else {
+    for (const n of notifications.items.value) {
+      items.push({ id: n.id, texte: n.titre, sousTexte: n.sousTitre, lien: n.lien });
+    }
   }
 
   return items.filter((item) => notificationsLues.value[item.id] !== item.texte);

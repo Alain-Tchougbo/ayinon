@@ -185,7 +185,7 @@ async function signerPlan() {
       <template #icone><Ruler :size="22" class="text-primaire" aria-hidden="true" /></template>
     </PageHeader>
 
-    <BaseCard>
+    <div>
       <p class="mb-3 flex items-center gap-2 font-semibold text-texte">
         <ListClock :size="18" class="text-primaire" aria-hidden="true" />
         Vos imports recents
@@ -194,28 +194,35 @@ async function signerPlan() {
       <p v-else-if="mesImports.length === 0" class="text-sm text-texte-attenue">
         Aucun plan de bornage importe pour le moment — le premier apparaitra ici.
       </p>
-      <ul v-else class="space-y-2">
-        <li
-          v-for="i in mesImports"
-          :key="i.id"
-          class="flex items-center justify-between gap-2 rounded-carte border border-bordure bg-surface p-3 text-sm"
-        >
-          <div>
-            <p class="font-medium text-texte">{{ i.parcelle.nup }} — {{ i.parcelle.commune }}</p>
-            <p class="text-xs text-texte-attenue">
-              Dossier {{ i.referenceDossier }} · {{ new Date(i.createdAt).toLocaleDateString("fr-FR") }}
-            </p>
-          </div>
-          <span
-            class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
-            :class="i.chevauchementDetecte ? 'bg-danger/10 text-danger' : i.signeParId ? 'bg-succes/10 text-succes' : 'bg-accent/10 text-accent'"
-          >
-            <component :is="i.chevauchementDetecte ? TriangleAlert : CircleCheck" :size="12" aria-hidden="true" />
-            {{ i.chevauchementDetecte ? "Chevauchement" : i.signeParId ? "Signe" : "A signer" }}
-          </span>
-        </li>
-      </ul>
-    </BaseCard>
+      <div v-else class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+              <th class="px-4 py-3 font-semibold">Parcelle</th>
+              <th class="px-4 py-3 font-semibold">Dossier</th>
+              <th class="px-4 py-3 font-semibold">Statut</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-bordure">
+            <tr v-for="i in mesImports" :key="i.id" class="align-top">
+              <td class="px-4 py-3 font-medium text-texte">{{ i.parcelle.nup }} — {{ i.parcelle.commune }}</td>
+              <td class="px-4 py-3 text-xs text-texte-attenue">
+                {{ i.referenceDossier }} · {{ new Date(i.createdAt).toLocaleDateString("fr-FR") }}
+              </td>
+              <td class="whitespace-nowrap px-4 py-3">
+                <span
+                  class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                  :class="i.chevauchementDetecte ? 'bg-danger/10 text-danger' : i.signeParId ? 'bg-succes/10 text-succes' : 'bg-accent/10 text-accent'"
+                >
+                  <component :is="i.chevauchementDetecte ? TriangleAlert : CircleCheck" :size="12" aria-hidden="true" />
+                  {{ i.chevauchementDetecte ? "Chevauchement" : i.signeParId ? "Signe" : "A signer" }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
     <BaseCard>
       <form class="space-y-4" @submit.prevent="importerBornage">

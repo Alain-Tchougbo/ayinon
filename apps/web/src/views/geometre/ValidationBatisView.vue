@@ -92,7 +92,7 @@ async function creerBati() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
+  <div class="w-full space-y-6 p-4 sm:p-6">
     <PageHeader
       titre="Validation des batis"
       description="Les batis detectes automatiquement par imagerie satellite (type Google Open Buildings) restent indicatifs tant qu'un geometre ou un agent ne les a pas valides."
@@ -102,33 +102,41 @@ async function creerBati() {
 
     <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ erreur }}</p>
 
-    <BaseCard>
-      <p v-if="chargement" class="text-sm text-texte-attenue" role="status">Chargement…</p>
-      <p v-else-if="batisAValider.length === 0" class="text-sm text-texte-attenue">Aucun bati en attente de validation.</p>
-      <ul v-else class="space-y-3">
-        <li v-for="b in batisAValider" :key="b.id" class="rounded-carte border border-bordure bg-surface p-3.5 text-sm">
-          <div class="flex items-center justify-between gap-2">
-            <div>
-              <p class="font-medium text-texte">{{ nupParcelle(b.parcelleId) }}</p>
-              <p class="text-xs text-texte-attenue">
-                <span v-if="b.source === 'IMPORT_IA'">
-                  Detection IA — confiance {{ b.scoreConfiance !== null ? Math.round(b.scoreConfiance * 100) + "%" : "inconnue" }}
-                </span>
-                <span v-else>Saisie manuelle</span>
-              </p>
-            </div>
-            <div class="flex gap-2">
-              <BaseButton taille="sm" variant="succes" :disabled="enCoursId === b.id" @click="valider(b.id)">
-                <CheckCheck :size="14" aria-hidden="true" /> Valider
-              </BaseButton>
-              <BaseButton v-if="b.source === 'IMPORT_IA'" taille="sm" variant="danger" :disabled="enCoursId === b.id" @click="rejeter(b.id)">
-                <Trash :size="14" aria-hidden="true" /> Rejeter
-              </BaseButton>
-            </div>
-          </div>
-        </li>
-      </ul>
-    </BaseCard>
+    <p v-if="chargement" class="text-sm text-texte-attenue" role="status">Chargement…</p>
+    <p v-else-if="batisAValider.length === 0" class="text-sm text-texte-attenue">Aucun bati en attente de validation.</p>
+
+    <div v-else class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+            <th class="px-4 py-3 font-semibold">Bati</th>
+            <th class="px-4 py-3 font-semibold">Origine</th>
+            <th class="px-4 py-3 font-semibold">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-bordure">
+          <tr v-for="b in batisAValider" :key="b.id" class="align-top">
+            <td class="px-4 py-3 font-medium text-texte">{{ nupParcelle(b.parcelleId) }}</td>
+            <td class="px-4 py-3 text-xs text-texte-attenue">
+              <span v-if="b.source === 'IMPORT_IA'">
+                Detection IA — confiance {{ b.scoreConfiance !== null ? Math.round(b.scoreConfiance * 100) + "%" : "inconnue" }}
+              </span>
+              <span v-else>Saisie manuelle</span>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex gap-2">
+                <BaseButton taille="sm" variant="succes" :disabled="enCoursId === b.id" @click="valider(b.id)">
+                  <CheckCheck :size="14" aria-hidden="true" /> Valider
+                </BaseButton>
+                <BaseButton v-if="b.source === 'IMPORT_IA'" taille="sm" variant="danger" :disabled="enCoursId === b.id" @click="rejeter(b.id)">
+                  <Trash :size="14" aria-hidden="true" /> Rejeter
+                </BaseButton>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <BaseCard>
       <p class="mb-3 flex items-center gap-2 font-semibold text-texte">

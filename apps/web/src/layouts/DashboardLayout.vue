@@ -62,6 +62,7 @@ type Theme = "clair" | "sombre" | "contraste-eleve";
 const theme = ref<Theme>((localStorage.getItem("ayinon_theme") as Theme | null) ?? "clair");
 const menuMobileOuvert = ref(false);
 const menuProfilOuvert = ref(false);
+const notificationsOuvertes = ref(false);
 const rechercheRapide = ref("");
 const champRecherche = ref<HTMLInputElement>();
 
@@ -542,22 +543,47 @@ function rechercherRapide() {
             </div>
           </div>
 
-          <div class="flex items-center gap-1 border-r border-bordure pr-3">
-            <RouterLink
-              v-if="notifications.lien.value"
-              :to="notifications.lien.value"
-              class="relative flex h-11 w-11 items-center justify-center rounded-full text-texte-attenue hover:bg-fond hover:text-texte"
-              :aria-label="`${notifications.compte.value} ${notifications.libelle.value}`"
-              :title="`${notifications.compte.value} ${notifications.libelle.value}`"
+          <div class="relative flex items-center gap-1 border-r border-bordure pr-3">
+            <div v-if="notificationsOuvertes" class="fixed inset-0 z-10" @click="notificationsOuvertes = false" />
+            <button
+              type="button"
+              class="relative z-20 flex h-11 w-11 items-center justify-center rounded-full text-texte-attenue hover:bg-fond hover:text-texte"
+              :aria-expanded="notificationsOuvertes"
+              aria-haspopup="true"
+              :aria-label="`${notifications.items.value.length} notification(s)`"
+              :title="`${notifications.items.value.length} notification(s)`"
+              @click="notificationsOuvertes = !notificationsOuvertes"
             >
               <Bell :size="18" aria-hidden="true" />
               <span
-                v-if="notifications.compte.value > 0"
+                v-if="notifications.items.value.length > 0"
                 class="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[0.6rem] font-bold text-white"
               >
-                {{ notifications.compte.value }}
+                {{ notifications.items.value.length }}
               </span>
-            </RouterLink>
+            </button>
+
+            <div
+              v-if="notificationsOuvertes"
+              class="absolute right-0 top-full z-20 mt-2 w-80 max-w-[90vw] rounded-carte border border-bordure bg-surface shadow-flottant"
+            >
+              <div class="border-b border-bordure px-4 py-3">
+                <p class="font-semibold text-texte">Notifications</p>
+              </div>
+              <div class="max-h-96 overflow-y-auto">
+                <p v-if="notifications.items.value.length === 0" class="px-4 py-6 text-center text-sm text-texte-attenue">
+                  Aucune notification pour le moment.
+                </p>
+                <ul v-else class="divide-y divide-bordure">
+                  <li v-for="item in notifications.items.value" :key="item.id">
+                    <RouterLink :to="item.lien" class="block px-4 py-2.5 hover:bg-fond" @click="notificationsOuvertes = false">
+                      <p class="text-sm font-medium text-texte">{{ item.titre }}</p>
+                      <p class="text-xs text-texte-attenue">{{ item.sousTitre }}</p>
+                    </RouterLink>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
 
           <div class="relative ml-3">
