@@ -46,8 +46,11 @@ services:
       - api
     environment:
       API_UPSTREAM_URL: http://api:3000
-    ports:
-      - "${WEB_PORT:-8080}:80"
+    # Pas de port hote publie : Coolify route en interne via son reseau Docker + le proxy
+    # Traefik (qui gere deja ses propres ports 80/443/8080 sur l'hote — un mapping statique ici
+    # entrerait en conflit).
+    expose:
+      - "80"
 
 volumes:
   ayinon_db_data:
