@@ -92,6 +92,8 @@ async function chargerDemandesFinancement() {
 async function examinerDemandeFinancement(id: string) {
   erreur.value = null;
   decisionEnCoursId.value = id;
+  montantAccordeParDemande.value[id] ??= "";
+  motifRefusParDemande.value[id] ??= "";
   try {
     await api.get(`/financements/${id}`);
   } catch (e) {
@@ -250,7 +252,7 @@ async function lever(hypothequeId: string) {
               Examiner
             </BaseButton>
             <div v-else class="mt-2.5 space-y-2.5 rounded-carte border border-bordure bg-fond p-3">
-              <BaseInput :id="`montant-accorde-${d.id}`" v-model="montantAccordeParDemande[d.id]" type="number" label="Montant accorde (FCFA)" />
+              <BaseInput :id="`montant-accorde-${d.id}`" v-model="montantAccordeParDemande[d.id]!" type="number" label="Montant accorde (FCFA)" />
               <BaseButton taille="sm" :disabled="actionFinancementEnCours" @click="traiterDemandeFinancement(d.id, 'ACCORD_PRINCIPE')">
                 Accorder un principe de financement
               </BaseButton>

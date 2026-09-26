@@ -150,10 +150,10 @@ async function sauvegarderRecherche() {
 async function appliquerRecherche(r: RechercheSauvegardee) {
   filtres.value = {
     commune: r.commune ?? "",
-    prixMinFcfa: r.prixMinFcfa ?? "",
-    prixMaxFcfa: r.prixMaxFcfa ?? "",
-    superficieMinM2: r.superficieMinM2 ?? "",
-    superficieMaxM2: r.superficieMaxM2 ?? "",
+    prixMinFcfa: r.prixMinFcfa != null ? String(r.prixMinFcfa) : "",
+    prixMaxFcfa: r.prixMaxFcfa != null ? String(r.prixMaxFcfa) : "",
+    superficieMinM2: r.superficieMinM2 != null ? String(r.superficieMinM2) : "",
+    superficieMaxM2: r.superficieMaxM2 != null ? String(r.superficieMaxM2) : "",
     verifieeAndf: Boolean(r.verifieeAndf),
     limitesCertifiees: Boolean(r.limitesCertifiees),
   };

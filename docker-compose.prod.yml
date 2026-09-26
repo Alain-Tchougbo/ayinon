@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ayinon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-ayinon}
+    volumes:
+      - ayinon_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ayinon} -d ${POSTGRES_DB:-ayinon}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      API_PORT: 3000
+      WEB_ORIGIN: ${WEB_ORIGIN}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ayinon}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-ayinon}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      AUDIT_ED25519_PRIVATE_KEY: ${AUDIT_ED25519_PRIVATE_KEY}
+      AUDIT_ED25519_PUBLIC_KEY: ${AUDIT_ED25519_PUBLIC_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-latest}
+      GEMINI_TEMPERATURE: ${GEMINI_TEMPERATURE:-0.4}
+      GEMINI_MAX_OUTPUT_TOKENS: ${GEMINI_MAX_OUTPUT_TOKENS:-1024}
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      API_UPSTREAM_URL: http://api:3000
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
+volumes:
+  ayinon_db_data:
