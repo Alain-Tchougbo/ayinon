@@ -8,5 +8,6 @@ import { AnnoncesService } from "./annonces.service";
   imports: [CryptoAuditModule, CsafModule],
   controllers: [AnnoncesController],
   providers: [AnnoncesService],
+  exports: [AnnoncesService],
 })
 export class AnnoncesModule {}

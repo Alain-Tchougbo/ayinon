@@ -6,6 +6,10 @@ declare module "vue-router" {
   interface RouteMeta {
     rolesAutorises?: RoleUtilisateur[];
     necessiteAuth?: boolean;
+    /** Force PublicLayout meme si connecte (voir App.vue) : la vitrine reste accessible depuis le
+     * logo sans jamais perdre la session (contrairement a "/", dont le contenu et l'habillage
+     * varient selon auth.estConnecte). */
+    forcerPublic?: boolean;
     titre: string;
   }
 }
@@ -14,6 +18,12 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: "/", name: "accueil", component: () => import("../views/AccueilView.vue"), meta: { titre: "Accueil" } },
+    {
+      path: "/public",
+      name: "accueil-public",
+      component: () => import("../views/AccueilPublicView.vue"),
+      meta: { titre: "Accueil", forcerPublic: true },
+    },
     { path: "/carte", name: "carte", component: () => import("../views/CarteView.vue"), meta: { titre: "Carte cadastrale" } },
     { path: "/aide", name: "aide", component: () => import("../views/AideView.vue"), meta: { titre: "Aide" } },
     {
@@ -145,8 +155,50 @@ const router = createRouter({
     {
       path: "/admin",
       name: "admin",
-      component: () => import("../views/admin/AdminView.vue"),
+      component: () => import("../views/admin/BackOfficeVueEnsembleView.vue"),
       meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.ADMIN], titre: "Back-office" },
+    },
+    {
+      path: "/admin/demandes-professionnelles",
+      name: "admin-demandes-pro",
+      component: () => import("../views/admin/BackOfficeDemandesProView.vue"),
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.ADMIN], titre: "Demandes professionnelles" },
+    },
+    {
+      path: "/admin/utilisateurs",
+      name: "admin-utilisateurs",
+      component: () => import("../views/admin/BackOfficeUtilisateursView.vue"),
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.ADMIN], titre: "Utilisateurs" },
+    },
+    {
+      path: "/admin/proprietaires",
+      name: "admin-proprietaires",
+      component: () => import("../views/admin/BackOfficeProprietairesView.vue"),
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.ADMIN], titre: "Proprietaires" },
+    },
+    {
+      path: "/admin/parcelles",
+      name: "admin-parcelles",
+      component: () => import("../views/admin/BackOfficeParcellesView.vue"),
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.ADMIN], titre: "Parcelles" },
+    },
+    {
+      path: "/admin/documents",
+      name: "admin-documents",
+      component: () => import("../views/admin/BackOfficeDocumentsView.vue"),
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.ADMIN], titre: "Documents" },
+    },
+    {
+      path: "/admin/signalements",
+      name: "admin-signalements",
+      component: () => import("../views/admin/BackOfficeSignalementsView.vue"),
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.ADMIN], titre: "Signalements" },
+    },
+    {
+      path: "/admin/annonces-a-risque",
+      name: "admin-annonces-risque",
+      component: () => import("../views/admin/BackOfficeAnnoncesRisqueView.vue"),
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.ADMIN], titre: "Annonces a risque" },
     },
     { path: "/:pathMatch(.*)*", name: "introuvable", component: () => import("../views/IntrouvableView.vue"), meta: { titre: "Page introuvable" } },
   ],

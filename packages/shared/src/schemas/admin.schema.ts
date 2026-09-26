@@ -14,3 +14,20 @@ export const SuspendreAnnonceSchema = z.object({
   motif: z.string().trim().min(10).max(500),
 });
 export type SuspendreAnnonceDto = z.infer<typeof SuspendreAnnonceSchema>;
+
+/** Suspension/reactivation d'un compte utilisateur depuis le back-office : motif obligatoire
+ * uniquement pour suspendre (une reactivation n'a pas besoin d'etre justifiee de la meme facon). */
+export const SuspendreUtilisateurSchema = z.object({
+  suspendre: z.boolean(),
+  motif: z.string().trim().min(10).max(500).optional(),
+});
+export type SuspendreUtilisateurDto = z.infer<typeof SuspendreUtilisateurSchema>;
+
+/** Correction de coordonnees de contact d'un proprietaire depuis le back-office (ex. faute de
+ * frappe signalee) : jamais la propriete des parcelles elle-meme, qui reste pilotee par les
+ * workflows de cession dedies. */
+export const ModifierProprietaireSchema = z.object({
+  email: z.string().trim().email().optional().nullable(),
+  telephone: z.string().trim().min(6).max(20).optional().nullable(),
+});
+export type ModifierProprietaireDto = z.infer<typeof ModifierProprietaireSchema>;

@@ -132,6 +132,9 @@ enum TypeOperationAudit {
   VALIDATION_BATI
   REJET_BATI
   VALIDATION_USAGE_SOL
+  SUSPENSION_COMPTE
+  REACTIVATION_COMPTE
+  MODIFICATION_ADMIN_PROPRIETAIRE
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
@@ -263,6 +266,11 @@ enum TypeUsageSol {
   AUTRE
 }
 
+enum RoleMessageChatbot {
+  UTILISATEUR
+  ASSISTANT
+}
+
 // ---------------------------------------------------------------------------
 // Identite & acces
 // ---------------------------------------------------------------------------
@@ -309,6 +317,7 @@ model Utilisateur {
   financementsTraites    DemandeFinancement[]   @relation("FinancementTraite")
   batisValides           Bati[]                 @relation("BatiValidateur")
   parcellesUsageSolValidees Parcelle[]          @relation("UsageSolValidateur")
+  conversationsChatbot   ConversationChatbot[]
 
   /// Declare uniquement par un VENDEUR (E0.3) : adapte les pieces demandees lors de la publication.
   statutDeclarant StatutDeclarantVendeur?
@@ -322,6 +331,15 @@ model Utilisateur {
   valideParId         String?
   validePar           Utilisateur?        @relation("ValidationProAdmin", fields: [valideParId], references: [id])
   comptesProValides   Utilisateur[]       @relation("ValidationProAdmin")
+
+  /// Suspension de compte par un admin (back-office, "Utilisateurs") : bloque la connexion tant
+  /// que non nul, motif obligatoire, journalisee (voir AdminService.suspendreUtilisateur). Un
+  /// horodatage plutot qu'un simple booleen, comme retireeLe sur Annonce.
+  compteSuspenduLe      DateTime?
+  motifSuspensionCompte String?
+  suspenduParId         String?
+  suspenduPar           Utilisateur?  @relation("SuspensionCompteAdmin", fields: [suspenduParId], references: [id])
+  comptesSuspendus      Utilisateur[] @relation("SuspensionCompteAdmin")
 
   @@index([role])
   @@index([statutValidationPro])
@@ -896,4 +914,39 @@ model MutationAudit {
 
   @@index([parcelleId])
   @@index([horodatage])
+}
+
+// ---------------------------------------------------------------------------
+// Assistant conversationnel (chatbot Gemini, tool-calling sur les donnees reelles)
+// ---------------------------------------------------------------------------
+
+/// Regroupe les messages d'un fil de discussion. Anonyme (utilisateurId null, identifie par
+/// sessionAnonymeId cote client) ou lie a un compte — voir ChatbotOrchestrationService pour la
+/// verification de propriete avant de reprendre une conversation existante.
+model ConversationChatbot {
+  id               String    @id @default(uuid())
+  utilisateurId    String?
+  utilisateur      Utilisateur? @relation(fields: [utilisateurId], references: [id])
+  sessionAnonymeId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  messages MessageChatbot[]
+
+  @@index([utilisateurId])
+  @@index([sessionAnonymeId])
+}
+
+model MessageChatbot {
+  id             String              @id @default(uuid())
+  conversationId String
+  conversation   ConversationChatbot @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           RoleMessageChatbot
+  contenu        String
+  /// Nom + arguments des tools appeles pour produire ce message (tracabilite), jamais affiche
+  /// tel quel dans l'interface.
+  appelsOutils   Json?
+  createdAt      DateTime            @default(now())
+
+  @@index([conversationId])
 }

@@ -7,5 +7,6 @@ import { AvisService } from "./avis.service";
   imports: [CryptoAuditModule],
   controllers: [AvisController],
   providers: [AvisService],
+  exports: [AvisService],
 })
 export class AvisModule {}
