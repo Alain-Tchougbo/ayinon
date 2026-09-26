@@ -119,7 +119,7 @@ async function creerBati() {
             <td class="px-4 py-3 font-medium text-texte">{{ nupParcelle(b.parcelleId) }}</td>
             <td class="px-4 py-3 text-xs text-texte-attenue">
               <span v-if="b.source === 'IMPORT_IA'">
-                Detection IA — confiance {{ b.scoreConfiance !== null ? Math.round(b.scoreConfiance * 100) + "%" : "inconnue" }}
+                Detection IA - confiance {{ b.scoreConfiance !== null ? Math.round(b.scoreConfiance * 100) + "%" : "inconnue" }}
               </span>
               <span v-else>Saisie manuelle</span>
             </td>
@@ -147,7 +147,7 @@ async function creerBati() {
           <label for="parcelle-bati" class="mb-1 block text-sm font-medium text-texte">Parcelle concernee (optionnel)</label>
           <select id="parcelle-bati" v-model="parcelleIdSaisie" class="w-full rounded-carte border border-bordure bg-fond px-3.5 py-2.5 text-sm text-texte">
             <option value="">Aucune parcelle particuliere</option>
-            <option v-for="p in parcelles.parcelles" :key="p.id" :value="p.id">{{ p.nup }} — {{ p.commune }}</option>
+            <option v-for="p in parcelles.parcelles" :key="p.id" :value="p.id">{{ p.nup }} - {{ p.commune }}</option>
           </select>
         </div>
         <div>

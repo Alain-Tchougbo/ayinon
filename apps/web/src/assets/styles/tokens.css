@@ -5,7 +5,7 @@
 :root {
   /* Valeurs en triplets "R G B" (pas #hex) : c'est le format qu'attend Tailwind pour construire
      rgb(var(--color-x) / <alpha-value>) et faire fonctionner les modificateurs d'opacite (/10,
-     /70...) sur ces couleurs personnalisees — voir tailwind.config.ts. Un #hex direct ici ferait
+     /70...) sur ces couleurs personnalisees - voir tailwind.config.ts. Un #hex direct ici ferait
      echouer silencieusement toute classe du type bg-primaire/10 (aucune regle generee). */
   --color-fond: 251 244 228;
   --color-surface: 255 255 255;

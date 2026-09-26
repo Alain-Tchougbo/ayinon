@@ -1,5 +1,5 @@
 /**
- * Vraie tuile satellite (Esri World_Imagery, gratuite, sans cle — meme fournisseur que
+ * Vraie tuile satellite (Esri World_Imagery, gratuite, sans cle - meme fournisseur que
  * MapCadastral.vue utilise pour le fond de plan) centree sur des coordonnees reelles. Utilisee
  * pour montrer une vraie image aerienne de l'emplacement exact d'une parcelle sur les cartes
  * d'annonces, plutot qu'une illustration ou, pire, une photo generique/trompeuse presentee comme

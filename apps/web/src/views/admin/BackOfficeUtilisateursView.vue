@@ -141,8 +141,8 @@ async function reactiver(id: string) {
                 <td class="px-4 py-3">
                   <p class="font-medium text-texte">{{ u.nomComplet }}</p>
                   <p class="break-words text-xs text-texte-attenue">
-                    {{ u.email }} — {{ u.role.replaceAll("_", " ") }}
-                    <span v-if="u.poleTerritorial"> — {{ u.poleTerritorial.replaceAll("_", " ") }}</span>
+                    {{ u.email }} - {{ u.role.replaceAll("_", " ") }}
+                    <span v-if="u.poleTerritorial"> - {{ u.poleTerritorial.replaceAll("_", " ") }}</span>
                   </p>
                 </td>
                 <td class="px-4 py-3">
@@ -154,7 +154,7 @@ async function reactiver(id: string) {
                     Suspendu
                   </span>
                   <p v-if="u.compteSuspenduLe" class="mt-1 text-xs italic text-danger">
-                    Le {{ new Date(u.compteSuspenduLe).toLocaleDateString("fr-FR") }}<span v-if="u.motifSuspensionCompte"> — {{ u.motifSuspensionCompte }}</span>
+                    Le {{ new Date(u.compteSuspenduLe).toLocaleDateString("fr-FR") }}<span v-if="u.motifSuspensionCompte"> - {{ u.motifSuspensionCompte }}</span>
                   </p>
                 </td>
                 <td class="px-4 py-3">

@@ -43,7 +43,7 @@ function construirePopupHtml(parcelle: ParcelleCache): string {
         <span>${LIBELLE_STATUT[parcelle.statut]}</span>
       </div>
       <div style="color:rgb(var(--color-texte-attenue))">
-        ${parcelle.commune}${parcelle.arrondissement ? " — " + parcelle.arrondissement : ""}<br/>
+        ${parcelle.commune}${parcelle.arrondissement ? " - " + parcelle.arrondissement : ""}<br/>
         Superficie : ${parcelle.superficieM2.toLocaleString("fr-FR")} m²<br/>
         Proprietaire : ${parcelle.proprietaireNom ?? "Non renseigne"}
         ${
@@ -60,7 +60,7 @@ function construirePopupHtml(parcelle: ParcelleCache): string {
     </div>`;
 }
 
-/** Fond OSM raster (aucune cle requise) — a remplacer par des tuiles vectorielles officielles en production. */
+/** Fond OSM raster (aucune cle requise) - a remplacer par des tuiles vectorielles officielles en production. */
 const STYLE_FOND: StyleSpecification = {
   version: 8,
   sources: {

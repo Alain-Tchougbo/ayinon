@@ -48,7 +48,7 @@ async function obtenirClePubliqueImportee(): Promise<CryptoKey | null> {
 /**
  * Verification Ed25519 locale (Web Crypto API), sans appel reseau : permet au Scanner Anti-Fraude
  * de confirmer l'authenticite cryptographique d'une convention meme en zone blanche. Cette
- * verification ne porte que sur la signature — elle ne peut pas savoir si le document a ete
+ * verification ne porte que sur la signature - elle ne peut pas savoir si le document a ete
  * invalide depuis (ex. mutation annulee), ce que seule l'API /conventions/verifier confirme.
  * Renvoie null si aucune verification locale n'est possible (cle absente ou Ed25519 non supporte
  * par ce navigateur) plutot que de laisser croire a un resultat negatif.

@@ -10,7 +10,7 @@ import { PHRASES } from "../voice/phrases";
 
 // Vitrine publique forcee (voir router/index.ts: meta.forcerPublic) : accessible depuis le logo
 // AYINON meme par un utilisateur deja connecte (voir DashboardLayout.vue), sans jamais toucher a
-// sa session — contrairement a "/" (AccueilView.vue), le contenu ici ne varie jamais selon
+// sa session - contrairement a "/" (AccueilView.vue), le contenu ici ne varie jamais selon
 // auth.estConnecte. PublicLayout.vue adapte deja son en-tete (acceder a mon espace / deconnexion)
 // pour un visiteur qui se trouve etre connecte.
 const router = useRouter();
@@ -42,7 +42,7 @@ function rechercherEtOuvrirCarte() {
         Retrouvez votre terrain en toute serenite.
       </h1>
       <p class="mt-3 max-w-lg text-sm text-white/85 [text-shadow:0_1px_10px_rgba(0,0,0,.3)]">
-        Localisation exacte, limites certifiees, statut a jour — votre parcelle, en un instant.
+        Localisation exacte, limites certifiees, statut a jour - votre parcelle, en un instant.
       </p>
 
       <form
