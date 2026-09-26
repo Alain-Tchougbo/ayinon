@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Award, Banknote, Calculator, CalendarClock, Check, Handshake, Landmark, Megaphone, Send, ShieldCheck, Star, Store, X } from "@lucide/vue";
+import { Award, Banknote, Calculator, CalendarClock, Check, Handshake, Landmark, Megaphone, QrCode, Send, ShieldCheck, Star, Store, X } from "@lucide/vue";
 import { simulerGainNet } from "@ayinon/shared";
 import { computed, onMounted, ref } from "vue";
 import BaseButton from "../../components/ui/BaseButton.vue";
@@ -134,6 +134,9 @@ const dureeExclusiviteParInteret = ref<Record<string, string | number>>({});
 
 const reprogrammationEnCours = ref<string | null>(null);
 const nouvelleDateVisite = ref("");
+
+const qrEnCoursId = ref<string | null>(null);
+const qrDataUrl = ref<string | null>(null);
 
 const codeVerificationFinancement = ref("");
 const resultatVerificationFinancement = ref<ResultatVerificationFinancement | null>(null);
@@ -317,6 +320,19 @@ async function repondreVisite(id: string, decision: "CONFIRMER" | "REFUSER") {
     erreur.value = e instanceof ApiError ? e.message : "Reponse impossible";
   } finally {
     actionEnCours.value = false;
+  }
+}
+
+async function voirQrCode(conventionId: string) {
+  erreur.value = null;
+  qrEnCoursId.value = conventionId;
+  try {
+    const reponse = await api.get<{ qrCodeDataUrl: string }>(`/cessions/${conventionId}/qr`);
+    qrDataUrl.value = reponse.qrCodeDataUrl;
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Impossible de recuperer le QR";
+  } finally {
+    qrEnCoursId.value = null;
   }
 }
 
@@ -523,6 +539,7 @@ async function reprogrammerVisite(id: string) {
             <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
               <th class="px-4 py-3 font-semibold">Cession</th>
               <th class="px-4 py-3 font-semibold">Statut</th>
+              <th class="px-4 py-3 font-semibold">Action</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-bordure">
@@ -545,11 +562,26 @@ async function reprogrammerVisite(id: string) {
                   {{ LIBELLE_STATUT_CESSION[c.statutCession] }}
                 </span>
               </td>
+              <td class="whitespace-nowrap px-4 py-3">
+                <BaseButton taille="sm" variant="secondaire" :disabled="qrEnCoursId === c.id" @click="voirQrCode(c.id)">
+                  <QrCode :size="13" aria-hidden="true" />
+                  Voir le QR
+                </BaseButton>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
+
+    <BaseModal :model-value="qrDataUrl !== null" titre="QR anti-fraude" @update:model-value="qrDataUrl = null">
+      <div v-if="qrDataUrl" class="flex flex-col items-center gap-3">
+        <img :src="qrDataUrl" alt="QR code anti-fraude de la cession" class="h-56 w-56" />
+        <p class="text-center text-xs text-texte-attenue">
+          A presenter ou imprimer : verifiable a tout moment via le Scanner Anti-Fraude.
+        </p>
+      </div>
+    </BaseModal>
 
     <section v-if="visitesRecues.length > 0">
       <h2 class="mb-3 flex items-center gap-2 font-semibold text-texte">
