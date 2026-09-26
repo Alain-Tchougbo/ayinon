@@ -7,6 +7,7 @@ import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface Utilisateur {
@@ -162,28 +163,10 @@ async function reactiver(id: string) {
                       <ShieldCheck :size="13" aria-hidden="true" />
                       Reactiver
                     </BaseButton>
-                    <BaseButton v-else-if="suspensionEnCours !== u.id" taille="sm" variant="secondaire" @click="suspensionEnCours = u.id">
+                    <BaseButton v-else taille="sm" variant="secondaire" @click="suspensionEnCours = u.id">
                       <ShieldOff :size="13" aria-hidden="true" />
                       Suspendre
                     </BaseButton>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="suspensionEnCours === u.id">
-                <td colspan="3" class="bg-fond/40 px-4 py-3">
-                  <div class="space-y-2 rounded-carte border border-bordure bg-fond p-3">
-                    <label :for="`motif-suspension-${u.id}`" class="block text-xs font-medium text-texte">Motif de la suspension (obligatoire)</label>
-                    <textarea
-                      :id="`motif-suspension-${u.id}`"
-                      v-model="motifSuspension"
-                      rows="2"
-                      placeholder="Ex. plusieurs signalements fondes pour usurpation d'identite"
-                      class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                    />
-                    <div class="flex gap-2">
-                      <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="suspendre(u.id)">Suspendre ce compte</BaseButton>
-                      <BaseButton taille="sm" variant="secondaire" @click="suspensionEnCours = null">Annuler</BaseButton>
-                    </div>
                   </div>
                 </td>
               </tr>
@@ -192,5 +175,22 @@ async function reactiver(id: string) {
         </table>
       </div>
     </div>
+
+    <BaseModal :model-value="suspensionEnCours !== null" titre="Suspendre le compte" @update:model-value="suspensionEnCours = null">
+      <div class="space-y-2">
+        <label for="motif-suspension" class="block text-xs font-medium text-texte">Motif de la suspension (obligatoire)</label>
+        <textarea
+          id="motif-suspension"
+          v-model="motifSuspension"
+          rows="3"
+          placeholder="Ex. plusieurs signalements fondes pour usurpation d'identite"
+          class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+        />
+        <div class="flex gap-2">
+          <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="suspendre(suspensionEnCours!)">Suspendre ce compte</BaseButton>
+          <BaseButton taille="sm" variant="secondaire" @click="suspensionEnCours = null">Annuler</BaseButton>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>
