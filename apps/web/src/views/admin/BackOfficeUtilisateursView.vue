@@ -95,7 +95,7 @@ async function reactiver(id: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+  <div class="w-full space-y-6 p-4 sm:p-6">
     <PageHeader titre="Utilisateurs" description="Comptes de la plateforme : suspendez un compte en cas d'abus constate.">
       <template #icone><Users :size="22" class="text-primaire" aria-hidden="true" /></template>
     </PageHeader>
@@ -125,13 +125,26 @@ async function reactiver(id: string) {
         </ul>
       </BaseCard>
 
-      <ul class="space-y-2.5">
-        <li v-for="u in utilisateurs" :key="u.id">
-          <BaseCard rembourrage="sm" :accentue="u.compteSuspenduLe ? 'danger' : 'aucun'">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p class="flex items-center gap-1.5 font-medium text-texte">
-                  {{ u.nomComplet }}
+      <div class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+              <th class="px-4 py-3 font-semibold">Utilisateur</th>
+              <th class="px-4 py-3 font-semibold">Statut</th>
+              <th class="px-4 py-3 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-bordure">
+            <template v-for="u in utilisateurs" :key="u.id">
+              <tr class="align-top">
+                <td class="px-4 py-3">
+                  <p class="font-medium text-texte">{{ u.nomComplet }}</p>
+                  <p class="text-xs text-texte-attenue">
+                    {{ u.email }} — {{ u.role.replaceAll("_", " ") }}
+                    <span v-if="u.poleTerritorial"> — {{ u.poleTerritorial.replaceAll("_", " ") }}</span>
+                  </p>
+                </td>
+                <td class="px-4 py-3">
                   <span
                     v-if="u.compteSuspenduLe"
                     class="inline-flex items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-semibold text-danger"
@@ -139,44 +152,45 @@ async function reactiver(id: string) {
                     <ShieldOff :size="11" aria-hidden="true" />
                     Suspendu
                   </span>
-                </p>
-                <p class="text-xs text-texte-attenue">
-                  {{ u.email }} — {{ u.role.replaceAll("_", " ") }}
-                  <span v-if="u.poleTerritorial"> — {{ u.poleTerritorial.replaceAll("_", " ") }}</span>
-                </p>
-                <p v-if="u.compteSuspenduLe" class="mt-0.5 text-xs italic text-danger">
-                  Suspendu le {{ new Date(u.compteSuspenduLe).toLocaleDateString("fr-FR") }}<span v-if="u.motifSuspensionCompte"> — {{ u.motifSuspensionCompte }}</span>
-                </p>
-              </div>
-              <div v-if="u.id !== auth.utilisateur?.id" class="flex shrink-0 gap-2">
-                <BaseButton v-if="u.compteSuspenduLe" taille="sm" variant="secondaire" :disabled="actionEnCours" @click="reactiver(u.id)">
-                  <ShieldCheck :size="13" aria-hidden="true" />
-                  Reactiver
-                </BaseButton>
-                <BaseButton v-else-if="suspensionEnCours !== u.id" taille="sm" variant="secondaire" @click="suspensionEnCours = u.id">
-                  <ShieldOff :size="13" aria-hidden="true" />
-                  Suspendre
-                </BaseButton>
-              </div>
-            </div>
-
-            <div v-if="suspensionEnCours === u.id" class="mt-3 space-y-2 rounded-carte border border-bordure bg-fond p-3">
-              <label :for="`motif-suspension-${u.id}`" class="block text-xs font-medium text-texte">Motif de la suspension (obligatoire)</label>
-              <textarea
-                :id="`motif-suspension-${u.id}`"
-                v-model="motifSuspension"
-                rows="2"
-                placeholder="Ex. plusieurs signalements fondes pour usurpation d'identite"
-                class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-              />
-              <div class="flex gap-2">
-                <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="suspendre(u.id)">Suspendre ce compte</BaseButton>
-                <BaseButton taille="sm" variant="secondaire" @click="suspensionEnCours = null">Annuler</BaseButton>
-              </div>
-            </div>
-          </BaseCard>
-        </li>
-      </ul>
+                  <p v-if="u.compteSuspenduLe" class="mt-1 text-xs italic text-danger">
+                    Le {{ new Date(u.compteSuspenduLe).toLocaleDateString("fr-FR") }}<span v-if="u.motifSuspensionCompte"> — {{ u.motifSuspensionCompte }}</span>
+                  </p>
+                </td>
+                <td class="px-4 py-3">
+                  <div v-if="u.id !== auth.utilisateur?.id" class="flex shrink-0 gap-2">
+                    <BaseButton v-if="u.compteSuspenduLe" taille="sm" variant="secondaire" :disabled="actionEnCours" @click="reactiver(u.id)">
+                      <ShieldCheck :size="13" aria-hidden="true" />
+                      Reactiver
+                    </BaseButton>
+                    <BaseButton v-else-if="suspensionEnCours !== u.id" taille="sm" variant="secondaire" @click="suspensionEnCours = u.id">
+                      <ShieldOff :size="13" aria-hidden="true" />
+                      Suspendre
+                    </BaseButton>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="suspensionEnCours === u.id">
+                <td colspan="3" class="bg-fond/40 px-4 py-3">
+                  <div class="space-y-2 rounded-carte border border-bordure bg-fond p-3">
+                    <label :for="`motif-suspension-${u.id}`" class="block text-xs font-medium text-texte">Motif de la suspension (obligatoire)</label>
+                    <textarea
+                      :id="`motif-suspension-${u.id}`"
+                      v-model="motifSuspension"
+                      rows="2"
+                      placeholder="Ex. plusieurs signalements fondes pour usurpation d'identite"
+                      class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
+                    />
+                    <div class="flex gap-2">
+                      <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="suspendre(u.id)">Suspendre ce compte</BaseButton>
+                      <BaseButton taille="sm" variant="secondaire" @click="suspensionEnCours = null">Annuler</BaseButton>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>

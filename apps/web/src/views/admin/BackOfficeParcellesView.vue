@@ -5,7 +5,6 @@ import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
-import BaseCard from "../../components/ui/BaseCard.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
@@ -99,7 +98,7 @@ async function voirHistorique(parcelleId: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+  <div class="w-full space-y-6 p-4 sm:p-6">
     <PageHeader titre="Parcelles" description="Corrigez les champs declaratifs (commune, arrondissement) et consultez le journal d'audit d'un dossier.">
       <template #icone><MapPin :size="22" class="text-primaire" aria-hidden="true" /></template>
     </PageHeader>
@@ -108,51 +107,68 @@ async function voirHistorique(parcelleId: string) {
     <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes" role="status">{{ message }}</p>
     <p v-if="chargement" class="text-sm text-texte-attenue" role="status">Chargement…</p>
 
-    <ul v-if="!chargement" class="space-y-2.5">
-      <li v-for="p in parcelles" :key="p.id">
-        <BaseCard rembourrage="sm">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p class="font-medium text-texte">{{ p.nup }} — {{ p.commune }}<span v-if="p.arrondissement"> ({{ p.arrondissement }})</span></p>
-              <p class="text-xs text-texte-attenue">
-                {{ p.proprietaire?.nomComplet ?? "Sans proprietaire" }} — {{ p.superficieM2.toLocaleString("fr-FR") }} m² — {{ p.statut.replaceAll("_", " ") }}
-              </p>
-            </div>
-            <div class="flex gap-2">
-              <BaseButton v-if="editionEnCours !== p.id" taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
-                <Pencil :size="13" aria-hidden="true" />
-                Modifier
-              </BaseButton>
-              <BaseButton taille="sm" variant="secondaire" @click="voirHistorique(p.id)">
-                <History :size="13" aria-hidden="true" />
-                {{ historiqueEnCours === p.id ? "Masquer le journal" : "Journal d'audit" }}
-              </BaseButton>
-            </div>
-          </div>
-          <div v-if="editionEnCours === p.id" class="mt-3 flex flex-wrap items-end gap-2">
-            <div class="w-48"><BaseInput id="commune-edition" v-model="communeEdition" label="Commune" /></div>
-            <div class="w-48"><BaseInput id="arrondissement-edition" v-model="arrondissementEdition" label="Arrondissement" /></div>
-            <BaseButton taille="sm" @click="enregistrerEdition(p.id)">Enregistrer</BaseButton>
-            <BaseButton taille="sm" variant="secondaire" @click="editionEnCours = null">Annuler</BaseButton>
-          </div>
-
-          <!-- ET.3 : journal d'audit horodate et signe du dossier (cette parcelle). -->
-          <div v-if="historiqueEnCours === p.id" class="mt-3 border-t border-bordure pt-3">
-            <p v-if="chargementHistorique" class="text-sm text-texte-attenue" role="status">Chargement du journal d'audit…</p>
-            <p v-else-if="historique && historique.length === 0" class="text-sm text-texte-attenue">Aucune operation enregistree sur ce dossier.</p>
-            <ol v-else-if="historique" class="space-y-2 border-l-2 border-bordure pl-4">
-              <li v-for="entree in historique" :key="entree.id" class="text-sm">
-                <p class="font-medium text-texte">{{ entree.typeOperation.replaceAll("_", " ") }}</p>
-                <p class="text-xs text-texte-attenue">
-                  {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}
-                  <template v-if="entree.roleActeur"> — {{ entree.roleActeur.replaceAll("_", " ") }}</template>
-                </p>
-                <p class="mt-0.5 font-mono text-[0.65rem] text-texte-attenue">hash bloc : {{ entree.hashBloc.slice(0, 24) }}…</p>
-              </li>
-            </ol>
-          </div>
-        </BaseCard>
-      </li>
-    </ul>
+    <div v-if="!chargement" class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+            <th class="px-4 py-3 font-semibold">Parcelle</th>
+            <th class="px-4 py-3 font-semibold">Proprietaire</th>
+            <th class="px-4 py-3 font-semibold">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-bordure">
+          <template v-for="p in parcelles" :key="p.id">
+            <tr class="align-top">
+              <td class="px-4 py-3">
+                <p class="font-medium text-texte">{{ p.nup }} — {{ p.commune }}<span v-if="p.arrondissement"> ({{ p.arrondissement }})</span></p>
+              </td>
+              <td class="px-4 py-3">
+                <p class="text-texte">{{ p.proprietaire?.nomComplet ?? "Sans proprietaire" }}</p>
+                <p class="text-xs text-texte-attenue">{{ p.superficieM2.toLocaleString("fr-FR") }} m² — {{ p.statut.replaceAll("_", " ") }}</p>
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex gap-2">
+                  <BaseButton v-if="editionEnCours !== p.id" taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
+                    <Pencil :size="13" aria-hidden="true" />
+                    Modifier
+                  </BaseButton>
+                  <BaseButton taille="sm" variant="secondaire" @click="voirHistorique(p.id)">
+                    <History :size="13" aria-hidden="true" />
+                    {{ historiqueEnCours === p.id ? "Masquer le journal" : "Journal d'audit" }}
+                  </BaseButton>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="editionEnCours === p.id">
+              <td colspan="3" class="bg-fond/40 px-4 py-3">
+                <div class="flex flex-wrap items-end gap-2">
+                  <div class="w-48"><BaseInput id="commune-edition" v-model="communeEdition" label="Commune" /></div>
+                  <div class="w-48"><BaseInput id="arrondissement-edition" v-model="arrondissementEdition" label="Arrondissement" /></div>
+                  <BaseButton taille="sm" @click="enregistrerEdition(p.id)">Enregistrer</BaseButton>
+                  <BaseButton taille="sm" variant="secondaire" @click="editionEnCours = null">Annuler</BaseButton>
+                </div>
+              </td>
+            </tr>
+            <!-- ET.3 : journal d'audit horodate et signe du dossier (cette parcelle). -->
+            <tr v-if="historiqueEnCours === p.id">
+              <td colspan="3" class="bg-fond/40 px-4 py-3">
+                <p v-if="chargementHistorique" class="text-sm text-texte-attenue" role="status">Chargement du journal d'audit…</p>
+                <p v-else-if="historique && historique.length === 0" class="text-sm text-texte-attenue">Aucune operation enregistree sur ce dossier.</p>
+                <ol v-else-if="historique" class="space-y-2 border-l-2 border-bordure pl-4">
+                  <li v-for="entree in historique" :key="entree.id" class="text-sm">
+                    <p class="font-medium text-texte">{{ entree.typeOperation.replaceAll("_", " ") }}</p>
+                    <p class="text-xs text-texte-attenue">
+                      {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}
+                      <template v-if="entree.roleActeur"> — {{ entree.roleActeur.replaceAll("_", " ") }}</template>
+                    </p>
+                    <p class="mt-0.5 font-mono text-[0.65rem] text-texte-attenue">hash bloc : {{ entree.hashBloc.slice(0, 24) }}…</p>
+                  </li>
+                </ol>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>

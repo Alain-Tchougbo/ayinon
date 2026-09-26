@@ -67,7 +67,7 @@ async function voirHistorique(parcelleId: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+  <div class="w-full space-y-6 p-4 sm:p-6">
     <PageHeader
       titre="Documents"
       description="Registre des conventions et titres, en lecture seule : consultez le journal d'audit signe du dossier plutot que de reecrire un document juridique."
@@ -81,57 +81,85 @@ async function voirHistorique(parcelleId: string) {
     <div v-if="!chargement && documents" class="space-y-6">
       <div>
         <h2 class="mb-2 flex items-center gap-1.5 text-sm font-semibold text-texte"><FileStack :size="15" aria-hidden="true" /> Conventions ({{ documents.conventions.length }})</h2>
-        <ul class="space-y-2">
-          <li v-for="c in documents.conventions" :key="c.id" class="rounded-carte border border-bordure bg-surface px-3.5 py-2.5 text-sm">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <p>
-                <span class="font-medium text-texte">{{ c.parcelle.nup }}</span>
-                <span class="text-texte-attenue"> — {{ c.vendeurNom }} → {{ c.acquereurNom }} — {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA — {{ c.statutCession.replaceAll("_", " ") }}</span>
-              </p>
-              <BaseButton taille="sm" variant="secondaire" @click="voirHistorique(c.parcelle.id)">
-                <History :size="13" aria-hidden="true" />
-                {{ historiqueEnCours === c.parcelle.id ? "Masquer" : "Journal d'audit" }}
-              </BaseButton>
-            </div>
-            <div v-if="historiqueEnCours === c.parcelle.id" class="mt-2.5 border-t border-bordure pt-2.5">
-              <p v-if="chargementHistorique" class="text-xs text-texte-attenue" role="status">Chargement…</p>
-              <p v-else-if="historique && historique.length === 0" class="text-xs text-texte-attenue">Aucune operation enregistree sur ce dossier.</p>
-              <ol v-else-if="historique" class="space-y-1.5 border-l-2 border-bordure pl-3">
-                <li v-for="entree in historique" :key="entree.id" class="text-xs">
-                  <span class="font-medium text-texte">{{ entree.typeOperation.replaceAll("_", " ") }}</span>
-                  <span class="text-texte-attenue"> — {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}</span>
-                </li>
-              </ol>
-            </div>
-          </li>
-        </ul>
+        <div class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+          <table class="w-full text-left text-sm">
+            <thead>
+              <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+                <th class="px-4 py-3 font-semibold">Convention</th>
+                <th class="px-4 py-3 font-semibold">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-bordure">
+              <template v-for="c in documents.conventions" :key="c.id">
+                <tr class="align-top">
+                  <td class="px-4 py-3">
+                    <span class="font-medium text-texte">{{ c.parcelle.nup }}</span>
+                    <span class="text-texte-attenue"> — {{ c.vendeurNom }} → {{ c.acquereurNom }} — {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA — {{ c.statutCession.replaceAll("_", " ") }}</span>
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-3">
+                    <BaseButton taille="sm" variant="secondaire" @click="voirHistorique(c.parcelle.id)">
+                      <History :size="13" aria-hidden="true" />
+                      {{ historiqueEnCours === c.parcelle.id ? "Masquer" : "Journal d'audit" }}
+                    </BaseButton>
+                  </td>
+                </tr>
+                <tr v-if="historiqueEnCours === c.parcelle.id">
+                  <td colspan="2" class="bg-fond/40 px-4 py-3">
+                    <p v-if="chargementHistorique" class="text-xs text-texte-attenue" role="status">Chargement…</p>
+                    <p v-else-if="historique && historique.length === 0" class="text-xs text-texte-attenue">Aucune operation enregistree sur ce dossier.</p>
+                    <ol v-else-if="historique" class="space-y-1.5 border-l-2 border-bordure pl-3">
+                      <li v-for="entree in historique" :key="entree.id" class="text-xs">
+                        <span class="font-medium text-texte">{{ entree.typeOperation.replaceAll("_", " ") }}</span>
+                        <span class="text-texte-attenue"> — {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}</span>
+                      </li>
+                    </ol>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
       </div>
       <div>
         <h2 class="mb-2 text-sm font-semibold text-texte">Titres delivres ({{ documents.titres.length }})</h2>
-        <ul class="space-y-2">
-          <li v-for="t in documents.titres" :key="t.id" class="rounded-carte border border-bordure bg-surface px-3.5 py-2.5 text-sm">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <p>
-                <span class="font-medium text-texte">{{ t.numeroTitre }}</span>
-                <span class="text-texte-attenue"> — {{ t.parcelle.nup }} — delivre le {{ new Date(t.dateDelivrance).toLocaleDateString("fr-FR") }}</span>
-              </p>
-              <BaseButton taille="sm" variant="secondaire" @click="voirHistorique(t.parcelle.id)">
-                <History :size="13" aria-hidden="true" />
-                {{ historiqueEnCours === t.parcelle.id ? "Masquer" : "Journal d'audit" }}
-              </BaseButton>
-            </div>
-            <div v-if="historiqueEnCours === t.parcelle.id" class="mt-2.5 border-t border-bordure pt-2.5">
-              <p v-if="chargementHistorique" class="text-xs text-texte-attenue" role="status">Chargement…</p>
-              <p v-else-if="historique && historique.length === 0" class="text-xs text-texte-attenue">Aucune operation enregistree sur ce dossier.</p>
-              <ol v-else-if="historique" class="space-y-1.5 border-l-2 border-bordure pl-3">
-                <li v-for="entree in historique" :key="entree.id" class="text-xs">
-                  <span class="font-medium text-texte">{{ entree.typeOperation.replaceAll("_", " ") }}</span>
-                  <span class="text-texte-attenue"> — {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}</span>
-                </li>
-              </ol>
-            </div>
-          </li>
-        </ul>
+        <div class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+          <table class="w-full text-left text-sm">
+            <thead>
+              <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+                <th class="px-4 py-3 font-semibold">Titre</th>
+                <th class="px-4 py-3 font-semibold">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-bordure">
+              <template v-for="t in documents.titres" :key="t.id">
+                <tr class="align-top">
+                  <td class="px-4 py-3">
+                    <span class="font-medium text-texte">{{ t.numeroTitre }}</span>
+                    <span class="text-texte-attenue"> — {{ t.parcelle.nup }} — delivre le {{ new Date(t.dateDelivrance).toLocaleDateString("fr-FR") }}</span>
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-3">
+                    <BaseButton taille="sm" variant="secondaire" @click="voirHistorique(t.parcelle.id)">
+                      <History :size="13" aria-hidden="true" />
+                      {{ historiqueEnCours === t.parcelle.id ? "Masquer" : "Journal d'audit" }}
+                    </BaseButton>
+                  </td>
+                </tr>
+                <tr v-if="historiqueEnCours === t.parcelle.id">
+                  <td colspan="2" class="bg-fond/40 px-4 py-3">
+                    <p v-if="chargementHistorique" class="text-xs text-texte-attenue" role="status">Chargement…</p>
+                    <p v-else-if="historique && historique.length === 0" class="text-xs text-texte-attenue">Aucune operation enregistree sur ce dossier.</p>
+                    <ol v-else-if="historique" class="space-y-1.5 border-l-2 border-bordure pl-3">
+                      <li v-for="entree in historique" :key="entree.id" class="text-xs">
+                        <span class="font-medium text-texte">{{ entree.typeOperation.replaceAll("_", " ") }}</span>
+                        <span class="text-texte-attenue"> — {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}</span>
+                      </li>
+                    </ol>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>

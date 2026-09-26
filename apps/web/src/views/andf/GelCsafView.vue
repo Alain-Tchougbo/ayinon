@@ -209,16 +209,28 @@ async function confirmerLevee(conflitId: string) {
         <Flag :size="16" class="text-accent" aria-hidden="true" />
         Litiges qualifies fondes, en attente d'instruction ({{ litigesFondes.length }})
       </h2>
-      <ul class="space-y-2.5">
-        <li v-for="litige in litigesFondes" :key="litige.id">
-          <BaseCard accentue="accent" rembourrage="sm">
-            <p class="font-semibold text-texte">{{ litige.parcelle.nup }} — {{ litige.parcelle.commune }}</p>
-            <p class="mt-0.5 text-sm text-texte-attenue">{{ litige.motif }}</p>
-            <p v-if="litige.decisionMotif" class="mt-0.5 text-xs italic text-texte-attenue">Qualification admin : {{ litige.decisionMotif }}</p>
-            <BaseButton taille="sm" variant="secondaire" class="mt-2.5" @click="instruireLitige(litige)">Instruire ce dossier</BaseButton>
-          </BaseCard>
-        </li>
-      </ul>
+      <div class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+              <th class="px-4 py-3 font-semibold">Litige</th>
+              <th class="px-4 py-3 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-bordure">
+            <tr v-for="litige in litigesFondes" :key="litige.id" class="align-top">
+              <td class="px-4 py-3">
+                <p class="font-semibold text-texte">{{ litige.parcelle.nup }} — {{ litige.parcelle.commune }}</p>
+                <p class="mt-0.5 text-sm text-texte-attenue">{{ litige.motif }}</p>
+                <p v-if="litige.decisionMotif" class="mt-0.5 text-xs italic text-texte-attenue">Qualification admin : {{ litige.decisionMotif }}</p>
+              </td>
+              <td class="whitespace-nowrap px-4 py-3">
+                <BaseButton taille="sm" variant="secondaire" @click="instruireLitige(litige)">Instruire ce dossier</BaseButton>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <form class="flex gap-2" @submit.prevent="chercherParcelle">
@@ -298,82 +310,98 @@ async function confirmerLevee(conflitId: string) {
 
     <div>
       <h2 class="mb-3 font-semibold text-texte">Conflits CSAF actifs ({{ conflitsActifs.length }})</h2>
-      <ul class="space-y-2.5">
-        <li v-for="conflit in conflitsActifs" :key="conflit.id">
-          <BaseCard accentue="danger" rembourrage="sm">
-            <p class="font-semibold text-texte">{{ conflit.parcelle.nup }} — {{ conflit.parcelle.commune }}</p>
-            <p class="mt-0.5 text-sm text-texte-attenue">{{ conflit.motif }} (dossier {{ conflit.referenceDossierJudiciaire }})</p>
-            <p class="mt-0.5 text-xs text-texte-attenue">Gele le {{ new Date(conflit.dateGel).toLocaleDateString("fr-FR") }}</p>
-
-            <BaseButton
-              v-if="conflitEnLevee !== conflit.id"
-              variant="secondaire"
-              taille="sm"
-              class="mt-2.5"
-              @click="
-                conflitEnLevee = conflit.id;
-                typeDecisionParConflit[conflit.id] = 'LEVEE_SIMPLE';
-              "
-            >
-              <Unlock :size="14" aria-hidden="true" />
-              Lever le gel
-            </BaseButton>
-            <div v-else class="mt-2.5 space-y-2 rounded-carte border border-bordure bg-fond p-3">
-              <div>
-                <label :for="`type-decision-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">Effet de la decision</label>
-                <select
-                  :id="`type-decision-${conflit.id}`"
-                  v-model="typeDecisionParConflit[conflit.id]"
-                  class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                >
-                  <option value="LEVEE_SIMPLE">Levee simple (restaure le statut anterieur)</option>
-                  <option value="ANNULATION_VENTE">Annulation de la vente en cours</option>
-                  <option value="TRANSFERT_FORCE">Transfert force de propriete</option>
-                </select>
-              </div>
-              <div v-if="typeDecisionParConflit[conflit.id] === 'TRANSFERT_FORCE'">
-                <label :for="`nouveau-proprietaire-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">
-                  Nom du proprietaire designe par la decision
-                </label>
-                <input
-                  :id="`nouveau-proprietaire-${conflit.id}`"
-                  v-model="nouveauProprietaireParConflit[conflit.id]"
-                  class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                />
-              </div>
-              <div>
-                <label :for="`motif-levee-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">
-                  Motif de la levee (obligatoire)
-                </label>
-                <textarea
-                  :id="`motif-levee-${conflit.id}`"
-                  v-model="motifLeveeParConflit[conflit.id]"
-                  rows="2"
-                  placeholder="Ex. litige resolu par jugement du..."
-                  class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                />
-              </div>
-              <div>
-                <label :for="`fichier-decision-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">
-                  Document de la decision (optionnel)
-                </label>
-                <input
-                  :id="`fichier-decision-${conflit.id}`"
-                  type="file"
-                  class="w-full text-xs text-texte"
-                  @change="surChoixFichierDecision(conflit.id, $event)"
-                />
-              </div>
-              <p class="text-xs text-texte-attenue">Confirmez-vous la levee du gel sur {{ conflit.parcelle.nup }} ?</p>
-              <div class="flex gap-2">
-                <BaseButton taille="sm" @click="confirmerLevee(conflit.id)">Oui, lever le gel</BaseButton>
-                <BaseButton variant="secondaire" taille="sm" @click="conflitEnLevee = null">Annuler</BaseButton>
-              </div>
-            </div>
-          </BaseCard>
-        </li>
-        <li v-if="conflitsActifs.length === 0" class="text-sm text-texte-attenue">Aucun conflit actif.</li>
-      </ul>
+      <p v-if="conflitsActifs.length === 0" class="text-sm text-texte-attenue">Aucun conflit actif.</p>
+      <div v-else class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+              <th class="px-4 py-3 font-semibold">Conflit</th>
+              <th class="px-4 py-3 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-bordure">
+            <template v-for="conflit in conflitsActifs" :key="conflit.id">
+              <tr class="align-top">
+                <td class="px-4 py-3">
+                  <p class="font-semibold text-texte">{{ conflit.parcelle.nup }} — {{ conflit.parcelle.commune }}</p>
+                  <p class="mt-0.5 text-sm text-texte-attenue">{{ conflit.motif }} (dossier {{ conflit.referenceDossierJudiciaire }})</p>
+                  <p class="mt-0.5 text-xs text-texte-attenue">Gele le {{ new Date(conflit.dateGel).toLocaleDateString("fr-FR") }}</p>
+                </td>
+                <td class="whitespace-nowrap px-4 py-3">
+                  <BaseButton
+                    v-if="conflitEnLevee !== conflit.id"
+                    variant="secondaire"
+                    taille="sm"
+                    @click="
+                      conflitEnLevee = conflit.id;
+                      typeDecisionParConflit[conflit.id] = 'LEVEE_SIMPLE';
+                    "
+                  >
+                    <Unlock :size="14" aria-hidden="true" />
+                    Lever le gel
+                  </BaseButton>
+                </td>
+              </tr>
+              <tr v-if="conflitEnLevee === conflit.id">
+                <td colspan="2" class="bg-fond/40 px-4 py-3">
+                  <div class="space-y-2 rounded-carte border border-bordure bg-fond p-3">
+                    <div>
+                      <label :for="`type-decision-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">Effet de la decision</label>
+                      <select
+                        :id="`type-decision-${conflit.id}`"
+                        v-model="typeDecisionParConflit[conflit.id]"
+                        class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
+                      >
+                        <option value="LEVEE_SIMPLE">Levee simple (restaure le statut anterieur)</option>
+                        <option value="ANNULATION_VENTE">Annulation de la vente en cours</option>
+                        <option value="TRANSFERT_FORCE">Transfert force de propriete</option>
+                      </select>
+                    </div>
+                    <div v-if="typeDecisionParConflit[conflit.id] === 'TRANSFERT_FORCE'">
+                      <label :for="`nouveau-proprietaire-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">
+                        Nom du proprietaire designe par la decision
+                      </label>
+                      <input
+                        :id="`nouveau-proprietaire-${conflit.id}`"
+                        v-model="nouveauProprietaireParConflit[conflit.id]"
+                        class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
+                      />
+                    </div>
+                    <div>
+                      <label :for="`motif-levee-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">
+                        Motif de la levee (obligatoire)
+                      </label>
+                      <textarea
+                        :id="`motif-levee-${conflit.id}`"
+                        v-model="motifLeveeParConflit[conflit.id]"
+                        rows="2"
+                        placeholder="Ex. litige resolu par jugement du..."
+                        class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
+                      />
+                    </div>
+                    <div>
+                      <label :for="`fichier-decision-${conflit.id}`" class="mb-1 block text-xs font-medium text-texte">
+                        Document de la decision (optionnel)
+                      </label>
+                      <input
+                        :id="`fichier-decision-${conflit.id}`"
+                        type="file"
+                        class="w-full text-xs text-texte"
+                        @change="surChoixFichierDecision(conflit.id, $event)"
+                      />
+                    </div>
+                    <p class="text-xs text-texte-attenue">Confirmez-vous la levee du gel sur {{ conflit.parcelle.nup }} ?</p>
+                    <div class="flex gap-2">
+                      <BaseButton taille="sm" @click="confirmerLevee(conflit.id)">Oui, lever le gel</BaseButton>
+                      <BaseButton variant="secondaire" taille="sm" @click="conflitEnLevee = null">Annuler</BaseButton>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
