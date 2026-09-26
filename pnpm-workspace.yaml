@@ -2,9 +2,15 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
+  # @google/genai: script "prepare" absent du tarball publie (present dans le repo source
+  # uniquement) - rien a executer, ignore plutot que de risquer un echec MODULE_NOT_FOUND.
+  '@google/genai': false
   '@nestjs/core': true
   '@prisma/client': true
   '@prisma/engines': true
   esbuild: true
   prisma: true
+  # protobufjs: postinstall purement informatif (verifie une convention de version), verifie
+  # son contenu avant d'autoriser - aucun risque.
+  protobufjs: true
   vue-demi: true

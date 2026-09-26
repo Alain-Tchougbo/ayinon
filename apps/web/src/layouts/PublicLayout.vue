@@ -4,6 +4,7 @@ import type { LangueAssistantVocal } from "@ayinon/shared";
 import { onMounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 import VoiceAssistantButton from "../components/accessibility/VoiceAssistantButton.vue";
+import ChatbotWidget from "../components/chatbot/ChatbotWidget.vue";
 import { useOnlineStatus } from "../composables/useOnlineStatus";
 import { useVoiceAssistant } from "../composables/useVoiceAssistant";
 import { LANGUES } from "../voice/langues";
@@ -206,6 +207,7 @@ watch(() => route.fullPath, () => (menuMobileOuvert.value = false));
     </main>
 
     <VoiceAssistantButton />
+    <ChatbotWidget />
 
     <footer class="border-t border-bordure bg-surface px-4 py-4 pb-20 text-center text-xs text-texte-attenue sm:pb-4">
       AYINON — Le Gardien Numerique de la Terre · Republique du Benin ·

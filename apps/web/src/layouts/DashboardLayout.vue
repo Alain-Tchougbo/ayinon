@@ -31,6 +31,7 @@ import { RoleUtilisateur, type LangueAssistantVocal } from "@ayinon/shared";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import VoiceAssistantButton from "../components/accessibility/VoiceAssistantButton.vue";
+import ChatbotWidget from "../components/chatbot/ChatbotWidget.vue";
 import { useNotifications } from "../composables/useNotifications";
 import { useOnlineStatus } from "../composables/useOnlineStatus";
 import { useVoiceAssistant } from "../composables/useVoiceAssistant";
@@ -413,5 +414,6 @@ function rechercherRapide() {
     </div>
 
     <VoiceAssistantButton />
+    <ChatbotWidget />
   </div>
 </template>
