@@ -259,7 +259,7 @@ function chargerNotificationsLues() {
   }
 }
 
-/** Liste reelle de notifications, une entree par evenement effectivement charge sur cette page —
+/** Liste reelle de notifications, une entree par evenement effectivement charge sur cette page -
  * jamais une liste inventee. Le CITOYEN n'a pas de flux dans useNotifications() (pas de role
  * regalien a valider) : on utilise a la place ses propres signalements qualifies et le rappel de
  * verrouillage. L'ACHETEUR beneficie en plus des alertes reelles de recherche sauvegardee (E3.2,
@@ -430,7 +430,7 @@ const raccourcis = computed(() => {
 
 <template>
   <!-- Visiteur non connecte : hero publique plein cadre, carte du Benin en fond (voir
-       HeroCarteBenin.vue) — hors du conteneur max-w-5xl pour occuper toute la largeur. Occupe
+       HeroCarteBenin.vue) - hors du conteneur max-w-5xl pour occuper toute la largeur. Occupe
        tout le premier ecran : 100vh moins la hauteur du bandeau + de l'en-tete (6rem, sticky). -->
   <section v-if="!auth.estConnecte" class="relative h-[calc(100vh-6rem)] min-h-[28rem] overflow-hidden">
     <HeroCarteBenin />
@@ -441,7 +441,7 @@ const raccourcis = computed(() => {
         Retrouvez votre terrain en toute serenite.
       </h1>
       <p class="mt-3 max-w-lg text-sm text-white/85 [text-shadow:0_1px_10px_rgba(0,0,0,.3)]">
-        Localisation exacte, limites certifiees, statut a jour — votre parcelle, en un instant.
+        Localisation exacte, limites certifiees, statut a jour - votre parcelle, en un instant.
       </p>
 
       <form
@@ -466,7 +466,7 @@ const raccourcis = computed(() => {
     <div class="pointer-events-auto absolute bottom-8 left-8 z-10 hidden max-w-xs rounded-carte bg-surface p-6 shadow-flottant sm:block">
       <span class="inline-block rounded-full bg-primaire/10 px-2.5 py-1 text-xs font-bold text-primaire">Situation controlee ANDF</span>
       <h3 class="mt-2.5 font-affichage text-base font-bold text-texte">BJ-LIT-COT-0014</h3>
-      <p class="mt-0.5 text-sm text-texte-attenue">Cotonou, Akpakpa — 450 m²</p>
+      <p class="mt-0.5 text-sm text-texte-attenue">Cotonou, Akpakpa - 450 m²</p>
       <a href="#" class="mt-3 inline-block text-sm font-bold text-primaire" @click.prevent>Voir le dossier complet →</a>
     </div>
   </section>
@@ -640,7 +640,7 @@ const raccourcis = computed(() => {
         <ul v-else class="grid gap-3 sm:grid-cols-2">
           <li v-for="a in mesAnnonces" :key="a.id">
             <BaseCard to="/vendre" rembourrage="sm">
-              <p class="font-medium text-texte">{{ a.parcelle.nup }} — {{ a.parcelle.commune }}</p>
+              <p class="font-medium text-texte">{{ a.parcelle.nup }} - {{ a.parcelle.commune }}</p>
               <p class="mt-0.5 text-xs text-texte-attenue">
                 {{ a.interets.filter((i) => i.statut === "EN_ATTENTE").length }} interet(s) en attente
               </p>
@@ -659,8 +659,8 @@ const raccourcis = computed(() => {
         <ul class="space-y-2">
           <li v-for="p in propositionsCession" :key="p.id">
             <BaseCard to="/acheter" accentue="accent" rembourrage="sm">
-              <p class="font-medium text-texte">{{ p.parcelle.nup }} — {{ p.parcelle.commune }}</p>
-              <p class="mt-0.5 text-xs text-texte-attenue">Proposee par {{ p.vendeurNom }} — {{ p.montantFcfa.toLocaleString("fr-FR") }} FCFA</p>
+              <p class="font-medium text-texte">{{ p.parcelle.nup }} - {{ p.parcelle.commune }}</p>
+              <p class="mt-0.5 text-xs text-texte-attenue">Proposee par {{ p.vendeurNom }} - {{ p.montantFcfa.toLocaleString("fr-FR") }} FCFA</p>
             </BaseCard>
           </li>
         </ul>
@@ -675,7 +675,7 @@ const raccourcis = computed(() => {
         <ul class="space-y-2">
           <li v-for="i in mesInterets.filter((x) => x.statut === 'RETENU')" :key="i.id">
             <BaseCard :to="`/annonces/${i.annonce.id}`" accentue="succes" rembourrage="sm">
-              <p class="font-medium text-texte">{{ i.annonce.parcelle.nup }} — {{ i.annonce.parcelle.commune }}</p>
+              <p class="font-medium text-texte">{{ i.annonce.parcelle.nup }} - {{ i.annonce.parcelle.commune }}</p>
               <p class="mt-0.5 text-xs text-texte-attenue">Cession en cours de validation ANDF</p>
             </BaseCard>
           </li>
@@ -695,7 +695,7 @@ const raccourcis = computed(() => {
         <ul v-else class="space-y-2">
           <li v-for="s in mesSignatures" :key="s.id">
             <BaseCard :to="`/famille?parcelle=${s.parcelle.id}`" accentue="accent" rembourrage="sm">
-              <p class="font-medium text-texte">{{ s.parcelle.nup }} — {{ s.parcelle.commune }}</p>
+              <p class="font-medium text-texte">{{ s.parcelle.nup }} - {{ s.parcelle.commune }}</p>
               <p class="mt-0.5 text-xs text-texte-attenue">Signature requise en tant que {{ s.role }}</p>
             </BaseCard>
           </li>
@@ -715,7 +715,7 @@ const raccourcis = computed(() => {
             <BaseCard rembourrage="sm">
               <div class="flex items-center justify-between gap-2">
                 <div>
-                  <p class="font-medium text-texte">{{ i.parcelle.nup }} — {{ i.parcelle.commune }}</p>
+                  <p class="font-medium text-texte">{{ i.parcelle.nup }} - {{ i.parcelle.commune }}</p>
                   <p class="text-xs text-texte-attenue">Dossier {{ i.referenceDossier }} · {{ new Date(i.createdAt).toLocaleDateString("fr-FR") }}</p>
                 </div>
                 <span
@@ -742,8 +742,8 @@ const raccourcis = computed(() => {
         <ul v-else class="space-y-2">
           <li v-for="c in conflitsActifs" :key="c.id">
             <BaseCard accentue="danger" rembourrage="sm">
-              <p class="font-medium text-texte">{{ c.parcelle.nup }} — {{ c.parcelle.commune }}</p>
-              <p class="mt-0.5 text-xs text-texte-attenue">{{ c.motif }} — gele le {{ new Date(c.dateGel).toLocaleDateString("fr-FR") }}</p>
+              <p class="font-medium text-texte">{{ c.parcelle.nup }} - {{ c.parcelle.commune }}</p>
+              <p class="mt-0.5 text-xs text-texte-attenue">{{ c.motif }} - gele le {{ new Date(c.dateGel).toLocaleDateString("fr-FR") }}</p>
             </BaseCard>
           </li>
         </ul>

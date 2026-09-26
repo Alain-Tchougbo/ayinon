@@ -95,7 +95,7 @@ async function basculerVerrou(parcelleId: string, verrouActuel: boolean) {
             <tr class="align-top">
               <td class="px-4 py-3">
                 <p class="font-semibold text-texte">{{ parcelle.nup }}</p>
-                <p class="text-xs text-texte-attenue">{{ parcelle.commune }} — {{ parcelle.superficieM2.toLocaleString("fr-FR") }} m²</p>
+                <p class="text-xs text-texte-attenue">{{ parcelle.commune }} - {{ parcelle.superficieM2.toLocaleString("fr-FR") }} m²</p>
               </td>
               <td class="whitespace-nowrap px-4 py-3">
                 <span
@@ -124,7 +124,7 @@ async function basculerVerrou(parcelleId: string, verrouActuel: boolean) {
       @update:model-value="fermerModal"
     >
       <div v-if="parcelleActiveObjet" class="space-y-3">
-        <p class="text-sm text-texte-attenue">{{ parcelleActiveObjet.nup }} — {{ parcelleActiveObjet.commune }}</p>
+        <p class="text-sm text-texte-attenue">{{ parcelleActiveObjet.nup }} - {{ parcelleActiveObjet.commune }}</p>
         <BaseInput id="code-otp" v-model="codeOtp" label="Code a 6 chiffres" :maxlength="6" placeholder="000000" />
         <p v-if="codeOtpDemande" class="text-xs text-texte-attenue">(demo : code = {{ codeOtpDemande }})</p>
         <p v-if="message" class="text-xs text-texte-attenue" role="status">{{ message }}</p>

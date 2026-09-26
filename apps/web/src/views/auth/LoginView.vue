@@ -76,7 +76,7 @@ async function seConnecter() {
           <button type="button" class="min-h-0 font-medium text-primaire underline underline-offset-2" @click="email = compte.email">
             {{ compte.email }}
           </button>
-          — {{ compte.label }}
+          - {{ compte.label }}
         </li>
       </ul>
     </div>

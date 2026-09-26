@@ -100,12 +100,12 @@ async function suspendreAnnonce(id: string) {
               <td class="px-4 py-3">
                 <p class="flex items-center gap-1.5 font-medium text-texte">
                   <TriangleAlert :size="13" class="text-danger" aria-hidden="true" />
-                  {{ a.parcelle.nup }} — {{ a.parcelle.commune }}
+                  {{ a.parcelle.nup }} - {{ a.parcelle.commune }}
                 </p>
                 <p class="mt-0.5 text-xs text-texte-attenue">Publiee par {{ a.publieePar.nomComplet }} le {{ new Date(a.createdAt).toLocaleDateString("fr-FR") }}</p>
               </td>
               <td class="px-4 py-3 text-sm text-texte">
-                {{ a.prixParM2.toLocaleString("fr-FR") }} FCFA/m² —
+                {{ a.prixParM2.toLocaleString("fr-FR") }} FCFA/m² -
                 {{ a.deviationPourcentage > 0 ? "+" : "" }}{{ a.deviationPourcentage }}% par rapport a la moyenne communale
                 ({{ a.moyenneCommuneFcfaParM2.toLocaleString("fr-FR") }} FCFA/m²)
               </td>

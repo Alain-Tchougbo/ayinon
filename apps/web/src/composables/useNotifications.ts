@@ -48,7 +48,7 @@ export function useNotifications() {
             .map((i) => ({
               id: `interet-${i.id}`,
               titre: `Interet de ${i.acheteur.nomComplet}`,
-              sousTitre: `${a.parcelle.nup} — ${a.parcelle.commune}`,
+              sousTitre: `${a.parcelle.nup} - ${a.parcelle.commune}`,
               lien: "/vendre",
             })),
         );
@@ -57,7 +57,7 @@ export function useNotifications() {
           .map((v) => ({
             id: `visite-${v.id}`,
             titre: `Visite demandee par ${v.acheteur.nomComplet}`,
-            sousTitre: `${v.annonce.parcelle.nup} — ${v.annonce.parcelle.commune}`,
+            sousTitre: `${v.annonce.parcelle.nup} - ${v.annonce.parcelle.commune}`,
             lien: "/vendre",
           }));
         items.value = [...interets, ...visites];
@@ -87,13 +87,13 @@ export function useNotifications() {
           .map((i) => ({
             id: `interet-${i.id}`,
             titre: "Votre interet a ete retenu",
-            sousTitre: `${i.annonce.parcelle.nup} — ${i.annonce.parcelle.commune}`,
+            sousTitre: `${i.annonce.parcelle.nup} - ${i.annonce.parcelle.commune}`,
             lien: "/acheter",
           }));
         const propositions = propositionsRecues.map((c) => ({
           id: `proposition-${c.id}`,
           titre: `Proposition de cession de ${c.vendeurNom}`,
-          sousTitre: `${c.parcelle.nup} — ${c.parcelle.commune}`,
+          sousTitre: `${c.parcelle.nup} - ${c.parcelle.commune}`,
           lien: "/acheter",
         }));
         const reprogrammations = mesVisites
@@ -101,7 +101,7 @@ export function useNotifications() {
           .map((v) => ({
             id: `visite-${v.id}`,
             titre: "Nouvelle date de visite proposee",
-            sousTitre: `${v.annonce.parcelle.nup} — ${v.annonce.parcelle.commune}`,
+            sousTitre: `${v.annonce.parcelle.nup} - ${v.annonce.parcelle.commune}`,
             lien: "/acheter",
           }));
         items.value = [...retenus, ...propositions, ...reprogrammations];
@@ -114,7 +114,7 @@ export function useNotifications() {
         items.value = signatures.map((s) => ({
           id: `signature-${s.id}`,
           titre: "Signature requise",
-          sousTitre: `${s.parcelle.nup} — ${s.parcelle.commune}`,
+          sousTitre: `${s.parcelle.nup} - ${s.parcelle.commune}`,
           lien: "/famille",
         }));
       } else if (auth.role === RoleUtilisateur.AGENT_ANDF || auth.role === RoleUtilisateur.ADMIN) {
@@ -128,7 +128,7 @@ export function useNotifications() {
         items.value = aValider.map((c) => ({
           id: `cession-${c.id}`,
           titre: `Cession de ${c.vendeurNom} vers ${c.acquereurNom}`,
-          sousTitre: `${c.parcelle.nup} — ${c.parcelle.commune}`,
+          sousTitre: `${c.parcelle.nup} - ${c.parcelle.commune}`,
           lien: "/andf/cessions",
         }));
       } else if (auth.role === RoleUtilisateur.MAGISTRAT_CSAF) {
@@ -141,7 +141,7 @@ export function useNotifications() {
         items.value = conflits.map((c) => ({
           id: `conflit-${c.id}`,
           titre: c.motif,
-          sousTitre: `${c.parcelle.nup} — ${c.parcelle.commune}`,
+          sousTitre: `${c.parcelle.nup} - ${c.parcelle.commune}`,
           lien: "/csaf",
         }));
       } else {

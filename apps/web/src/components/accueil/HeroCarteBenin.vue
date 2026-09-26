@@ -7,7 +7,7 @@ import { onBeforeUnmount, onMounted, ref } from "vue";
 /**
  * Fond decoratif de la hero publique : meme fond OSM raster que MapCadastral.vue (aucune cle
  * requise), pour une coherence visuelle entre cet apercu et le vrai outil cartographique en
- * /carte. Aucune donnee de parcelle ici — uniquement le contour national, pour situer le propos
+ * /carte. Aucune donnee de parcelle ici - uniquement le contour national, pour situer le propos
  * avant que le visiteur ne recherche une parcelle precise.
  */
 const STYLE_FOND: StyleSpecification = {
@@ -93,7 +93,7 @@ onMounted(() => {
         { padding: { top: 280, bottom: 40, left: 40, right: 40 }, duration: 0 },
       );
     } catch (erreur) {
-      console.error("HeroCarteBenin: repli sur centre fixe —", erreur);
+      console.error("HeroCarteBenin: repli sur centre fixe -", erreur);
       // Repli honnete si le contour local est indisponible : au moins centre sur le Benin.
       carte.setCenter([2.35, 9.3]);
       carte.setZoom(6.4);
@@ -117,7 +117,7 @@ onBeforeUnmount(() => {
     ref="conteneur"
     class="h-full w-full"
     role="application"
-    aria-label="Carte du Benin (apercu) — recherchez votre parcelle ci-dessus pour l'outil complet"
+    aria-label="Carte du Benin (apercu) - recherchez votre parcelle ci-dessus pour l'outil complet"
     @click="activerMolette"
     @mouseleave="desactiverMolette"
   />

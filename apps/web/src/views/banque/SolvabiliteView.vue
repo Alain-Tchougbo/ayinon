@@ -230,7 +230,7 @@ async function lever(hypothequeId: string) {
           <tbody class="divide-y divide-bordure">
             <tr v-for="d in depotsAConfirmer" :key="d.id" class="align-top">
               <td class="px-4 py-3">
-                <p class="font-semibold text-texte">{{ d.convention.parcelle.nup }} — {{ d.convention.parcelle.commune }}</p>
+                <p class="font-semibold text-texte">{{ d.convention.parcelle.nup }} - {{ d.convention.parcelle.commune }}</p>
                 <p class="mt-0.5 text-sm text-texte-attenue">
                   {{ d.declarePar.nomComplet }} declare {{ d.montantFcfa.toLocaleString("fr-FR") }} FCFA le
                   {{ new Date(d.dateDeclaration).toLocaleDateString("fr-FR") }}
@@ -265,8 +265,8 @@ async function lever(hypothequeId: string) {
             <template v-for="d in demandesFinancement" :key="d.id">
               <tr class="align-top">
                 <td class="px-4 py-3">
-                  <p class="font-semibold text-texte">{{ d.acheteur.nomComplet }} — {{ d.montantSouhaiteFcfa.toLocaleString("fr-FR") }} FCFA souhaites</p>
-                  <p v-if="d.annonce" class="mt-0.5 text-xs text-texte-attenue">Pour {{ d.annonce.parcelle.nup }} — {{ d.annonce.parcelle.commune }}</p>
+                  <p class="font-semibold text-texte">{{ d.acheteur.nomComplet }} - {{ d.montantSouhaiteFcfa.toLocaleString("fr-FR") }} FCFA souhaites</p>
+                  <p v-if="d.annonce" class="mt-0.5 text-xs text-texte-attenue">Pour {{ d.annonce.parcelle.nup }} - {{ d.annonce.parcelle.commune }}</p>
                   <p class="mt-0.5 text-xs text-texte-attenue">Demande le {{ new Date(d.createdAt).toLocaleDateString("fr-FR") }}</p>
                   <p v-if="d.cheminDocument" class="mt-0.5 text-xs text-texte-attenue">Un justificatif a ete joint a cette demande.</p>
                 </td>
@@ -318,7 +318,7 @@ async function lever(hypothequeId: string) {
     </form>
 
     <BaseCard v-if="resultat" :accentue="resultat.eligibleCredit ? 'succes' : 'danger'">
-      <p class="font-semibold text-texte">{{ resultat.parcelle.nup }} — {{ resultat.parcelle.commune }}</p>
+      <p class="font-semibold text-texte">{{ resultat.parcelle.nup }} - {{ resultat.parcelle.commune }}</p>
       <p class="text-xs text-texte-attenue">{{ resultat.parcelle.superficieM2.toLocaleString("fr-FR") }} m²</p>
 
       <ul class="mt-3.5 space-y-1.5 border-t border-bordure pt-3 text-sm">
@@ -341,7 +341,7 @@ async function lever(hypothequeId: string) {
 
       <div v-if="resultat.hypothequesActives.length > 0" class="mt-3 space-y-1.5">
         <p v-for="h in resultat.hypothequesActives" :key="h.id" class="text-xs text-danger">
-          Gage actif : {{ h.banqueNom }} — {{ h.montantGarantiFcfa.toLocaleString("fr-FR") }} FCFA
+          Gage actif : {{ h.banqueNom }} - {{ h.montantGarantiFcfa.toLocaleString("fr-FR") }} FCFA
         </p>
       </div>
 
@@ -382,8 +382,8 @@ async function lever(hypothequeId: string) {
             <template v-for="h in mesInscriptions" :key="h.id">
               <tr class="align-top">
                 <td class="px-4 py-3">
-                  <p class="font-medium text-texte">{{ h.parcelle.nup }} — {{ h.parcelle.commune }}</p>
-                  <p class="text-xs text-texte-attenue">{{ h.montantGarantiFcfa.toLocaleString("fr-FR") }} FCFA — inscrite le {{ new Date(h.dateInscription).toLocaleDateString("fr-FR") }}</p>
+                  <p class="font-medium text-texte">{{ h.parcelle.nup }} - {{ h.parcelle.commune }}</p>
+                  <p class="text-xs text-texte-attenue">{{ h.montantGarantiFcfa.toLocaleString("fr-FR") }} FCFA - inscrite le {{ new Date(h.dateInscription).toLocaleDateString("fr-FR") }}</p>
                 </td>
                 <td class="whitespace-nowrap px-4 py-3">
                   <span
