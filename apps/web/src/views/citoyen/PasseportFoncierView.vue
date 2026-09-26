@@ -8,6 +8,7 @@ import { useParcellesStore } from "../../stores/parcelles.store";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 const auth = useAuthStore();
@@ -27,6 +28,14 @@ onMounted(async () => {
 });
 
 const mesParcelles = computed(() => parcelles.parcelles.filter((p) => p.proprietaireId === auth.utilisateur?.proprietaireId));
+const parcelleActiveObjet = computed(() => mesParcelles.value.find((p) => p.id === parcelleActive.value) ?? null);
+
+function fermerModal() {
+  parcelleActive.value = null;
+  codeOtp.value = "";
+  codeOtpDemande.value = null;
+  message.value = null;
+}
 
 async function demanderOtp(parcelleId: string) {
   erreur.value = null;
@@ -99,38 +108,38 @@ async function basculerVerrou(parcelleId: string, verrouActuel: boolean) {
                 </span>
               </td>
               <td class="px-4 py-3">
-                <BaseButton
-                  v-if="parcelleActive !== parcelle.id"
-                  taille="sm"
-                  :variant="parcelle.verrouAntiVente ? 'danger' : 'secondaire'"
-                  @click="demanderOtp(parcelle.id)"
-                >
+                <BaseButton taille="sm" :variant="parcelle.verrouAntiVente ? 'danger' : 'secondaire'" @click="demanderOtp(parcelle.id)">
                   {{ parcelle.verrouAntiVente ? "Deverrouiller" : "Verrouiller" }}
                 </BaseButton>
-              </td>
-            </tr>
-            <tr v-if="parcelleActive === parcelle.id">
-              <td colspan="3" class="bg-fond/40 px-4 py-3">
-                <div class="flex flex-wrap items-end gap-2.5">
-                  <div class="w-40">
-                    <BaseInput id="code-otp" v-model="codeOtp" label="Code a 6 chiffres" :maxlength="6" placeholder="000000" />
-                  </div>
-                  <BaseButton
-                    taille="sm"
-                    :variant="parcelle.verrouAntiVente ? 'danger' : 'primaire'"
-                    :disabled="enCours || codeOtp.length !== 6"
-                    @click="basculerVerrou(parcelle.id, parcelle.verrouAntiVente)"
-                  >
-                    Confirmer
-                  </BaseButton>
-                  <span v-if="codeOtpDemande" class="text-xs text-texte-attenue">(demo : code = {{ codeOtpDemande }})</span>
-                </div>
-                <p v-if="message" class="mt-2 text-xs text-texte-attenue" role="status">{{ message }}</p>
               </td>
             </tr>
           </template>
         </tbody>
       </table>
     </div>
+
+    <BaseModal
+      :model-value="parcelleActive !== null"
+      :titre="parcelleActiveObjet?.verrouAntiVente ? 'Deverrouiller la parcelle' : 'Verrouiller la parcelle'"
+      @update:model-value="fermerModal"
+    >
+      <div v-if="parcelleActiveObjet" class="space-y-3">
+        <p class="text-sm text-texte-attenue">{{ parcelleActiveObjet.nup }} — {{ parcelleActiveObjet.commune }}</p>
+        <BaseInput id="code-otp" v-model="codeOtp" label="Code a 6 chiffres" :maxlength="6" placeholder="000000" />
+        <p v-if="codeOtpDemande" class="text-xs text-texte-attenue">(demo : code = {{ codeOtpDemande }})</p>
+        <p v-if="message" class="text-xs text-texte-attenue" role="status">{{ message }}</p>
+        <div class="flex gap-2">
+          <BaseButton
+            taille="sm"
+            :variant="parcelleActiveObjet.verrouAntiVente ? 'danger' : 'primaire'"
+            :disabled="enCours || codeOtp.length !== 6"
+            @click="basculerVerrou(parcelleActiveObjet.id, parcelleActiveObjet.verrouAntiVente)"
+          >
+            Confirmer
+          </BaseButton>
+          <BaseButton taille="sm" variant="secondaire" @click="fermerModal">Annuler</BaseButton>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>

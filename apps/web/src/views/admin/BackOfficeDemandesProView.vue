@@ -5,6 +5,7 @@ import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface DemandePro {
@@ -101,37 +102,36 @@ async function traiterDemandePro(id: string, approuver: boolean) {
                 <p class="mt-0.5 text-xs text-texte-attenue">Demande deposee le {{ new Date(d.createdAt).toLocaleDateString("fr-FR") }}</p>
               </td>
               <td class="px-4 py-3">
-                <BaseButton v-if="traitementProEnCours !== d.id" taille="sm" @click="traitementProEnCours = d.id">Traiter</BaseButton>
-              </td>
-            </tr>
-            <tr v-if="traitementProEnCours === d.id">
-              <td colspan="3" class="bg-fond/40 px-4 py-3">
-                <div class="space-y-2 rounded-carte border border-bordure bg-fond p-3">
-                  <label :for="`motif-rejet-pro-${d.id}`" class="block text-xs font-medium text-texte">Motif du rejet (obligatoire pour rejeter)</label>
-                  <textarea
-                    :id="`motif-rejet-pro-${d.id}`"
-                    v-model="motifRejetPro"
-                    rows="2"
-                    placeholder="Ex. numero d'agrement introuvable au registre professionnel"
-                    class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                  />
-                  <div class="flex gap-2">
-                    <BaseButton taille="sm" :disabled="actionEnCours" @click="traiterDemandePro(d.id, true)">
-                      <Check :size="12" aria-hidden="true" />
-                      Approuver
-                    </BaseButton>
-                    <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="traiterDemandePro(d.id, false)">
-                      <X :size="12" aria-hidden="true" />
-                      Rejeter
-                    </BaseButton>
-                    <BaseButton taille="sm" variant="secondaire" @click="traitementProEnCours = null">Annuler</BaseButton>
-                  </div>
-                </div>
+                <BaseButton taille="sm" @click="traitementProEnCours = d.id">Traiter</BaseButton>
               </td>
             </tr>
           </template>
         </tbody>
       </table>
     </div>
+
+    <BaseModal :model-value="traitementProEnCours !== null" titre="Traiter la demande professionnelle" @update:model-value="traitementProEnCours = null">
+      <div class="space-y-2">
+        <BaseButton taille="sm" :disabled="actionEnCours" @click="traiterDemandePro(traitementProEnCours!, true)">
+          <Check :size="12" aria-hidden="true" />
+          Approuver
+        </BaseButton>
+        <div class="border-t border-bordure pt-2.5">
+          <label for="motif-rejet-pro" class="mb-1 block text-xs font-medium text-texte">Ou refuser, avec motif (obligatoire)</label>
+          <textarea
+            id="motif-rejet-pro"
+            v-model="motifRejetPro"
+            rows="2"
+            placeholder="Ex. numero d'agrement introuvable au registre professionnel"
+            class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+          />
+          <BaseButton taille="sm" variant="danger" class="mt-2" :disabled="actionEnCours" @click="traiterDemandePro(traitementProEnCours!, false)">
+            <X :size="12" aria-hidden="true" />
+            Rejeter
+          </BaseButton>
+        </div>
+        <BaseButton taille="sm" variant="secondaire" @click="traitementProEnCours = null">Annuler</BaseButton>
+      </div>
+    </BaseModal>
   </div>
 </template>

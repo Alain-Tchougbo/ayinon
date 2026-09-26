@@ -6,6 +6,7 @@ import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface ParcelleAdmin {
@@ -128,7 +129,7 @@ async function voirHistorique(parcelleId: string) {
               </td>
               <td class="px-4 py-3">
                 <div class="flex gap-2">
-                  <BaseButton v-if="editionEnCours !== p.id" taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
+                  <BaseButton taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
                     <Pencil :size="13" aria-hidden="true" />
                     Modifier
                   </BaseButton>
@@ -136,16 +137,6 @@ async function voirHistorique(parcelleId: string) {
                     <History :size="13" aria-hidden="true" />
                     {{ historiqueEnCours === p.id ? "Masquer le journal" : "Journal d'audit" }}
                   </BaseButton>
-                </div>
-              </td>
-            </tr>
-            <tr v-if="editionEnCours === p.id">
-              <td colspan="3" class="bg-fond/40 px-4 py-3">
-                <div class="flex flex-wrap items-end gap-2">
-                  <div class="w-48"><BaseInput id="commune-edition" v-model="communeEdition" label="Commune" /></div>
-                  <div class="w-48"><BaseInput id="arrondissement-edition" v-model="arrondissementEdition" label="Arrondissement" /></div>
-                  <BaseButton taille="sm" @click="enregistrerEdition(p.id)">Enregistrer</BaseButton>
-                  <BaseButton taille="sm" variant="secondaire" @click="editionEnCours = null">Annuler</BaseButton>
                 </div>
               </td>
             </tr>
@@ -170,5 +161,16 @@ async function voirHistorique(parcelleId: string) {
         </tbody>
       </table>
     </div>
+
+    <BaseModal :model-value="editionEnCours !== null" titre="Modifier la parcelle" @update:model-value="editionEnCours = null">
+      <div class="flex flex-wrap items-end gap-2">
+        <div class="w-48"><BaseInput id="commune-edition" v-model="communeEdition" label="Commune" /></div>
+        <div class="w-48"><BaseInput id="arrondissement-edition" v-model="arrondissementEdition" label="Arrondissement" /></div>
+        <div class="flex gap-2">
+          <BaseButton taille="sm" @click="enregistrerEdition(editionEnCours!)">Enregistrer</BaseButton>
+          <BaseButton taille="sm" variant="secondaire" @click="editionEnCours = null">Annuler</BaseButton>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>

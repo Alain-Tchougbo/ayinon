@@ -5,6 +5,7 @@ import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface Cession {
@@ -97,7 +98,7 @@ async function valider(id: string, approuver: boolean) {
                 <p class="mt-0.5 text-xs text-texte-attenue">Acceptee le {{ new Date(c.dateAcceptation).toLocaleDateString("fr-FR") }}</p>
               </td>
               <td class="px-4 py-3">
-                <div v-if="rejetEnCoursId !== c.id" class="flex gap-2">
+                <div class="flex gap-2">
                   <BaseButton taille="sm" @click="valider(c.id, true)">
                     <Award :size="14" aria-hidden="true" />
                     Valider et delivrer le titre
@@ -109,27 +110,26 @@ async function valider(id: string, approuver: boolean) {
                 </div>
               </td>
             </tr>
-            <tr v-if="rejetEnCoursId === c.id">
-              <td colspan="2" class="bg-fond/40 px-4 py-3">
-                <div class="space-y-2 rounded-carte border border-bordure bg-fond p-3">
-                  <label :for="`motif-rejet-${c.id}`" class="block text-xs font-medium text-texte">Motif du rejet (obligatoire)</label>
-                  <textarea
-                    :id="`motif-rejet-${c.id}`"
-                    v-model="motifRejetParCession[c.id]"
-                    rows="2"
-                    placeholder="Ex. incoherence avec le registre cadastral"
-                    class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                  />
-                  <div class="flex gap-2">
-                    <BaseButton taille="sm" variant="danger" @click="valider(c.id, false)">Confirmer le rejet</BaseButton>
-                    <BaseButton taille="sm" variant="secondaire" @click="rejetEnCoursId = null">Annuler</BaseButton>
-                  </div>
-                </div>
-              </td>
-            </tr>
           </template>
         </tbody>
       </table>
     </div>
+
+    <BaseModal :model-value="rejetEnCoursId !== null" titre="Rejeter la cession" @update:model-value="rejetEnCoursId = null">
+      <div class="space-y-2">
+        <label for="motif-rejet" class="block text-xs font-medium text-texte">Motif du rejet (obligatoire)</label>
+        <textarea
+          id="motif-rejet"
+          v-model="motifRejetParCession[rejetEnCoursId ?? '']"
+          rows="3"
+          placeholder="Ex. incoherence avec le registre cadastral"
+          class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+        />
+        <div class="flex gap-2">
+          <BaseButton taille="sm" variant="danger" @click="valider(rejetEnCoursId!, false)">Confirmer le rejet</BaseButton>
+          <BaseButton taille="sm" variant="secondaire" @click="rejetEnCoursId = null">Annuler</BaseButton>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>
