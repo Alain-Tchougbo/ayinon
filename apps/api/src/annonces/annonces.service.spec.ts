@@ -62,6 +62,9 @@ function creerService(options: {
       findFirst: async ({ where }: any) =>
         options.parcellesLimitesCertifiees?.includes(where.parcelleId) ? { id: `plan-${where.parcelleId}` } : null,
     },
+    // Centroid PostGIS reel de la parcelle (voir AnnoncesService.avecBadges) : peu importe la
+    // valeur exacte ici, seul un tableau de la bonne forme est attendu par l'appelant.
+    $queryRaw: async () => [{ lng: 2.39, lat: 6.37 }],
     $transaction: async (ops: unknown[]) => Promise.all(ops as any),
   };
 
