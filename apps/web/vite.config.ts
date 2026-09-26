@@ -37,7 +37,7 @@ export default defineConfig({
       },
       manifest: {
         id: "/",
-        name: "AYINON — Le Gardien Numerique de la Terre",
+        name: "AYINON - Le Gardien Numerique de la Terre",
         short_name: "AYINON",
         description: "Plateforme de securisation et gouvernance fonciere de la Republique du Benin",
         start_url: "/",

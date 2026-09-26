@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LogIn, Shield } from "@lucide/vue";
+import { LogIn } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import BaseButton from "../../components/ui/BaseButton.vue";
@@ -47,7 +47,10 @@ async function seConnecter() {
   <div class="mx-auto max-w-md px-4 py-14">
     <div class="mb-6 flex flex-col items-center text-center">
       <span class="flex h-12 w-12 items-center justify-center rounded-carte bg-primaire text-primaire-contraste">
-        <Shield :size="24" aria-hidden="true" />
+        <svg viewBox="0 0 32 32" fill="none" class="h-6 w-6" aria-hidden="true">
+          <path d="M6 22L10 8L24 6L27 20L16 27Z" stroke="#F2A93B" stroke-width="1.6" stroke-linejoin="round" />
+          <circle cx="10" cy="8" r="1.6" fill="#F2A93B" />
+        </svg>
       </span>
       <h1 class="mt-3 text-xl font-bold text-texte">Connexion</h1>
     </div>
