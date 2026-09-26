@@ -1,11 +1,15 @@
 import { Body, Controller, Get, Param, Patch } from "@nestjs/common";
 import {
   ModifierParcelleAdminSchema,
+  ModifierProprietaireSchema,
   RoleUtilisateur,
   SuspendreAnnonceSchema,
+  SuspendreUtilisateurSchema,
   TraiterDemandeProSchema,
   type ModifierParcelleAdminDto,
+  type ModifierProprietaireDto,
   type SuspendreAnnonceDto,
+  type SuspendreUtilisateurDto,
   type TraiterDemandeProDto,
 } from "@ayinon/shared";
 import { CurrentUser, type UtilisateurAuthentifie } from "../common/decorators/current-user.decorator";
@@ -37,6 +41,24 @@ export class AdminController {
   @Get("proprietaires")
   async listerProprietaires() {
     return this.admin.listerProprietaires();
+  }
+
+  @Patch("proprietaires/:id")
+  async modifierProprietaire(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(ModifierProprietaireSchema)) dto: ModifierProprietaireDto,
+    @CurrentUser() utilisateur: UtilisateurAuthentifie,
+  ) {
+    return this.admin.modifierProprietaire(id, dto, utilisateur);
+  }
+
+  @Patch("utilisateurs/:id/statut")
+  async suspendreUtilisateur(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(SuspendreUtilisateurSchema)) dto: SuspendreUtilisateurDto,
+    @CurrentUser() utilisateur: UtilisateurAuthentifie,
+  ) {
+    return this.admin.suspendreUtilisateur(id, dto, utilisateur);
   }
 
   @Get("documents")

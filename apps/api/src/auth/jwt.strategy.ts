@@ -31,6 +31,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!utilisateur) {
       throw new UnauthorizedException("Utilisateur introuvable");
     }
+    if (utilisateur.compteSuspenduLe) {
+      throw new UnauthorizedException("Compte suspendu");
+    }
     return {
       id: utilisateur.id,
       email: utilisateur.email,

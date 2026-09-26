@@ -132,6 +132,9 @@ enum TypeOperationAudit {
   VALIDATION_BATI
   REJET_BATI
   VALIDATION_USAGE_SOL
+  SUSPENSION_COMPTE
+  REACTIVATION_COMPTE
+  MODIFICATION_ADMIN_PROPRIETAIRE
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
@@ -328,6 +331,15 @@ model Utilisateur {
   valideParId         String?
   validePar           Utilisateur?        @relation("ValidationProAdmin", fields: [valideParId], references: [id])
   comptesProValides   Utilisateur[]       @relation("ValidationProAdmin")
+
+  /// Suspension de compte par un admin (back-office, "Utilisateurs") : bloque la connexion tant
+  /// que non nul, motif obligatoire, journalisee (voir AdminService.suspendreUtilisateur). Un
+  /// horodatage plutot qu'un simple booleen, comme retireeLe sur Annonce.
+  compteSuspenduLe      DateTime?
+  motifSuspensionCompte String?
+  suspenduParId         String?
+  suspenduPar           Utilisateur?  @relation("SuspensionCompteAdmin", fields: [suspenduParId], references: [id])
+  comptesSuspendus      Utilisateur[] @relation("SuspensionCompteAdmin")
 
   @@index([role])
   @@index([statutValidationPro])

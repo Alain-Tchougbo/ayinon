@@ -6,7 +6,9 @@ import {
   StatutValidationPro,
   TypeOperationAudit,
   type ModifierParcelleAdminDto,
+  type ModifierProprietaireDto,
   type SuspendreAnnonceDto,
+  type SuspendreUtilisateurDto,
   type TraiterDemandeProDto,
 } from "@ayinon/shared";
 import type { UtilisateurAuthentifie } from "../common/decorators/current-user.decorator";
@@ -14,11 +16,14 @@ import { CryptoAuditService } from "../crypto-audit/crypto-audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 /**
- * Back-office minimal : vue d'ensemble et gestion de contenu de base (utilisateurs, proprietaires,
- * parcelles, documents) pour le role ADMIN. Volontairement en lecture seule sauf pour les champs
- * declaratifs d'une parcelle (commune/arrondissement) : le statut cadastral, lui, reste pilote
- * exclusivement par les workflows metier dedies (cession, gel CSAF, import geometre) pour ne jamais
- * court-circuiter leurs garde-fous depuis un simple formulaire d'admin.
+ * Back-office : vue d'ensemble et gestion de contenu (utilisateurs, proprietaires, parcelles,
+ * documents) pour le role ADMIN. Chaque section expose l'action reellement pertinente pour son
+ * entite (suspension de compte, correction de contact proprietaire, champs declaratifs d'une
+ * parcelle) : le statut cadastral d'une parcelle, lui, reste pilote exclusivement par les
+ * workflows metier dedies (cession, gel CSAF, import geometre) pour ne jamais court-circuiter
+ * leurs garde-fous depuis un simple formulaire d'admin ; de meme, conventions/titres restent en
+ * lecture seule (avec acces au journal d'audit) pour ne jamais permettre de reecrire un document
+ * juridique apres coup — l'integrite de ce registre est le socle anti-fraude de la plateforme.
  */
 @Injectable()
 export class AdminService {
@@ -55,17 +60,59 @@ export class AdminService {
 
   async listerUtilisateurs() {
     return this.prisma.utilisateur.findMany({
-      select: { id: true, email: true, role: true, nomComplet: true, telephone: true, poleTerritorial: true, createdAt: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        nomComplet: true,
+        telephone: true,
+        poleTerritorial: true,
+        createdAt: true,
+        compteSuspenduLe: true,
+        motifSuspensionCompte: true,
+      },
       orderBy: { createdAt: "desc" },
     });
+  }
+
+  /** Suspend ou reactive un compte : bloque/debloque la connexion (voir AuthService.connexion et
+   * JwtStrategy.validate, qui revalident a chaque requete). Un admin ne peut pas se suspendre
+   * lui-meme, ce qui laisserait la plateforme sans administrateur actif si c'etait le dernier. */
+  async suspendreUtilisateur(id: string, dto: SuspendreUtilisateurDto, admin: UtilisateurAuthentifie) {
+    if (id === admin.id) {
+      throw new BadRequestException("Vous ne pouvez pas suspendre votre propre compte");
+    }
+    const utilisateur = await this.prisma.utilisateur.findUnique({ where: { id } });
+    if (!utilisateur) {
+      throw new NotFoundException("Compte introuvable");
+    }
+    if (dto.suspendre && !dto.motif) {
+      throw new BadRequestException("Un motif est requis pour suspendre un compte");
+    }
+
+    const misAJour = await this.prisma.utilisateur.update({
+      where: { id },
+      data: dto.suspendre
+        ? { compteSuspenduLe: new Date(), motifSuspensionCompte: dto.motif, suspenduParId: admin.id }
+        : { compteSuspenduLe: null, motifSuspensionCompte: null, suspenduParId: null },
+      select: { id: true, email: true, nomComplet: true, role: true, compteSuspenduLe: true },
+    });
+
+    await this.cryptoAudit.enregistrer({
+      typeOperation: dto.suspendre ? TypeOperationAudit.SUSPENSION_COMPTE : TypeOperationAudit.REACTIVATION_COMPTE,
+      acteurId: admin.id,
+      roleActeur: admin.role as RoleUtilisateur,
+      payload: { compteId: id, motif: dto.motif ?? null },
+    });
+
+    return misAJour;
   }
 
   /** E3.9 : detection de comptes potentiellement lies. Seul le critere "meme numero de telephone
    * sur plusieurs comptes" est verifiable ici : `telephone` n'est pas contraint unique (a la
    * difference de `email`), donc un meme numero peut legitimement se retrouver sur plusieurs
-   * comptes sans qu'aucune regle metier ne l'empeche aujourd'hui. Purement une liste a revoir,
-   * en lecture seule : aucune action de fusion/suspension de compte n'existe sur la plateforme,
-   * pour aucun role, pas seulement ici (voir docs/decisions.md). */
+   * comptes sans qu'aucune regle metier ne l'empeche aujourd'hui. L'admin peut agir directement
+   * depuis cette liste via la suspension de compte (voir suspendreUtilisateur). */
   async comptesLiesParTelephone() {
     const comptes = await this.prisma.utilisateur.findMany({
       where: { telephone: { not: null } },
@@ -98,15 +145,43 @@ export class AdminService {
     return proprietaires.map(({ _count, ...p }) => ({ ...p, nombreParcelles: _count.parcelles }));
   }
 
+  /** Correction de coordonnees de contact (ex. faute de frappe signalee) : jamais la propriete
+   * des parcelles elle-meme, qui reste pilotee par les workflows de cession dedies. */
+  async modifierProprietaire(id: string, dto: ModifierProprietaireDto, admin: UtilisateurAuthentifie) {
+    const proprietaire = await this.prisma.proprietaire.findUnique({ where: { id } });
+    if (!proprietaire) {
+      throw new NotFoundException("Proprietaire introuvable");
+    }
+
+    const misAJour = await this.prisma.proprietaire.update({ where: { id }, data: dto });
+
+    await this.cryptoAudit.enregistrer({
+      typeOperation: TypeOperationAudit.MODIFICATION_ADMIN_PROPRIETAIRE,
+      acteurId: admin.id,
+      roleActeur: admin.role as RoleUtilisateur,
+      payload: { proprietaireId: id, champsModifies: dto },
+    });
+
+    return misAJour;
+  }
+
   async listerDocuments() {
     const [conventions, titres] = await Promise.all([
       this.prisma.convention.findMany({
-        select: { id: true, vendeurNom: true, acquereurNom: true, montantFcfa: true, statutCession: true, createdAt: true, parcelle: { select: { nup: true } } },
+        select: {
+          id: true,
+          vendeurNom: true,
+          acquereurNom: true,
+          montantFcfa: true,
+          statutCession: true,
+          createdAt: true,
+          parcelle: { select: { id: true, nup: true } },
+        },
         orderBy: { createdAt: "desc" },
         take: 50,
       }),
       this.prisma.titre.findMany({
-        select: { id: true, numeroTitre: true, dateDelivrance: true, parcelle: { select: { nup: true } } },
+        select: { id: true, numeroTitre: true, dateDelivrance: true, parcelle: { select: { id: true, nup: true } } },
         orderBy: { dateDelivrance: "desc" },
         take: 50,
       }),

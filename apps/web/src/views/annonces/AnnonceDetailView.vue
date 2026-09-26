@@ -425,7 +425,14 @@ function formaterDate(date: string): string {
   --disp: "Fraunces", serif;
   --sans: "Work Sans", sans-serif;
 
-  min-height: 100%;
+  /* flex: 1 0 auto (pas min-height: 100%) : le parent est un flex-column (voir <main> dans
+     DashboardLayout.vue/PublicLayout.vue) dont la hauteur est fixe. Un pourcentage de hauteur sur
+     un flex-item avec flex-basis:auto s'est retrouve plafonne a la hauteur du conteneur au lieu de
+     grandir avec le contenu, faisant apparaitre le pied de page PAR-DESSUS la fin reelle du
+     contenu (verifie : chevauchement mesure de ~16px avec .liste-proprietaires). flex-grow:1 remplit
+     l'espace quand le contenu est court, flex-shrink:0 empeche toute compression sous sa vraie
+     hauteur quand le contenu est long. */
+  flex: 1 0 auto;
   font-family: var(--sans);
   background: var(--ivoire);
   color: rgb(var(--color-texte));
