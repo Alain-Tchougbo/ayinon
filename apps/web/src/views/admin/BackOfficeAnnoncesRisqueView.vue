@@ -5,6 +5,7 @@ import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface AnnonceARisque {
@@ -109,32 +110,31 @@ async function suspendreAnnonce(id: string) {
                 ({{ a.moyenneCommuneFcfaParM2.toLocaleString("fr-FR") }} FCFA/m²)
               </td>
               <td class="px-4 py-3">
-                <BaseButton v-if="suspensionEnCours !== a.id" taille="sm" variant="secondaire" @click="suspensionEnCours = a.id">
+                <BaseButton taille="sm" variant="secondaire" @click="suspensionEnCours = a.id">
                   Mettre en revue
                 </BaseButton>
-              </td>
-            </tr>
-            <tr v-if="suspensionEnCours === a.id">
-              <td colspan="3" class="bg-fond/40 px-4 py-3">
-                <div class="space-y-2 rounded-carte border border-bordure bg-fond p-3">
-                  <label :for="`motif-suspension-${a.id}`" class="block text-xs font-medium text-texte">Motif de la suspension (obligatoire)</label>
-                  <textarea
-                    :id="`motif-suspension-${a.id}`"
-                    v-model="motifSuspension"
-                    rows="2"
-                    placeholder="Ex. prix trois fois superieur a la moyenne communale constatee, sans justification apparente"
-                    class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-                  />
-                  <div class="flex gap-2">
-                    <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="suspendreAnnonce(a.id)">Suspendre l'annonce</BaseButton>
-                    <BaseButton taille="sm" variant="secondaire" @click="suspensionEnCours = null">Annuler</BaseButton>
-                  </div>
-                </div>
               </td>
             </tr>
           </template>
         </tbody>
       </table>
     </div>
+
+    <BaseModal :model-value="suspensionEnCours !== null" titre="Suspendre l'annonce" @update:model-value="suspensionEnCours = null">
+      <div class="space-y-2">
+        <label for="motif-suspension" class="block text-xs font-medium text-texte">Motif de la suspension (obligatoire)</label>
+        <textarea
+          id="motif-suspension"
+          v-model="motifSuspension"
+          rows="3"
+          placeholder="Ex. prix trois fois superieur a la moyenne communale constatee, sans justification apparente"
+          class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+        />
+        <div class="flex gap-2">
+          <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="suspendreAnnonce(suspensionEnCours!)">Suspendre l'annonce</BaseButton>
+          <BaseButton taille="sm" variant="secondaire" @click="suspensionEnCours = null">Annuler</BaseButton>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>
