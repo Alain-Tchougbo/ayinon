@@ -35,6 +35,11 @@ export class AuthService {
     if (!utilisateur.emailValide) {
       throw new UnauthorizedException("Compte non confirme : verifiez le code envoye a votre inscription");
     }
+    if (utilisateur.compteSuspenduLe) {
+      throw new UnauthorizedException(
+        `Compte suspendu${utilisateur.motifSuspensionCompte ? " : " + utilisateur.motifSuspensionCompte : ""}`,
+      );
+    }
     if (utilisateur.statutValidationPro === StatutValidationPro.EN_ATTENTE) {
       throw new UnauthorizedException("Votre compte professionnel est en attente de validation par un administrateur");
     }
@@ -119,6 +124,9 @@ export class AuthService {
     });
     if (!enregistrement) {
       throw new UnauthorizedException("Session expiree, veuillez vous reconnecter");
+    }
+    if (enregistrement.utilisateur.compteSuspenduLe) {
+      throw new UnauthorizedException("Compte suspendu");
     }
 
     await this.prisma.refreshToken.update({
