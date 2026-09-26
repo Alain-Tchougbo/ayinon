@@ -297,7 +297,7 @@ async function noter(conventionId: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
+  <div class="w-full space-y-6 p-4 sm:p-6">
     <PageHeader
       titre="Acheter un terrain"
       description="Suivez ici les annonces sur lesquelles vous avez manifeste votre interet."

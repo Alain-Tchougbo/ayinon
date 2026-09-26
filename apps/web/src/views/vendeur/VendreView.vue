@@ -360,7 +360,7 @@ async function reprogrammerVisite(id: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl space-y-8 p-4 sm:p-6">
+  <div class="w-full space-y-8 p-4 sm:p-6">
     <PageHeader
       titre="Vendre un terrain"
       description="Publiez une parcelle que vous possedez dans la vitrine publique, suivez les acheteurs interesses et retenez celui de votre choix."
