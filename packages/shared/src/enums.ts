@@ -128,6 +128,10 @@ export const TypeOperationAudit = {
   TRAITEMENT_FINANCEMENT: "TRAITEMENT_FINANCEMENT",
   ACCORD_EXCLUSIVITE: "ACCORD_EXCLUSIVITE",
   SUSPENSION_ADMIN_ANNONCE: "SUSPENSION_ADMIN_ANNONCE",
+  IMPORT_BATI: "IMPORT_BATI",
+  VALIDATION_BATI: "VALIDATION_BATI",
+  REJET_BATI: "REJET_BATI",
+  VALIDATION_USAGE_SOL: "VALIDATION_USAGE_SOL",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
 
@@ -178,6 +182,33 @@ export const LIBELLE_POLE_TERRITORIAL: Record<PoleTerritorial, string> = {
   ZOU_COLLINES: "Pole Zou-Collines (Abomey, Savalou)",
   BORGOU_ALIBORI: "Pole Borgou-Alibori (Parakou, Kandi)",
   ATACORA_DONGA: "Pole Atacora-Donga (Natitingou, Djougou)",
+};
+
+/// Detection automatique par imagerie satellite (a valider) vs dessin direct par un
+/// geometre/agent sur la carte.
+export const SourceBati = {
+  IMPORT_IA: "IMPORT_IA",
+  SAISIE_MANUELLE: "SAISIE_MANUELLE",
+} as const;
+export type SourceBati = (typeof SourceBati)[keyof typeof SourceBati];
+
+/// Usage du sol d'une parcelle (voir usageSolIndicatif/usageSolValide sur Parcelle) : reste
+/// indicatif (donnee satellite) tant qu'un agent ANDF ne l'a pas confirme.
+export const TypeUsageSol = {
+  AGRICOLE: "AGRICOLE",
+  URBAIN: "URBAIN",
+  FORET: "FORET",
+  EAU: "EAU",
+  AUTRE: "AUTRE",
+} as const;
+export type TypeUsageSol = (typeof TypeUsageSol)[keyof typeof TypeUsageSol];
+
+export const LIBELLE_TYPE_USAGE_SOL: Record<TypeUsageSol, string> = {
+  AGRICOLE: "Agricole",
+  URBAIN: "Urbain / bati",
+  FORET: "Foret",
+  EAU: "Plan d'eau",
+  AUTRE: "Autre",
 };
 
 export const LangueAssistantVocal = {

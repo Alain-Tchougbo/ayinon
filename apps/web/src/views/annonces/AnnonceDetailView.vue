@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ArrowLeft, CalendarClock, Flag, Handshake, MapPin, Scale, ShieldCheck, Star, Users } from "@lucide/vue";
-import { RoleUtilisateur } from "@ayinon/shared";
+import { LIBELLE_TYPE_USAGE_SOL, RoleUtilisateur, type TypeUsageSol } from "@ayinon/shared";
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import MapCadastral from "../../components/map/MapCadastral.vue";
-import type { ParcelleCache } from "../../db/localDb";
+import type { BatiCache, ParcelleCache } from "../../db/localDb";
 import { ApiError, api } from "../../services/api";
 import { tuileSatellitePour } from "../../services/tuileSatellite";
 import { useAuthStore } from "../../stores/auth.store";
@@ -58,6 +58,9 @@ const profilVendeur = ref<ProfilVendeur | null>(null);
 // utilise par la carte cadastrale) : reaffichee ici via le meme composant MapCadastral.vue plutot
 // que de dupliquer la logique de rendu cartographique.
 const parcelleCarte = ref<ParcelleCache | null>(null);
+// Batis identifies sur cette parcelle (import IA ou saisie manuelle), affiches sur la carte de
+// localisation via le meme composant que la carte cadastrale generale.
+const batisParcelle = ref<BatiCache[]>([]);
 // Historique public (judiciaire + proprietaires successifs), affiche a l'acheteur pour l'aider a
 // evaluer le risque avant de s'engager. Version resumee/anonymisee : le dossier judiciaire complet
 // reste reserve aux roles regaliens (voir GET /parcelles/:id/historique cote API).
@@ -100,16 +103,18 @@ async function charger() {
   chargement.value = true;
   try {
     annonce.value = await api.get<AnnonceDetail>(`/annonces/${route.params.id}`);
-    const [profil, parcelleGeo, historiquePublic] = await Promise.allSettled([
+    const [profil, parcelleGeo, historiquePublic, batisGeo] = await Promise.allSettled([
       api.get<ProfilVendeur>(`/avis/profil/${annonce.value.publieePar.id}`),
       api.get<ParcelleCache>(`/parcelles/${annonce.value.parcelle.id}`),
       api.get<HistoriqueParcellePublic>(`/parcelles/${annonce.value.parcelle.id}/historique`),
+      api.get<BatiCache[]>(`/batis/parcelle/${annonce.value.parcelle.id}`),
     ]);
     if (profil.status === "fulfilled") profilVendeur.value = profil.value;
     // Non bloquant : si la geometrie ne charge pas, le reste de la fiche reste consultable, sans
     // la carte de localisation.
     if (parcelleGeo.status === "fulfilled") parcelleCarte.value = parcelleGeo.value;
     if (historiquePublic.status === "fulfilled") historique.value = historiquePublic.value;
+    if (batisGeo.status === "fulfilled") batisParcelle.value = batisGeo.value;
   } catch (e) {
     erreur.value = e instanceof ApiError ? e.message : "Annonce introuvable";
   } finally {
@@ -213,6 +218,12 @@ const initiales = computed(() =>
     .toUpperCase(),
 );
 
+const badgeUsageSol = computed(() => {
+  const usageSol = parcelleCarte.value?.usageSolValide ?? parcelleCarte.value?.usageSolIndicatif;
+  if (!usageSol) return null;
+  return { libelle: LIBELLE_TYPE_USAGE_SOL[usageSol as TypeUsageSol], confirme: Boolean(parcelleCarte.value?.usageSolValide) };
+});
+
 function formaterDate(date: string): string {
   return new Date(date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
@@ -267,6 +278,9 @@ function formaterDate(date: string): string {
               <span v-if="annonce.limitesCertifiees" class="badge badge-certifie">Limites certifiees par un geometre</span>
               <!-- E4.5 : badge public, sans jamais reveler l'identite de l'acheteur beneficiaire. -->
               <span v-if="annonce.enExclusivite" class="badge badge-exclusif">En negociation exclusive</span>
+              <span v-if="badgeUsageSol" class="badge badge-certifie">
+                {{ badgeUsageSol.libelle }}<template v-if="!badgeUsageSol.confirme"> (indicatif)</template>
+              </span>
             </div>
 
             <p v-if="annonce.description" class="description">{{ annonce.description }}</p>
@@ -322,7 +336,7 @@ function formaterDate(date: string): string {
             <div v-if="parcelleCarte" class="bloc-localisation">
               <h2>Localisation</h2>
               <div class="conteneur-carte">
-                <MapCadastral :parcelles="[parcelleCarte]" />
+                <MapCadastral :parcelles="[parcelleCarte]" :batis="batisParcelle" />
               </div>
             </div>
           </div>

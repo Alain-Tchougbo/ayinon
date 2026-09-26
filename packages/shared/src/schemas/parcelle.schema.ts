@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TypeUsageSol } from "../enums";
 
 /** Recherche cadastrale : au moins un critere parmi NUP / position GPS / nom du proprietaire. */
 export const RechercheParcelleSchema = z
@@ -36,3 +37,9 @@ export const ModifierParcelleAdminSchema = z.object({
   arrondissement: z.string().trim().min(2).nullable().optional(),
 });
 export type ModifierParcelleAdminDto = z.infer<typeof ModifierParcelleAdminSchema>;
+
+/** Confirmation/correction par un agent ANDF de l'usage du sol indicatif (donnee satellite). */
+export const ValidationUsageSolSchema = z.object({
+  usageSol: z.nativeEnum(TypeUsageSol),
+});
+export type ValidationUsageSolDto = z.infer<typeof ValidationUsageSolSchema>;

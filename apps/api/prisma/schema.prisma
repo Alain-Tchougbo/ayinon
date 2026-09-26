@@ -128,6 +128,10 @@ enum TypeOperationAudit {
   TRAITEMENT_FINANCEMENT
   ACCORD_EXCLUSIVITE
   SUSPENSION_ADMIN_ANNONCE
+  IMPORT_BATI
+  VALIDATION_BATI
+  REJET_BATI
+  VALIDATION_USAGE_SOL
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
@@ -240,6 +244,25 @@ enum PoleTerritorial {
   ATACORA_DONGA
 }
 
+/// IMPORT_IA : detection automatique par imagerie satellite (ex. Google Open Buildings), a valider
+/// par un humain avant d'etre consideree fiable. SAISIE_MANUELLE : dessine directement par un
+/// geometre/agent sur la carte.
+enum SourceBati {
+  IMPORT_IA
+  SAISIE_MANUELLE
+}
+
+/// Usage du sol d'une parcelle. AGRICOLE/URBAIN/FORET/EAU/AUTRE refletent les classes d'occupation
+/// du sol de jeux de donnees satellite ouverts (ex. ESA WorldCover) — voir usageSolIndicatif sur
+/// Parcelle, qui reste indicatif tant qu'un agent ANDF ne l'a pas confirme (usageSolValide).
+enum TypeUsageSol {
+  AGRICOLE
+  URBAIN
+  FORET
+  EAU
+  AUTRE
+}
+
 // ---------------------------------------------------------------------------
 // Identite & acces
 // ---------------------------------------------------------------------------
@@ -284,6 +307,8 @@ model Utilisateur {
   visitesDemandees       Visite[]               @relation("VisiteAcheteur")
   demandesFinancement    DemandeFinancement[]   @relation("FinancementAcheteur")
   financementsTraites    DemandeFinancement[]   @relation("FinancementTraite")
+  batisValides           Bati[]                 @relation("BatiValidateur")
+  parcellesUsageSolValidees Parcelle[]          @relation("UsageSolValidateur")
 
   /// Declare uniquement par un VENDEUR (E0.3) : adapte les pieces demandees lors de la publication.
   statutDeclarant StatutDeclarantVendeur?
@@ -365,6 +390,15 @@ model Parcelle {
   proprietaireId String?
   proprietaire   Proprietaire? @relation(fields: [proprietaireId], references: [id])
 
+  /// Occupation du sol derivee automatiquement par recoupement spatial avec ZoneOccupationSol
+  /// (donnee satellite indicative, ex. ESA WorldCover) — jamais presentee comme officielle.
+  usageSolIndicatif TypeUsageSol?
+  /// Confirme ou corrige par un agent ANDF depuis l'indicatif ; prioritaire sur usageSolIndicatif
+  /// des qu'il est renseigne.
+  usageSolValide      TypeUsageSol?
+  usageSolValideParId String?
+  usageSolValidePar   Utilisateur?  @relation("UsageSolValidateur", fields: [usageSolValideParId], references: [id])
+
   titres            Titre[]
   conventions       Convention[]
   plansBornage      PlanBornage[]
@@ -375,9 +409,44 @@ model Parcelle {
   mutationsAudit    MutationAudit[]
   annonces          Annonce[]
   signalements      Signalement[]
+  batis             Bati[]
 
   @@index([statut])
   @@index([poleTerritorial])
+}
+
+/// Empreinte d'un batiment/construction, geolocalisee independamment de la parcelle (le
+/// recoupement spatial via ST_Intersects determine parcelleId, souvent absent tant que le
+/// batiment detecte ne recoupe aucune parcelle cadastree connue). Voir apps/api/src/batis.
+model Bati {
+  id             String       @id @default(uuid())
+  geom           Unsupported("geometry(Polygon, 4326)")
+  source         SourceBati
+  /// Score de confiance du modele de detection (0-1), uniquement pour source = IMPORT_IA.
+  scoreConfiance Float?
+  parcelleId     String?
+  parcelle       Parcelle?    @relation(fields: [parcelleId], references: [id])
+  valide         Boolean      @default(false)
+  valideParId    String?
+  validePar      Utilisateur? @relation("BatiValidateur", fields: [valideParId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([parcelleId])
+  @@index([valide])
+}
+
+/// Polygone d'occupation du sol importe d'un jeu de donnees satellite (ex. classe "Cropland"
+/// d'ESA WorldCover), independant des limites de parcelle — le recoupement spatial avec Parcelle
+/// (ST_Intersection/ST_Area) derive usageSolIndicatif. Purement indicatif, jamais un zonage officiel.
+model ZoneOccupationSol {
+  id        String       @id @default(uuid())
+  geom      Unsupported("geometry(Polygon, 4326)")
+  typeUsage TypeUsageSol
+  source    String       @default("ESA_WORLDCOVER_2021")
+  createdAt DateTime     @default(now())
+
+  @@index([typeUsage])
 }
 
 model Titre {

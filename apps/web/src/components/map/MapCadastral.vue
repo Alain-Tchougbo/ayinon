@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { COULEUR_STATUT_PARCELLE, type StatutParcelle } from "@ayinon/shared";
+import { COULEUR_STATUT_PARCELLE, LIBELLE_TYPE_USAGE_SOL, type StatutParcelle, type TypeUsageSol } from "@ayinon/shared";
 import { bbox } from "@turf/turf";
 import maplibregl, { type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
-import type { ParcelleCache } from "../../db/localDb";
+import type { BatiCache, ParcelleCache } from "../../db/localDb";
 
-const props = defineProps<{ parcelles: ParcelleCache[] }>();
+const props = withDefaults(defineProps<{ parcelles: ParcelleCache[]; batis?: BatiCache[] }>(), { batis: () => [] });
 const emit = defineEmits<{ selection: [ParcelleCache] }>();
 
 const SOURCE_ID = "parcelles";
+const BATIS_SOURCE_ID = "batis";
 
 const LIBELLE_STATUT: Record<StatutParcelle, string> = {
   TITREE: "Titree et securisee",
@@ -33,6 +34,7 @@ const SVG_CADENAS =
  */
 function construirePopupHtml(parcelle: ParcelleCache): string {
   const couleurStatut = COULEUR_STATUT_PARCELLE[parcelle.statut];
+  const usageSol = parcelle.usageSolValide ?? parcelle.usageSolIndicatif;
   return `
     <div style="font-family:system-ui,sans-serif;font-size:13px;line-height:1.6;min-width:200px;background:rgb(var(--color-surface));color:rgb(var(--color-texte));margin:-10px;padding:10px;border-radius:0.5rem">
       <div style="font-weight:700;font-size:14px;margin-bottom:2px">${parcelle.nup}</div>
@@ -44,6 +46,11 @@ function construirePopupHtml(parcelle: ParcelleCache): string {
         ${parcelle.commune}${parcelle.arrondissement ? " — " + parcelle.arrondissement : ""}<br/>
         Superficie : ${parcelle.superficieM2.toLocaleString("fr-FR")} m²<br/>
         Proprietaire : ${parcelle.proprietaireNom ?? "Non renseigne"}
+        ${
+          usageSol
+            ? `<br/>Occupation du sol : ${LIBELLE_TYPE_USAGE_SOL[usageSol as TypeUsageSol]}${!parcelle.usageSolValide ? " (indicatif, non confirme)" : ""}`
+            : ""
+        }
       </div>
       ${
         parcelle.verrouAntiVente
@@ -92,11 +99,26 @@ function construireGeoJson(parcelles: ParcelleCache[]): GeoJSON.FeatureCollectio
   };
 }
 
+function construireGeoJsonBatis(batis: BatiCache[]): GeoJSON.FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: batis.map((b) => ({
+      type: "Feature",
+      id: b.id,
+      geometry: b.geometrie,
+      properties: { id: b.id, valide: b.valide },
+    })),
+  };
+}
+
 function rafraichirDonnees() {
   if (!carte) return;
   const source = carte.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
   const donnees = construireGeoJson(props.parcelles);
   source?.setData(donnees);
+
+  const sourceBatis = carte.getSource(BATIS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+  sourceBatis?.setData(construireGeoJsonBatis(props.batis));
 
   if (props.parcelles.length > 0) {
     const [minX, minY, maxX, maxY] = bbox(donnees);
@@ -167,6 +189,26 @@ onMounted(() => {
       paint: { "line-color": "#12271a", "line-width": 1.5 },
     });
 
+    // Batis identifies (import IA ou saisie manuelle) : contour plein une fois valide, pointille
+    // tant qu'un geometre/agent ne l'a pas confirme (voir ValidationBatisView.vue). line-dasharray
+    // n'accepte pas d'expression data-driven (specification MapLibre/Mapbox) : deux couches
+    // filtrees plutot qu'une seule couche avec un dasharray conditionnel.
+    carte.addSource(BATIS_SOURCE_ID, { type: "geojson", data: construireGeoJsonBatis(props.batis) });
+    carte.addLayer({
+      id: "batis-contour-valide",
+      type: "line",
+      source: BATIS_SOURCE_ID,
+      filter: ["==", ["get", "valide"], true],
+      paint: { "line-color": "#7a431c", "line-width": 1.5 },
+    });
+    carte.addLayer({
+      id: "batis-contour-a-valider",
+      type: "line",
+      source: BATIS_SOURCE_ID,
+      filter: ["==", ["get", "valide"], false],
+      paint: { "line-color": "#7a431c", "line-width": 1.5, "line-dasharray": [2, 1.5], "line-opacity": 0.6 },
+    });
+
     carte.on("mouseenter", "parcelles-remplissage", () => {
       if (carte) carte.getCanvas().style.cursor = "pointer";
     });
@@ -201,6 +243,7 @@ onBeforeUnmount(() => {
 });
 
 watch(() => props.parcelles, rafraichirDonnees, { deep: false });
+watch(() => props.batis, rafraichirDonnees, { deep: false });
 </script>
 
 <template>

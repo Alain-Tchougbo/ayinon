@@ -7,6 +7,7 @@ import { AndfModule } from "./andf/andf.module";
 import { AnnoncesModule } from "./annonces/annonces.module";
 import { AuthModule } from "./auth/auth.module";
 import { AvisModule } from "./avis/avis.module";
+import { BatisModule } from "./batis/batis.module";
 import { CessionsModule } from "./cessions/cessions.module";
 import { CsrfGuard } from "./common/guards/csrf.guard";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
@@ -52,6 +53,7 @@ import { VisitesModule } from "./visites/visites.module";
     FinancementsModule,
     RecherchesSauvegardeesModule,
     SyncModule,
+    BatisModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
