@@ -408,10 +408,13 @@ const raccourcis = computed(() => {
     });
   }
   // E8.9 : suivi d'avancement d'un dossier de litige, accessible a chaque partie prenante habilitee a signaler.
-  if (
-    auth.role &&
-    [RoleUtilisateur.CITOYEN, RoleUtilisateur.VENDEUR, RoleUtilisateur.ACHETEUR, RoleUtilisateur.MANDATAIRE_FAMILIAL].includes(auth.role)
-  ) {
+  const ROLES_AVEC_SIGNALEMENTS: RoleUtilisateur[] = [
+    RoleUtilisateur.CITOYEN,
+    RoleUtilisateur.VENDEUR,
+    RoleUtilisateur.ACHETEUR,
+    RoleUtilisateur.MANDATAIRE_FAMILIAL,
+  ];
+  if (auth.role && ROLES_AVEC_SIGNALEMENTS.includes(auth.role)) {
     items.push({
       to: "/mes-signalements",
       icone: ScrollText,

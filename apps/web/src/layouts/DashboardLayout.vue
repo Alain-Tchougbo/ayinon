@@ -87,7 +87,7 @@ interface GroupeNav {
   items: LienNav[];
 }
 
-const ROLES_AVEC_SIGNALEMENTS = [
+const ROLES_AVEC_SIGNALEMENTS: RoleUtilisateur[] = [
   RoleUtilisateur.CITOYEN,
   RoleUtilisateur.VENDEUR,
   RoleUtilisateur.ACHETEUR,
