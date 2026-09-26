@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Award, Banknote, CalendarClock, Check, Download, FileStack, Handshake, Inbox, Landmark, Search, Star, X } from "@lucide/vue";
+import { Award, Banknote, CalendarClock, Check, Download, FileStack, Handshake, Inbox, Landmark, QrCode, Search, Star, X } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
@@ -151,6 +151,9 @@ const refusEnCoursId = ref<string | null>(null);
 const sequestreEnCours = ref<string | null>(null);
 const montantSequestre = ref<Record<string, string | number>>({});
 
+const qrEnCoursId = ref<string | null>(null);
+const qrDataUrl = ref<string | null>(null);
+
 onMounted(async () => {
   chargement.value = true;
   try {
@@ -268,6 +271,19 @@ function telechargerTitre(titre: MonTitre) {
   lien.download = `titre-${titre.numeroTitre}.json`;
   lien.click();
   URL.revokeObjectURL(url);
+}
+
+async function voirQrCode(conventionId: string) {
+  erreur.value = null;
+  qrEnCoursId.value = conventionId;
+  try {
+    const reponse = await api.get<{ qrCodeDataUrl: string }>(`/cessions/${conventionId}/qr`);
+    qrDataUrl.value = reponse.qrCodeDataUrl;
+  } catch (e) {
+    erreur.value = e instanceof ApiError ? e.message : "Impossible de recuperer le QR";
+  } finally {
+    qrEnCoursId.value = null;
+  }
 }
 
 function idCession(interet: MonInteret): string | null {
@@ -402,16 +418,31 @@ async function noter(conventionId: string) {
                 </span>
               </td>
               <td class="px-4 py-3">
-                <BaseButton v-if="!c.sequestre && c.statutCession === 'ACCEPTEE'" taille="sm" variant="secondaire" @click="sequestreEnCours = c.id">
-                  <Banknote :size="12" aria-hidden="true" />
-                  Declarer un depot
-                </BaseButton>
+                <div class="flex flex-wrap gap-2">
+                  <BaseButton v-if="!c.sequestre && c.statutCession === 'ACCEPTEE'" taille="sm" variant="secondaire" @click="sequestreEnCours = c.id">
+                    <Banknote :size="12" aria-hidden="true" />
+                    Declarer un depot
+                  </BaseButton>
+                  <BaseButton taille="sm" variant="secondaire" :disabled="qrEnCoursId === c.id" @click="voirQrCode(c.id)">
+                    <QrCode :size="12" aria-hidden="true" />
+                    Voir le QR
+                  </BaseButton>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
+
+    <BaseModal :model-value="qrDataUrl !== null" titre="QR anti-fraude" @update:model-value="qrDataUrl = null">
+      <div v-if="qrDataUrl" class="flex flex-col items-center gap-3">
+        <img :src="qrDataUrl" alt="QR code anti-fraude de la cession" class="h-56 w-56" />
+        <p class="text-center text-xs text-texte-attenue">
+          A presenter ou imprimer : verifiable a tout moment via le Scanner Anti-Fraude.
+        </p>
+      </div>
+    </BaseModal>
 
     <BaseModal :model-value="sequestreEnCours !== null" titre="Declarer un depot de reservation" @update:model-value="sequestreEnCours = null">
       <div class="flex flex-wrap items-center gap-2">
