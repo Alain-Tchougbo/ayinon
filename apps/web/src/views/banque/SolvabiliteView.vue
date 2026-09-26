@@ -201,7 +201,7 @@ async function lever(hypothequeId: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl space-y-8 p-4 sm:p-6">
+  <div class="w-full space-y-8 p-4 sm:p-6">
     <PageHeader
       titre="Verification de solvabilite hypothecaire"
       description="Verifiez en un appel qu'une parcelle est titree, non gelee et libre de tout autre gage avant d'accorder un credit."
