@@ -6,6 +6,10 @@ declare module "vue-router" {
   interface RouteMeta {
     rolesAutorises?: RoleUtilisateur[];
     necessiteAuth?: boolean;
+    /** Force PublicLayout meme si connecte (voir App.vue) : la vitrine reste accessible depuis le
+     * logo sans jamais perdre la session (contrairement a "/", dont le contenu et l'habillage
+     * varient selon auth.estConnecte). */
+    forcerPublic?: boolean;
     titre: string;
   }
 }
@@ -14,6 +18,12 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: "/", name: "accueil", component: () => import("../views/AccueilView.vue"), meta: { titre: "Accueil" } },
+    {
+      path: "/public",
+      name: "accueil-public",
+      component: () => import("../views/AccueilPublicView.vue"),
+      meta: { titre: "Accueil", forcerPublic: true },
+    },
     { path: "/carte", name: "carte", component: () => import("../views/CarteView.vue"), meta: { titre: "Carte cadastrale" } },
     { path: "/aide", name: "aide", component: () => import("../views/AideView.vue"), meta: { titre: "Aide" } },
     {
