@@ -4,6 +4,7 @@ import type { Request } from "express";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import type { RoleUtilisateur } from "@ayinon/shared";
 import { COOKIE_ACCES } from "../common/cookies.util";
+import { obtenirSecretJwt } from "../common/env.util";
 import { PrismaService } from "../prisma/prisma.service";
 
 export interface JwtPayload {
@@ -22,7 +23,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([extraireDepuisCookie]),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_ACCESS_SECRET ?? "dev-access-secret-a-ne-jamais-utiliser-en-prod",
+      secretOrKey: obtenirSecretJwt(),
     });
   }
 

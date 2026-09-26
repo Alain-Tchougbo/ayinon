@@ -3,6 +3,7 @@ import { JwtService } from "@nestjs/jwt";
 import { createHash, randomBytes } from "node:crypto";
 import { ROLES_PROFESSIONNELS_INSCRIPTIBLES, StatutValidationPro, TypeOperationAudit, type InscriptionDto, type RoleUtilisateur } from "@ayinon/shared";
 import { parseDureeMs } from "../common/duree.util";
+import { obtenirSecretJwt } from "../common/env.util";
 import { CryptoAuditService } from "../crypto-audit/crypto-audit.service";
 import { OtpService } from "../otp/otp.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -176,7 +177,7 @@ export class AuthService {
 
     const payload: JwtPayload = { sub: utilisateurId, role, proprietaireId };
     const accessToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_ACCESS_SECRET ?? "dev-access-secret-a-ne-jamais-utiliser-en-prod",
+      secret: obtenirSecretJwt(),
       expiresIn: accessTokenTtl,
     });
 
