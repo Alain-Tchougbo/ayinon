@@ -229,7 +229,7 @@ router.beforeEach(async (to) => {
 });
 
 router.afterEach((to) => {
-  document.title = to.meta.titre ? `${to.meta.titre} — AYINON` : "AYINON";
+  document.title = to.meta.titre ? `${to.meta.titre} - AYINON` : "AYINON";
 });
 
 export default router;

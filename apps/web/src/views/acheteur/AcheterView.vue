@@ -86,8 +86,8 @@ const COULEUR_STATUT: Record<MonInteret["statut"], string> = {
   DECLINE: "bg-texte-attenue/10 text-texte-attenue",
 };
 const LIBELLE_STATUT_CESSION: Record<CessionAcquise["statutCession"], string> = {
-  ACCEPTEE: "Acceptee — en attente de validation ANDF",
-  VALIDEE: "Validee — titre delivre",
+  ACCEPTEE: "Acceptee - en attente de validation ANDF",
+  VALIDEE: "Validee - titre delivre",
   REJETEE: "Rejetee",
 };
 const COULEUR_STATUT_CESSION: Record<CessionAcquise["statutCession"], string> = {
@@ -96,7 +96,7 @@ const COULEUR_STATUT_CESSION: Record<CessionAcquise["statutCession"], string> = 
   REJETEE: "bg-danger/10 text-danger",
 };
 const LIBELLE_STATUT_SEQUESTRE: Record<Sequestre["statut"], string> = {
-  DEPOT_DECLARE: "Depot declare — en attente de confirmation par la banque",
+  DEPOT_DECLARE: "Depot declare - en attente de confirmation par la banque",
   DEPOT_CONFIRME: "Depot confirme par la banque",
   LIBERE: "Depot libere au vendeur",
   REMBOURSE: "Depot rembourse",
@@ -348,8 +348,8 @@ async function noter(conventionId: string) {
             <template v-for="c in propositionsRecues" :key="c.id">
               <tr class="align-top">
                 <td class="px-4 py-3">
-                  <p class="font-semibold text-texte">{{ c.parcelle.nup }} — {{ c.parcelle.commune }}</p>
-                  <p class="mt-0.5 text-sm text-texte-attenue">Proposee par {{ c.vendeurNom }} — {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA</p>
+                  <p class="font-semibold text-texte">{{ c.parcelle.nup }} - {{ c.parcelle.commune }}</p>
+                  <p class="mt-0.5 text-sm text-texte-attenue">Proposee par {{ c.vendeurNom }} - {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA</p>
                 </td>
                 <td class="px-4 py-3">
                   <div class="flex flex-col gap-2 sm:flex-row">
@@ -399,12 +399,12 @@ async function noter(conventionId: string) {
             </tr>
           </thead>
           <!-- E5.4 : depot de reservation, possible des que la cession est acceptee. Le statut final
-               (LIBERE/REMBOURSE) reste affiche meme si la cession est ensuite validee ou rejetee —
+               (LIBERE/REMBOURSE) reste affiche meme si la cession est ensuite validee ou rejetee -
                sinon il ne serait plus jamais visible. -->
           <tbody class="divide-y divide-bordure">
             <tr v-for="c in cessionsAcquises" :key="c.id" class="align-top">
               <td class="px-4 py-3">
-                <p class="font-semibold text-texte">{{ c.parcelle.nup }} — {{ c.parcelle.commune }}</p>
+                <p class="font-semibold text-texte">{{ c.parcelle.nup }} - {{ c.parcelle.commune }}</p>
                 <p class="text-xs text-texte-attenue">{{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA</p>
                 <p v-if="c.statutCession === 'REJETEE' && c.motifRejet" class="mt-1.5 text-xs text-danger">Motif : {{ c.motifRejet }}</p>
                 <p v-if="c.sequestre" class="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-primaire">
@@ -474,9 +474,9 @@ async function noter(conventionId: string) {
           <tbody class="divide-y divide-bordure">
             <tr v-for="v in mesVisites" :key="v.id" class="align-top">
               <td class="px-4 py-3">
-                <p class="font-semibold text-texte">{{ v.annonce.parcelle.nup }} — {{ v.annonce.parcelle.commune }}</p>
+                <p class="font-semibold text-texte">{{ v.annonce.parcelle.nup }} - {{ v.annonce.parcelle.commune }}</p>
                 <p class="text-xs text-texte-attenue">
-                  {{ v.mode === "PRESENTIEL" ? "Sur place" : "A distance" }} — {{ new Date(v.dateProposee).toLocaleString("fr-FR") }}
+                  {{ v.mode === "PRESENTIEL" ? "Sur place" : "A distance" }} - {{ new Date(v.dateProposee).toLocaleString("fr-FR") }}
                 </p>
                 <p v-if="v.statut === 'REFUSEE' && v.motifRefus" class="mt-1.5 text-xs text-danger">Motif : {{ v.motifRefus }}</p>
                 <p v-if="v.statut === 'REPROGRAMMEE' && v.nouvelleDateProposee" class="mt-1.5 text-xs text-texte">
@@ -579,10 +579,10 @@ async function noter(conventionId: string) {
             <div class="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <RouterLink :to="`/annonces/${i.annonce.id}`" class="font-semibold text-texte hover:underline">
-                  {{ i.annonce.parcelle.nup }} — {{ i.annonce.parcelle.commune }}
+                  {{ i.annonce.parcelle.nup }} - {{ i.annonce.parcelle.commune }}
                 </RouterLink>
                 <p class="text-xs text-texte-attenue">
-                  {{ i.annonce.parcelle.superficieM2.toLocaleString("fr-FR") }} m² — vendeur {{ i.annonce.publieePar.nomComplet }}
+                  {{ i.annonce.parcelle.superficieM2.toLocaleString("fr-FR") }} m² - vendeur {{ i.annonce.publieePar.nomComplet }}
                 </p>
               </div>
               <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT[i.statut]">{{ LIBELLE_STATUT[i.statut] }}</span>
@@ -594,12 +594,12 @@ async function noter(conventionId: string) {
             </p>
             <div v-if="i.statut === 'RETENU'" class="mt-2.5 flex items-center gap-2 rounded-carte bg-succes/10 px-3 py-2 text-xs font-semibold text-succes">
               <Award :size="14" aria-hidden="true" />
-              {{ i.annonce.statut === "VENDUE" ? "Vente finalisee : le titre a ete transfere." : "Retenu par le vendeur — cession en cours de validation ANDF." }}
+              {{ i.annonce.statut === "VENDUE" ? "Vente finalisee : le titre a ete transfere." : "Retenu par le vendeur - cession en cours de validation ANDF." }}
             </div>
 
             <!-- E5.4 : depot de reservation, possible des que le vendeur a retenu l'interet. Le
                  statut final (LIBERE/REMBOURSE) reste affiche meme une fois l'annonce VENDUE ou
-                 le sequestre solde — sinon il ne serait plus jamais visible une fois la vente
+                 le sequestre solde - sinon il ne serait plus jamais visible une fois la vente
                  finalisee ou echouee. cessions[0] est toujours la plus recente (voir
                  AnnoncesService), donc a jour meme si l'annonce a un historique de tentatives. -->
             <div
@@ -674,7 +674,7 @@ async function noter(conventionId: string) {
               <td class="px-4 py-3">
                 <p class="font-medium text-texte">Titre {{ t.numeroTitre }}</p>
                 <p class="text-xs text-texte-attenue">
-                  {{ t.parcelle.nup }} — {{ t.parcelle.commune }} — delivre le {{ new Date(t.dateDelivrance).toLocaleDateString("fr-FR") }}
+                  {{ t.parcelle.nup }} - {{ t.parcelle.commune }} - delivre le {{ new Date(t.dateDelivrance).toLocaleDateString("fr-FR") }}
                 </p>
                 <p class="mt-0.5 font-mono text-[0.65rem] text-texte-attenue">hash : {{ t.hashSha256.slice(0, 24) }}…</p>
               </td>

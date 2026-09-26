@@ -11,7 +11,7 @@ import { useAuthStore } from "../stores/auth.store";
 import { LANGUES } from "../voice/langues";
 
 // Habillage des pages accessibles sans compte (accueil vitrine, carte publique, scanner
-// anti-fraude, simulateur de frais, connexion) : jamais de chrome "tableau de bord" ici — ce
+// anti-fraude, simulateur de frais, connexion) : jamais de chrome "tableau de bord" ici - ce
 // layout n'est monte que lorsque auth.estConnecte est false (voir App.vue). Des qu'une session
 // est active, DashboardLayout prend le relais sur les memes routes.
 const LIENS_PUBLICS = [
@@ -25,7 +25,7 @@ const route = useRoute();
 const auth = useAuthStore();
 const { enLigne } = useOnlineStatus();
 
-// Un utilisateur connecte peut atterrir ici via le logo (route /public, meta.forcerPublic — voir
+// Un utilisateur connecte peut atterrir ici via le logo (route /public, meta.forcerPublic - voir
 // App.vue) sans jamais perdre sa session : l'en-tete propose alors de revenir a son espace ou de
 // se deconnecter, plutot que de lui remontrer "Se connecter"/"Creer un compte" comme a un visiteur.
 async function seDeconnecter() {
@@ -53,9 +53,9 @@ watch(() => route.fullPath, () => (menuMobileOuvert.value = false));
 
     <header class="sticky top-0 z-30">
       <!-- Bandeau institutionnel : situe AYINON comme plateforme independante qui recoupe les
-           donnees du cadastre national, pas comme un portail officiel ANDF — voir docs/DEMO.md. -->
+           donnees du cadastre national, pas comme un portail officiel ANDF - voir docs/DEMO.md. -->
       <div class="hidden items-center justify-between gap-3 bg-primaire-fonce px-4 py-1.5 text-xs font-semibold text-primaire-contraste/70 lg:flex">
-        <span class="truncate">Plateforme independante de verification fonciere — donnees recoupees avec le cadastre national de l'ANDF</span>
+        <span class="truncate">Plateforme independante de verification fonciere - donnees recoupees avec le cadastre national de l'ANDF</span>
         <div class="flex shrink-0 items-center gap-4">
           <a href="https://andf.bj" target="_blank" rel="noopener" class="min-h-0 shrink-0 transition-colors hover:text-primaire-contraste">andf.bj ↗</a>
           <span class="inline-flex items-center gap-1.5" :class="enLigne ? 'text-succes' : 'text-danger'">
@@ -252,7 +252,7 @@ watch(() => route.fullPath, () => (menuMobileOuvert.value = false));
     <ChatbotWidget />
 
     <footer class="border-t border-bordure bg-surface px-4 py-4 pb-20 text-center text-xs text-texte-attenue sm:pb-4">
-      AYINON — Le Gardien Numerique de la Terre · Republique du Benin ·
+      AYINON - Le Gardien Numerique de la Terre · Republique du Benin ·
       <RouterLink to="/aide" class="underline underline-offset-2 hover:text-texte">Aide</RouterLink>
     </footer>
   </div>

@@ -102,7 +102,7 @@ function basculer() {
       <div ref="zoneMessages" class="flex-1 space-y-2.5 overflow-y-auto p-3.5">
         <template v-if="messages.length === 0">
           <p class="text-xs text-texte-attenue">
-            Posez une question sur une parcelle, une annonce ou les frais de mutation — je m'appuie uniquement sur les donnees reelles
+            Posez une question sur une parcelle, une annonce ou les frais de mutation - je m'appuie uniquement sur les donnees reelles
             d'AYINON, jamais sur une information inventee.
           </p>
           <div class="flex flex-wrap gap-1.5 pt-1">

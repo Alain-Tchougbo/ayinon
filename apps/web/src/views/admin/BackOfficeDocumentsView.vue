@@ -94,7 +94,7 @@ async function voirHistorique(parcelleId: string) {
                 <tr class="align-top">
                   <td class="px-4 py-3">
                     <span class="font-medium text-texte">{{ c.parcelle.nup }}</span>
-                    <span class="text-texte-attenue"> — {{ c.vendeurNom }} → {{ c.acquereurNom }} — {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA — {{ c.statutCession.replaceAll("_", " ") }}</span>
+                    <span class="text-texte-attenue"> - {{ c.vendeurNom }} → {{ c.acquereurNom }} - {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA - {{ c.statutCession.replaceAll("_", " ") }}</span>
                   </td>
                   <td class="whitespace-nowrap px-4 py-3">
                     <BaseButton taille="sm" variant="secondaire" @click="voirHistorique(c.parcelle.id)">
@@ -110,7 +110,7 @@ async function voirHistorique(parcelleId: string) {
                     <ol v-else-if="historique" class="space-y-1.5 border-l-2 border-bordure pl-3">
                       <li v-for="entree in historique" :key="entree.id" class="text-xs">
                         <span class="font-medium text-texte">{{ entree.typeOperation.replaceAll("_", " ") }}</span>
-                        <span class="text-texte-attenue"> — {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}</span>
+                        <span class="text-texte-attenue"> - {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}</span>
                       </li>
                     </ol>
                   </td>
@@ -135,7 +135,7 @@ async function voirHistorique(parcelleId: string) {
                 <tr class="align-top">
                   <td class="px-4 py-3">
                     <span class="font-medium text-texte">{{ t.numeroTitre }}</span>
-                    <span class="text-texte-attenue"> — {{ t.parcelle.nup }} — delivre le {{ new Date(t.dateDelivrance).toLocaleDateString("fr-FR") }}</span>
+                    <span class="text-texte-attenue"> - {{ t.parcelle.nup }} - delivre le {{ new Date(t.dateDelivrance).toLocaleDateString("fr-FR") }}</span>
                   </td>
                   <td class="whitespace-nowrap px-4 py-3">
                     <BaseButton taille="sm" variant="secondaire" @click="voirHistorique(t.parcelle.id)">
@@ -151,7 +151,7 @@ async function voirHistorique(parcelleId: string) {
                     <ol v-else-if="historique" class="space-y-1.5 border-l-2 border-bordure pl-3">
                       <li v-for="entree in historique" :key="entree.id" class="text-xs">
                         <span class="font-medium text-texte">{{ entree.typeOperation.replaceAll("_", " ") }}</span>
-                        <span class="text-texte-attenue"> — {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}</span>
+                        <span class="text-texte-attenue"> - {{ new Date(entree.horodatage).toLocaleString("fr-FR") }}</span>
                       </li>
                     </ol>
                   </td>

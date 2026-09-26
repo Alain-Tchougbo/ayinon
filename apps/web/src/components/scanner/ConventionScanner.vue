@@ -107,7 +107,7 @@ async function verifier(donneesBrutes: unknown) {
           : localementValide
             ? {
                 authentique: true,
-                motif: "Signature cryptographique valide (verification locale hors-ligne — non confirmee aupres du registre national).",
+                motif: "Signature cryptographique valide (verification locale hors-ligne - non confirmee aupres du registre national).",
               }
             : { authentique: false, motif: "Signature cryptographique invalide : document falsifie ou corrompu." };
     } else {

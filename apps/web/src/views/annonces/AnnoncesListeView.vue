@@ -198,7 +198,7 @@ async function estimer() {
 const anconceVedette = computed(() => annonces.value[0] ?? null);
 const autresAnnonces = computed(() => annonces.value.slice(1));
 
-// Bandeau de confiance : chiffres reels derives des annonces chargees (pas des totaux fictifs) —
+// Bandeau de confiance : chiffres reels derives des annonces chargees (pas des totaux fictifs) -
 // seul "6 poles territoriaux" est une constante reelle du decoupage administratif ANDF.
 const nombreVerifieesAndf = computed(() => annonces.value.filter((a) => a.verifieeParAndfId).length);
 
@@ -231,7 +231,7 @@ const visuelVedette = computed(() => (anconceVedette.value ? visuelPour(anconceV
   <div class="marche-editorial">
     <div class="entete-vitrine">
       <h1>Chaque parcelle a une histoire verifiee</h1>
-      <p>Des terrains publies par des vendeurs verifies AYINON — consultez librement, comparez, creez un compte pour manifester votre interet.</p>
+      <p>Des terrains publies par des vendeurs verifies AYINON - consultez librement, comparez, creez un compte pour manifester votre interet.</p>
     </div>
 
     <p v-if="erreur" class="alerte alerte-danger" role="alert">{{ erreur }}</p>
@@ -362,7 +362,7 @@ const visuelVedette = computed(() => (anconceVedette.value ? visuelPour(anconceV
             <span class="nup-vedette">{{ anconceVedette!.parcelle.nup }}</span>
             <h2>Parcelle a {{ anconceVedette!.parcelle.commune }}</h2>
             <p class="lieu">
-              <span v-if="anconceVedette!.parcelle.arrondissement">{{ anconceVedette!.parcelle.arrondissement }} — </span>{{
+              <span v-if="anconceVedette!.parcelle.arrondissement">{{ anconceVedette!.parcelle.arrondissement }} - </span>{{
                 anconceVedette!.parcelle.superficieM2.toLocaleString("fr-FR")
               }} m²
             </p>
@@ -473,7 +473,7 @@ const visuelVedette = computed(() => (anconceVedette.value ? visuelPour(anconceV
 
 <style scoped>
 /* Identite "Vitrine editoriale" (DA retenue pour la marketplace) : scopee a ce composant pour ne
-   pas modifier les tokens globaux ni les autres pages — voir la question posee a l'utilisateur
+   pas modifier les tokens globaux ni les autres pages - voir la question posee a l'utilisateur
    avant integration (l'en-tete partage reste dans l'identite foret & or). */
 .marche-editorial {
   --ivoire: #faf6ee;
@@ -801,7 +801,7 @@ const visuelVedette = computed(() => (anconceVedette.value ? visuelPour(anconceV
   height: 100%;
 }
 /* Repere = position reelle (fraction de tuile) du centre de la parcelle sur l'image satellite,
-   pas une valeur arbitraire — calculee dans tuileSatellitePour(). */
+   pas une valeur arbitraire - calculee dans tuileSatellitePour(). */
 .repere-parcelle {
   position: absolute;
   z-index: 1;
@@ -939,7 +939,7 @@ const visuelVedette = computed(() => (anconceVedette.value ? visuelPour(anconceV
 }
 .case-comparer-flottante {
   /* La cible tactile accessible (voir tokens.css, "Cibles tactiles genereuses") est portee par
-     ce label dans son ensemble, pas par la petite case ronde a l'interieur — cliquer n'importe
+     ce label dans son ensemble, pas par la petite case ronde a l'interieur - cliquer n'importe
      ou sur la pastille "Comparer" reste possible et confortable au doigt. */
   position: absolute;
   top: 0.6rem;

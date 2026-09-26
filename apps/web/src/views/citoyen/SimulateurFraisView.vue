@@ -54,7 +54,7 @@ const CHAMP_NUMERIQUE = "mt-1 w-full rounded-carte border border-bordure bg-fond
   <div class="mx-auto max-w-2xl space-y-6 p-4 sm:p-6">
     <PageHeader
       titre="Simulateur transparent des frais de mutation"
-      description="Connaissez le montant exact a payer avant toute transaction — plus de rackets des demarcheurs informels (kpatchi-kpatchi)."
+      description="Connaissez le montant exact a payer avant toute transaction - plus de rackets des demarcheurs informels (kpatchi-kpatchi)."
     >
       <template #icone><Calculator :size="22" class="text-primaire" aria-hidden="true" /></template>
     </PageHeader>
