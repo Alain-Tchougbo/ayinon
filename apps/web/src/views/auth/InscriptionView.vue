@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown, Clock, KeyRound, Shield, UserPlus } from "@lucide/vue";
+import { ChevronDown, Clock, KeyRound, UserPlus } from "@lucide/vue";
 import { ROLES_INSCRIPTIBLES, ROLES_PROFESSIONNELS_INSCRIPTIBLES, StatutDeclarantVendeur } from "@ayinon/shared";
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
@@ -77,7 +77,10 @@ async function confirmer() {
   <div class="mx-auto max-w-md px-4 py-14">
     <div class="mb-6 flex flex-col items-center text-center">
       <span class="flex h-12 w-12 items-center justify-center rounded-carte bg-primaire text-primaire-contraste">
-        <Shield :size="24" aria-hidden="true" />
+        <svg viewBox="0 0 32 32" fill="none" class="h-6 w-6" aria-hidden="true">
+          <path d="M6 22L10 8L24 6L27 20L16 27Z" stroke="#F2A93B" stroke-width="1.6" stroke-linejoin="round" />
+          <circle cx="10" cy="8" r="1.6" fill="#F2A93B" />
+        </svg>
       </span>
       <h1 class="mt-3 text-xl font-bold text-texte">Creer un compte AYINON</h1>
     </div>
