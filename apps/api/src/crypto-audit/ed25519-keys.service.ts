@@ -20,6 +20,11 @@ export class Ed25519KeysService implements OnModuleInit {
     if (privatePem && publicPem) {
       this.privateKey = createPrivateKey(privatePem);
       this.publicKey = createPublicKey(publicPem);
+    } else if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "AUDIT_ED25519_PRIVATE_KEY/AUDIT_ED25519_PUBLIC_KEY doivent etre definies en production (voir .env.example) : " +
+          "sans cles persistantes, chaque redemarrage invaliderait la verifiabilite des signatures deja emises.",
+      );
     } else {
       const { privateKey, publicKey } = generateKeyPairSync("ed25519");
       this.privateKey = privateKey;

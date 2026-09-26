@@ -19,6 +19,7 @@ function creerService(options: {
     options.parcelle === null ? null : { id: "parcelle-1", proprietaireId: "prop-vendeur", verrouAntiVente: false, ...options.parcelle };
   let annonce: Record<string, unknown> | null = options.annonce ?? null;
   let interet: Record<string, unknown> | null = options.interet ?? null;
+  let convention: Record<string, unknown> | null = null;
   const auditAppels: unknown[] = [];
   let dernierWhereListerActives: unknown = null;
 
@@ -57,7 +58,17 @@ function creerService(options: {
       },
       updateMany: async () => ({ count: 0 }),
     },
-    convention: { create: async ({ data }: any) => ({ id: "convention-1", ...data }), findMany: async () => [] },
+    convention: {
+      create: async ({ data }: any) => {
+        convention = { id: "convention-1", createdAt: new Date(), ...data };
+        return convention;
+      },
+      update: async ({ data }: any) => {
+        convention = { ...(convention as Record<string, unknown>), ...data };
+        return convention;
+      },
+      findMany: async () => [],
+    },
     planBornage: {
       findFirst: async ({ where }: any) =>
         options.parcellesLimitesCertifiees?.includes(where.parcelleId) ? { id: `plan-${where.parcelleId}` } : null,
