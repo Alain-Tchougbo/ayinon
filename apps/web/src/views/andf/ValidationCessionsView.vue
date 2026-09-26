@@ -5,7 +5,6 @@ import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
-import BaseCard from "../../components/ui/BaseCard.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface Cession {
@@ -63,7 +62,7 @@ async function valider(id: string, approuver: boolean) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
+  <div class="w-full space-y-6 p-4 sm:p-6">
     <PageHeader
       titre="Validation des cessions foncieres"
       description="Chaque cession acceptee par l'acquereur attend votre validation : elle delivre alors le titre numerique et transfere la propriete."
@@ -79,41 +78,58 @@ async function valider(id: string, approuver: boolean) {
       Aucune cession en attente de validation.
     </p>
 
-    <ul v-else class="space-y-3">
-      <li v-for="c in cessions" :key="c.id">
-        <BaseCard>
-          <p class="font-semibold text-texte">{{ c.parcelle.nup }} — {{ c.parcelle.commune }}</p>
-          <p class="mt-0.5 text-sm text-texte-attenue">
-            {{ c.vendeurNom }} cede a {{ c.acquereurNom }} — {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA
-          </p>
-          <p class="mt-0.5 text-xs text-texte-attenue">Acceptee le {{ new Date(c.dateAcceptation).toLocaleDateString("fr-FR") }}</p>
-
-          <div v-if="rejetEnCoursId !== c.id" class="mt-3.5 flex gap-2">
-            <BaseButton taille="sm" @click="valider(c.id, true)">
-              <Award :size="14" aria-hidden="true" />
-              Valider et delivrer le titre
-            </BaseButton>
-            <BaseButton taille="sm" variant="secondaire" @click="rejetEnCoursId = c.id">
-              <CircleX :size="14" aria-hidden="true" />
-              Rejeter
-            </BaseButton>
-          </div>
-          <div v-else class="mt-3.5 space-y-2 rounded-carte border border-bordure bg-fond p-3">
-            <label :for="`motif-rejet-${c.id}`" class="block text-xs font-medium text-texte">Motif du rejet (obligatoire)</label>
-            <textarea
-              :id="`motif-rejet-${c.id}`"
-              v-model="motifRejetParCession[c.id]"
-              rows="2"
-              placeholder="Ex. incoherence avec le registre cadastral"
-              class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-            />
-            <div class="flex gap-2">
-              <BaseButton taille="sm" variant="danger" @click="valider(c.id, false)">Confirmer le rejet</BaseButton>
-              <BaseButton taille="sm" variant="secondaire" @click="rejetEnCoursId = null">Annuler</BaseButton>
-            </div>
-          </div>
-        </BaseCard>
-      </li>
-    </ul>
+    <div v-else class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+            <th class="px-4 py-3 font-semibold">Cession</th>
+            <th class="px-4 py-3 font-semibold">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-bordure">
+          <template v-for="c in cessions" :key="c.id">
+            <tr class="align-top">
+              <td class="px-4 py-3">
+                <p class="font-semibold text-texte">{{ c.parcelle.nup }} — {{ c.parcelle.commune }}</p>
+                <p class="mt-0.5 text-sm text-texte-attenue">
+                  {{ c.vendeurNom }} cede a {{ c.acquereurNom }} — {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA
+                </p>
+                <p class="mt-0.5 text-xs text-texte-attenue">Acceptee le {{ new Date(c.dateAcceptation).toLocaleDateString("fr-FR") }}</p>
+              </td>
+              <td class="px-4 py-3">
+                <div v-if="rejetEnCoursId !== c.id" class="flex gap-2">
+                  <BaseButton taille="sm" @click="valider(c.id, true)">
+                    <Award :size="14" aria-hidden="true" />
+                    Valider et delivrer le titre
+                  </BaseButton>
+                  <BaseButton taille="sm" variant="secondaire" @click="rejetEnCoursId = c.id">
+                    <CircleX :size="14" aria-hidden="true" />
+                    Rejeter
+                  </BaseButton>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="rejetEnCoursId === c.id">
+              <td colspan="2" class="bg-fond/40 px-4 py-3">
+                <div class="space-y-2 rounded-carte border border-bordure bg-fond p-3">
+                  <label :for="`motif-rejet-${c.id}`" class="block text-xs font-medium text-texte">Motif du rejet (obligatoire)</label>
+                  <textarea
+                    :id="`motif-rejet-${c.id}`"
+                    v-model="motifRejetParCession[c.id]"
+                    rows="2"
+                    placeholder="Ex. incoherence avec le registre cadastral"
+                    class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
+                  />
+                  <div class="flex gap-2">
+                    <BaseButton taille="sm" variant="danger" @click="valider(c.id, false)">Confirmer le rejet</BaseButton>
+                    <BaseButton taille="sm" variant="secondaire" @click="rejetEnCoursId = null">Annuler</BaseButton>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
