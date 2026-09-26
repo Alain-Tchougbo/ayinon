@@ -6,7 +6,7 @@ import { LANGUES } from "../../voice/langues";
 
 // Bouton flottant plutot qu'une barre occupant en permanence toute la largeur : l'assistance
 // vocale reste disponible partout sans jamais s'imposer visuellement. Rien ne parle sans que
-// l'utilisateur ait clique ce bouton — voir composables/useVoiceAssistant.ts et les vues
+// l'utilisateur ait clique ce bouton - voir composables/useVoiceAssistant.ts et les vues
 // (definirPhraseCourante enregistre la phrase disponible, mais ne la lit jamais automatiquement).
 const { lire, enLecture, phraseCourante, languePreferee, dernierRepliFrancais } = useVoiceAssistant();
 
@@ -29,7 +29,7 @@ watch(dernierRepliFrancais, (repli) => {
       role="status"
       class="max-w-[14rem] rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte-attenue shadow-flottant"
     >
-      Voix {{ nomLanguePreferee() }} pas encore disponible — lecture en francais.
+      Voix {{ nomLanguePreferee() }} pas encore disponible - lecture en francais.
     </p>
     <button
       type="button"

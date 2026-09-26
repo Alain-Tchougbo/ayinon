@@ -25,7 +25,7 @@ defineEmits<{ "update:modelValue": [boolean] }>();
 <style scoped>
 /* Case personnalisee : le rendu par defaut du navigateur (carre bleu) jure avec le reste de
    l'interface. min-width/min-height a 0 neutralise la regle globale de cible tactile (voir
-   tokens.css, "Cibles tactiles genereuses") — le vrai confort tactile reste porte par le label
+   tokens.css, "Cibles tactiles genereuses") - le vrai confort tactile reste porte par le label
    englobant, deja assez grand pour etre cliquable au doigt. */
 .case {
   appearance: none;

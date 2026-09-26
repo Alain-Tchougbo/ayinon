@@ -36,7 +36,7 @@ onMounted(async () => {
 
 <template>
   <div class="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
-    <PageHeader titre="Console de pilotage decentralisee" description="Six poles territoriaux — suivi du zonage et de l'integrite fonciere.">
+    <PageHeader titre="Console de pilotage decentralisee" description="Six poles territoriaux - suivi du zonage et de l'integrite fonciere.">
       <template #icone><Landmark :size="22" class="text-primaire" aria-hidden="true" /></template>
     </PageHeader>
 
@@ -49,7 +49,7 @@ onMounted(async () => {
       <BaseCard v-for="pole in stats" :key="pole.pole">
         <h2 class="font-semibold text-texte">{{ pole.libelle }}</h2>
         <p class="mt-1.5 text-2xl font-bold text-primaire">{{ pole.totalParcelles }}</p>
-        <p class="text-xs text-texte-attenue">parcelles enregistrees — {{ Math.round(pole.superficieTotaleM2).toLocaleString("fr-FR") }} m²</p>
+        <p class="text-xs text-texte-attenue">parcelles enregistrees - {{ Math.round(pole.superficieTotaleM2).toLocaleString("fr-FR") }} m²</p>
 
         <ul class="mt-3.5 space-y-1.5 border-t border-bordure pt-3 text-xs">
           <li v-for="ligne in REPARTITION" :key="ligne.cle" class="flex items-center justify-between">

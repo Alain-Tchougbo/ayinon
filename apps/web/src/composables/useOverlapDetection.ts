@@ -15,7 +15,7 @@ export interface ConflitLocal {
 /**
  * Pre-verification instantanee cote client (Turf.js) avant meme l'envoi au serveur : donne un
  * retour immediat au geometre pendant la saisie. La validation faisant foi reste toujours
- * PostGIS cote serveur (ST_Intersects / ST_Area) — voir GeometreService.importerBornage.
+ * PostGIS cote serveur (ST_Intersects / ST_Area) - voir GeometreService.importerBornage.
  */
 export function detecterChevauchementLocal(nouvelle: GeoJsonPolygon, voisines: ParcelleVoisine[]): ConflitLocal[] {
   const conflits: ConflitLocal[] = [];

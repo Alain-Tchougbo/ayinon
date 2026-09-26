@@ -66,7 +66,7 @@ interface VisiteRecue {
 }
 
 const LIBELLE_STATUT_SEQUESTRE: Record<Sequestre["statut"], string> = {
-  DEPOT_DECLARE: "Depot declare par l'acheteur — en attente de confirmation par la banque",
+  DEPOT_DECLARE: "Depot declare par l'acheteur - en attente de confirmation par la banque",
   DEPOT_CONFIRME: "Depot confirme par la banque",
   LIBERE: "Depot libere",
   REMBOURSE: "Depot rembourse",
@@ -74,8 +74,8 @@ const LIBELLE_STATUT_SEQUESTRE: Record<Sequestre["statut"], string> = {
 
 const LIBELLE_STATUT_CESSION: Record<CessionDirecte["statutCession"], string> = {
   PROPOSEE: "En attente de l'acheteur",
-  ACCEPTEE: "Acceptee — en attente de validation ANDF",
-  VALIDEE: "Validee — titre delivre",
+  ACCEPTEE: "Acceptee - en attente de validation ANDF",
+  VALIDEE: "Validee - titre delivre",
   REJETEE: "Rejetee",
 };
 const COULEUR_STATUT_CESSION: Record<CessionDirecte["statutCession"], string> = {
@@ -95,7 +95,7 @@ const LIBELLE_STATUT_VISITE: Record<VisiteRecue["statut"], string> = {
   DEMANDEE: "A traiter",
   CONFIRMEE: "Confirmee",
   REFUSEE: "Refusee",
-  REPROGRAMMEE: "Nouvelle date proposee — en attente de l'acheteur",
+  REPROGRAMMEE: "Nouvelle date proposee - en attente de l'acheteur",
 };
 const COULEUR_STATUT_VISITE: Record<VisiteRecue["statut"], string> = {
   DEMANDEE: "bg-accent/10 text-accent",
@@ -410,7 +410,7 @@ async function reprogrammerVisite(id: string) {
             >
               <option value="" disabled>Choisissez une parcelle</option>
               <option v-for="p in parcellesSansAnnonceActive" :key="p.id" :value="p.id">
-                {{ p.nup }} — {{ p.commune }} ({{ p.superficieM2.toLocaleString("fr-FR") }} m²)
+                {{ p.nup }} - {{ p.commune }} ({{ p.superficieM2.toLocaleString("fr-FR") }} m²)
               </option>
             </select>
           </div>
@@ -469,7 +469,7 @@ async function reprogrammerVisite(id: string) {
         <div v-if="resultatVerificationFinancement" class="mt-3 border-t border-bordure pt-3">
           <p v-if="resultatVerificationFinancement.valide" class="flex items-center gap-1.5 text-sm font-semibold text-succes">
             <ShieldCheck :size="15" aria-hidden="true" />
-            Accord de principe valide pour {{ resultatVerificationFinancement.acheteurNom }} —
+            Accord de principe valide pour {{ resultatVerificationFinancement.acheteurNom }} -
             {{ resultatVerificationFinancement.montantAccordeFcfa?.toLocaleString("fr-FR") }} FCFA
           </p>
           <p v-else class="text-sm text-danger">Code invalide ou attestation non accordee.</p>
@@ -496,7 +496,7 @@ async function reprogrammerVisite(id: string) {
               <tr class="align-top">
                 <td class="px-4 py-3">
                   <p class="font-semibold text-texte">{{ p.nup }}</p>
-                  <p class="text-sm text-texte-attenue">{{ p.commune }} — {{ p.superficieM2.toLocaleString("fr-FR") }} m²</p>
+                  <p class="text-sm text-texte-attenue">{{ p.commune }} - {{ p.superficieM2.toLocaleString("fr-FR") }} m²</p>
                   <span v-if="p.verrouAntiVente" class="mt-1 inline-flex rounded-full bg-succes/10 px-3 py-1 text-xs font-semibold text-succes" title="Deverrouillez depuis le Passeport foncier avant de ceder">
                     Verrouillee
                   </span>
@@ -545,8 +545,8 @@ async function reprogrammerVisite(id: string) {
           <tbody class="divide-y divide-bordure">
             <tr v-for="c in cessionsEmises" :key="c.id" class="align-top">
               <td class="px-4 py-3">
-                <p class="font-semibold text-texte">{{ c.parcelle.nup }} — {{ c.parcelle.commune }}</p>
-                <p class="text-xs text-texte-attenue">Vers {{ c.acquereur?.nomComplet ?? "acheteur" }} — {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA</p>
+                <p class="font-semibold text-texte">{{ c.parcelle.nup }} - {{ c.parcelle.commune }}</p>
+                <p class="text-xs text-texte-attenue">Vers {{ c.acquereur?.nomComplet ?? "acheteur" }} - {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA</p>
                 <p v-if="c.statutCession === 'REJETEE' && c.motifRejet" class="mt-1.5 text-xs text-danger">Motif : {{ c.motifRejet }}</p>
                 <p v-if="c.sequestre" class="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-primaire">
                   <Banknote :size="13" aria-hidden="true" />
@@ -557,7 +557,7 @@ async function reprogrammerVisite(id: string) {
                   Titre {{ c.titre.numeroTitre }} delivre le {{ new Date(c.titre.dateDelivrance).toLocaleDateString("fr-FR") }}
                 </div>
               </td>
-              <td class="whitespace-nowrap px-4 py-3">
+              <td class="px-4 py-3">
                 <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_CESSION[c.statutCession]">
                   {{ LIBELLE_STATUT_CESSION[c.statutCession] }}
                 </span>
@@ -601,14 +601,14 @@ async function reprogrammerVisite(id: string) {
             <template v-for="v in visitesRecues" :key="v.id">
               <tr class="align-top">
                 <td class="px-4 py-3">
-                  <p class="font-semibold text-texte">{{ v.annonce.parcelle.nup }} — {{ v.annonce.parcelle.commune }}</p>
+                  <p class="font-semibold text-texte">{{ v.annonce.parcelle.nup }} - {{ v.annonce.parcelle.commune }}</p>
                   <p class="text-xs text-texte-attenue">
-                    {{ v.acheteur.nomComplet }} — {{ v.mode === "PRESENTIEL" ? "Sur place" : "A distance" }} —
+                    {{ v.acheteur.nomComplet }} - {{ v.mode === "PRESENTIEL" ? "Sur place" : "A distance" }} -
                     {{ new Date(v.dateProposee).toLocaleString("fr-FR") }}
                   </p>
                   <p v-if="v.messageAcheteur" class="mt-1.5 text-xs text-texte-attenue">« {{ v.messageAcheteur }} »</p>
                 </td>
-                <td class="whitespace-nowrap px-4 py-3">
+                <td class="px-4 py-3">
                   <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_VISITE[v.statut]">
                     {{ LIBELLE_STATUT_VISITE[v.statut] }}
                   </span>
@@ -650,7 +650,7 @@ async function reprogrammerVisite(id: string) {
           <BaseCard>
             <div class="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p class="font-semibold text-texte">{{ a.parcelle.nup }} — {{ a.parcelle.commune }}</p>
+                <p class="font-semibold text-texte">{{ a.parcelle.nup }} - {{ a.parcelle.commune }}</p>
                 <p class="text-xs text-texte-attenue">{{ a.parcelle.superficieM2.toLocaleString("fr-FR") }} m²</p>
               </div>
               <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT[a.statut]">{{ LIBELLE_STATUT[a.statut] }}</span>

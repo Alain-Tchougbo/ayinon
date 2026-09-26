@@ -75,9 +75,9 @@ async function confirmer(id: string) {
         <tbody class="divide-y divide-bordure">
           <tr v-for="p in parcellesAValider" :key="p.id" class="align-top">
             <td class="px-4 py-3">
-              <p class="font-medium text-texte">{{ p.nup }} — {{ p.commune }}</p>
+              <p class="font-medium text-texte">{{ p.nup }} - {{ p.commune }}</p>
               <p class="text-xs text-texte-attenue">
-                Indicatif satellite : {{ p.usageSolIndicatif ? LIBELLE_TYPE_USAGE_SOL[p.usageSolIndicatif as keyof typeof LIBELLE_TYPE_USAGE_SOL] : "—" }}
+                Indicatif satellite : {{ p.usageSolIndicatif ? LIBELLE_TYPE_USAGE_SOL[p.usageSolIndicatif as keyof typeof LIBELLE_TYPE_USAGE_SOL] : "-" }}
               </p>
             </td>
             <td class="px-4 py-3">

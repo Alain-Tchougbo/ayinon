@@ -93,9 +93,9 @@ async function traiterDemandePro(id: string, approuver: boolean) {
               <td class="px-4 py-3">
                 <p class="flex items-center gap-1.5 font-medium text-texte">
                   <BadgeCheck :size="13" aria-hidden="true" />
-                  {{ d.nomComplet }} — {{ d.role.replaceAll("_", " ") }}
+                  {{ d.nomComplet }} - {{ d.role.replaceAll("_", " ") }}
                 </p>
-                <p class="mt-0.5 text-xs text-texte-attenue">{{ d.email }}<span v-if="d.telephone"> — {{ d.telephone }}</span></p>
+                <p class="mt-0.5 text-xs text-texte-attenue">{{ d.email }}<span v-if="d.telephone"> - {{ d.telephone }}</span></p>
               </td>
               <td class="px-4 py-3">
                 <p class="text-sm text-texte">{{ d.numeroAgrement ?? "non renseigne" }}</p>

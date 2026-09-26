@@ -76,7 +76,7 @@ async function enregistrerEdition(id: string) {
     <p v-if="chargement" class="text-sm text-texte-attenue" role="status">Chargement…</p>
 
     <div v-if="!chargement" class="overflow-x-auto rounded-carte border border-bordure bg-surface">
-      <table class="w-full text-left text-sm">
+      <table class="w-full table-fixed text-left text-sm">
         <thead>
           <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
             <th class="px-4 py-3 font-semibold">Proprietaire</th>
@@ -91,7 +91,7 @@ async function enregistrerEdition(id: string) {
                 <p class="font-medium text-texte">{{ p.nomComplet }}<span v-if="p.estDiaspora" class="ml-2 text-xs font-semibold text-accent">Diaspora</span></p>
                 <p class="text-xs text-texte-attenue">{{ p.nombreParcelles }} parcelle(s)</p>
               </td>
-              <td class="px-4 py-3 text-xs text-texte-attenue">{{ p.email ?? "—" }}<span v-if="p.telephone"> — {{ p.telephone }}</span></td>
+              <td class="break-words px-4 py-3 text-xs text-texte-attenue">{{ p.email ?? "-" }}<span v-if="p.telephone"> - {{ p.telephone }}</span></td>
               <td class="px-4 py-3">
                 <BaseButton taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
                   <Pencil :size="13" aria-hidden="true" />

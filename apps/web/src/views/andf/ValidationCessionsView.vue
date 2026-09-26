@@ -91,14 +91,14 @@ async function valider(id: string, approuver: boolean) {
           <template v-for="c in cessions" :key="c.id">
             <tr class="align-top">
               <td class="px-4 py-3">
-                <p class="font-semibold text-texte">{{ c.parcelle.nup }} — {{ c.parcelle.commune }}</p>
+                <p class="font-semibold text-texte">{{ c.parcelle.nup }} - {{ c.parcelle.commune }}</p>
                 <p class="mt-0.5 text-sm text-texte-attenue">
-                  {{ c.vendeurNom }} cede a {{ c.acquereurNom }} — {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA
+                  {{ c.vendeurNom }} cede a {{ c.acquereurNom }} - {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA
                 </p>
                 <p class="mt-0.5 text-xs text-texte-attenue">Acceptee le {{ new Date(c.dateAcceptation).toLocaleDateString("fr-FR") }}</p>
               </td>
               <td class="px-4 py-3">
-                <div class="flex gap-2">
+                <div class="flex flex-col gap-2 sm:flex-row">
                   <BaseButton taille="sm" @click="valider(c.id, true)">
                     <Award :size="14" aria-hidden="true" />
                     Valider et delivrer le titre

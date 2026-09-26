@@ -127,7 +127,7 @@ async function reactiver(id: string) {
       </BaseCard>
 
       <div class="overflow-x-auto rounded-carte border border-bordure bg-surface">
-        <table class="w-full text-left text-sm">
+        <table class="w-full table-fixed text-left text-sm">
           <thead>
             <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
               <th class="px-4 py-3 font-semibold">Utilisateur</th>
@@ -140,9 +140,9 @@ async function reactiver(id: string) {
               <tr class="align-top">
                 <td class="px-4 py-3">
                   <p class="font-medium text-texte">{{ u.nomComplet }}</p>
-                  <p class="text-xs text-texte-attenue">
-                    {{ u.email }} — {{ u.role.replaceAll("_", " ") }}
-                    <span v-if="u.poleTerritorial"> — {{ u.poleTerritorial.replaceAll("_", " ") }}</span>
+                  <p class="break-words text-xs text-texte-attenue">
+                    {{ u.email }} - {{ u.role.replaceAll("_", " ") }}
+                    <span v-if="u.poleTerritorial"> - {{ u.poleTerritorial.replaceAll("_", " ") }}</span>
                   </p>
                 </td>
                 <td class="px-4 py-3">
@@ -154,7 +154,7 @@ async function reactiver(id: string) {
                     Suspendu
                   </span>
                   <p v-if="u.compteSuspenduLe" class="mt-1 text-xs italic text-danger">
-                    Le {{ new Date(u.compteSuspenduLe).toLocaleDateString("fr-FR") }}<span v-if="u.motifSuspensionCompte"> — {{ u.motifSuspensionCompte }}</span>
+                    Le {{ new Date(u.compteSuspenduLe).toLocaleDateString("fr-FR") }}<span v-if="u.motifSuspensionCompte"> - {{ u.motifSuspensionCompte }}</span>
                   </p>
                 </td>
                 <td class="px-4 py-3">
