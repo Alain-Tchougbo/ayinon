@@ -10,6 +10,12 @@ const languePreferee = ref<LangueAssistantVocal>(
 const enLecture = ref(false);
 /** Phrase associee a la vue actuellement affichee (definie par chaque vue via definirPhraseCourante). */
 const phraseCourante = ref<PhraseVocale>(PHRASES.bienvenue);
+/**
+ * true juste apres une lecture ayant bascule en francais faute d'enregistrement dans la langue
+ * choisie : l'interface doit le signaler explicitement (voir VoiceAssistantButton), jamais rester
+ * silencieuse sur le fait qu'elle n'a pas parle dans la langue demandee.
+ */
+const dernierRepliFrancais = ref(false);
 
 function definirLangue(langue: LangueAssistantVocal) {
   languePreferee.value = langue;
@@ -52,7 +58,10 @@ export function useVoiceAssistant() {
   async function lire(phrase: PhraseVocale) {
     if (languePreferee.value !== LangueAssistantVocal.FR) {
       const joue = await jouerAudioPreEnregistre(phrase.id, languePreferee.value);
+      dernierRepliFrancais.value = !joue;
       if (joue) return;
+    } else {
+      dernierRepliFrancais.value = false;
     }
     parlerFrancais(phrase.texteFr);
   }
@@ -61,5 +70,5 @@ export function useVoiceAssistant() {
     phraseCourante.value = phrase;
   }
 
-  return { languePreferee, definirLangue, lire, enLecture, phraseCourante, definirPhraseCourante };
+  return { languePreferee, definirLangue, lire, enLecture, phraseCourante, definirPhraseCourante, dernierRepliFrancais };
 }

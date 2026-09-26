@@ -59,4 +59,11 @@ export class FamillesController {
   async obtenirEtat(@Param("id") id: string) {
     return this.familles.obtenirEtatParcelle(id);
   }
+
+  /** Ce qui attend reellement l'utilisateur connecte, sans qu'il ait a chercher un NUP. */
+  @Get("mes-signatures-en-attente")
+  async mesSignaturesEnAttente(@CurrentUser() utilisateur: UtilisateurAuthentifie) {
+    if (!utilisateur.proprietaireId) return [];
+    return this.familles.listerMesSignaturesEnAttente(utilisateur.proprietaireId);
+  }
 }

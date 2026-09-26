@@ -5,6 +5,7 @@ export interface UtilisateurAuthentifie {
   id: string;
   email: string;
   role: RoleUtilisateur;
+  nomComplet: string;
   proprietaireId: string | null;
 }
 

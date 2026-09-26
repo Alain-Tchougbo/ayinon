@@ -13,6 +13,17 @@ export interface ParcelleCache {
   geometrie: GeoJsonPolygon;
   proprietaireId: string | null;
   proprietaireNom: string | null;
+  usageSolIndicatif: string | null;
+  usageSolValide: string | null;
+}
+
+export interface BatiCache {
+  id: string;
+  source: string;
+  scoreConfiance: number | null;
+  parcelleId: string | null;
+  valide: boolean;
+  geometrie: GeoJsonPolygon;
 }
 
 export interface ActionEnAttenteLocale {

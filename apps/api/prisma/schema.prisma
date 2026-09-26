@@ -21,11 +21,14 @@ datasource db {
 
 enum RoleUtilisateur {
   CITOYEN
+  VENDEUR
+  ACHETEUR
   GEOMETRE
   NOTAIRE
   MANDATAIRE_FAMILIAL
   AGENT_ANDF
   MAGISTRAT_CSAF
+  AGENT_BANQUE
   ADMIN
 }
 
@@ -67,6 +70,16 @@ enum StatutConflitCsaf {
   LEVE
 }
 
+/// Effet applique par la decision definitive du magistrat CSAF (E8.8) au moment de la levee du
+/// gel. LEVEE_SIMPLE restaure le statut anterieur de la parcelle (comportement historique).
+/// ANNULATION_VENTE et TRANSFERT_FORCE annulent en plus toute cession/annonce en cours sur la
+/// parcelle ; TRANSFERT_FORCE reassigne directement la propriete au nom designe par la decision.
+enum TypeDecisionCsaf {
+  LEVEE_SIMPLE
+  ANNULATION_VENTE
+  TRANSFERT_FORCE
+}
+
 enum TypeOperationAudit {
   CREATION_PARCELLE
   VERROUILLAGE_ANTI_VENTE
@@ -82,6 +95,144 @@ enum TypeOperationAudit {
   CLOTURE_BAN
   GEL_CSAF
   LEVEE_GEL_CSAF
+  PROPOSITION_CESSION
+  ACCEPTATION_CESSION
+  REJET_CESSION
+  VALIDATION_CESSION
+  DELIVRANCE_TITRE
+  INSCRIPTION_HYPOTHEQUE
+  LEVEE_HYPOTHEQUE
+  MODIFICATION_ADMIN_PARCELLE
+  PUBLICATION_ANNONCE
+  RETRAIT_ANNONCE
+  MANIFESTATION_INTERET
+  RETENUE_INTERET
+  VERIFICATION_ANDF_ANNONCE
+  CREATION_COMPTE
+  DEPOT_SIGNALEMENT
+  QUALIFICATION_SIGNALEMENT
+  DEPOT_AVIS
+  DECLARATION_SEQUESTRE
+  CONFIRMATION_SEQUESTRE
+  LIBERATION_SEQUESTRE
+  REMBOURSEMENT_SEQUESTRE
+  DEMANDE_VALIDATION_PRO
+  VALIDATION_COMPTE_PRO
+  REJET_COMPTE_PRO
+  DEMANDE_VISITE
+  REPONSE_VISITE
+  DECISION_CSAF_ANNULATION_VENTE
+  DECISION_CSAF_TRANSFERT_FORCE
+  DEMANDE_FINANCEMENT
+  CONSULTATION_FINANCEMENT
+  TRAITEMENT_FINANCEMENT
+  ACCORD_EXCLUSIVITE
+  SUSPENSION_ADMIN_ANNONCE
+  IMPORT_BATI
+  VALIDATION_BATI
+  REJET_BATI
+  VALIDATION_USAGE_SOL
+}
+
+/// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
+/// -> VALIDEE par un agent ANDF (genere le Titre et transfere la propriete), ou REJETEE a toute
+/// etape avant validation.
+enum StatutCession {
+  PROPOSEE
+  ACCEPTEE
+  VALIDEE
+  REJETEE
+}
+
+enum StatutHypotheque {
+  ACTIVE
+  LEVEE
+}
+
+/// Demande de financement (E4.6-E4.8) : l'acheteur demande un accord de principe a une banque
+/// partenaire, qui l'accorde ou le refuse. Aucun scoring automatique : la decision reste toujours
+/// humaine, l'agent banque tranche lui-meme au vu des pieces jointes.
+enum StatutDemandeFinancement {
+  EN_ATTENTE
+  ACCORD_PRINCIPE
+  REFUSEE
+}
+
+/// Cycle de vie d'une annonce (vitrine publique) : ACTIVE tant que le vendeur cherche un
+/// acquereur, RETIREE si le vendeur l'annule, VENDUE des qu'une cession issue de cette annonce
+/// est validee (voir apps/api/src/annonces).
+enum StatutAnnonce {
+  ACTIVE
+  RETIREE
+  VENDUE
+}
+
+enum StatutInteret {
+  EN_ATTENTE
+  RETENU
+  DECLINE
+}
+
+/// Statut declare par un vendeur (E0.3) : adapte les pieces attendues lors de la publication
+/// d'une annonce (ex. un mandataire doit joindre son mandat, un heritier son acte de succession).
+enum StatutDeclarantVendeur {
+  PROPRIETAIRE
+  HERITIER
+  MANDATAIRE
+  AGENCE
+}
+
+/// File d'attente de validation des comptes professionnels (E0.5/E0.6). NON_APPLICABLE pour tout
+/// compte non professionnel (CITOYEN/VENDEUR/ACHETEUR) ou cree directement par un admin — seul un
+/// geometre/notaire/agent banque en auto-inscription passe par EN_ATTENTE.
+enum StatutValidationPro {
+  NON_APPLICABLE
+  EN_ATTENTE
+  APPROUVE
+  REJETE
+}
+
+/// Portee d'un signalement (E2.6/E8.1) : ANNONCE pour un probleme sur une annonce publiee
+/// (occupant, litige non declare, prix suspect...), LITIGE_FONCIER pour une contestation plus
+/// large sur la parcelle elle-meme (susceptible d'aboutir a un gel conservatoire CSAF).
+enum TypeSignalement {
+  ANNONCE
+  LITIGE_FONCIER
+}
+
+/// DEPOSE tant qu'un admin ne l'a pas qualifie ; FONDE ou REJETE ensuite (E2.7/E8.2). La
+/// qualification FONDE d'un litige n'applique jamais elle-meme le gel : elle informe la file du
+/// magistrat CSAF, seul habilite a l'ordonner (separation des autorites, voir ET.8).
+enum StatutSignalement {
+  DEPOSE
+  FONDE
+  REJETE
+}
+
+/// Sequestre en pur suivi de statut (Epic 5) : aucun mouvement d'argent reel, ni mobile money ni
+/// virement (voir docs/decisions.md). DEPOT_DECLARE -> DEPOT_CONFIRME -> LIBERE (a la validation
+/// ANDF de la cession) ou REMBOURSE (des que la cession est REJETEE, quelle qu'en soit la cause).
+enum StatutSequestre {
+  DEPOT_DECLARE
+  DEPOT_CONFIRME
+  LIBERE
+  REMBOURSE
+}
+
+/// Modalite d'une visite (E3.5) : pas d'integration de visioconference reelle (Zoom, Meet...),
+/// VIDEO signifie simplement que les parties conviennent elles-memes du lien a utiliser.
+enum ModeVisite {
+  PRESENTIEL
+  VIDEO
+}
+
+/// DEMANDEE -> CONFIRMEE/REFUSEE par le vendeur, ou REPROGRAMMEE (le vendeur propose une autre
+/// date, que l'acheteur doit alors confirmer ou refuser a son tour).
+enum StatutVisite {
+  DEMANDEE
+  CONFIRMEE
+  REFUSEE
+  REPROGRAMMEE
 }
 
 enum PoleTerritorial {
@@ -91,6 +242,25 @@ enum PoleTerritorial {
   ZOU_COLLINES
   BORGOU_ALIBORI
   ATACORA_DONGA
+}
+
+/// IMPORT_IA : detection automatique par imagerie satellite (ex. Google Open Buildings), a valider
+/// par un humain avant d'etre consideree fiable. SAISIE_MANUELLE : dessine directement par un
+/// geometre/agent sur la carte.
+enum SourceBati {
+  IMPORT_IA
+  SAISIE_MANUELLE
+}
+
+/// Usage du sol d'une parcelle. AGRICOLE/URBAIN/FORET/EAU/AUTRE refletent les classes d'occupation
+/// du sol de jeux de donnees satellite ouverts (ex. ESA WorldCover) — voir usageSolIndicatif sur
+/// Parcelle, qui reste indicatif tant qu'un agent ANDF ne l'a pas confirme (usageSolValide).
+enum TypeUsageSol {
+  AGRICOLE
+  URBAIN
+  FORET
+  EAU
+  AUTRE
 }
 
 // ---------------------------------------------------------------------------
@@ -105,42 +275,80 @@ model Utilisateur {
   nomComplet      String
   telephone       String?
   poleTerritorial PoleTerritorial?
+  /// false pour un compte issu de l'inscription en libre-service (E0.1) tant que l'OTP n'est pas
+  /// confirme ; toujours true pour un compte cree par un admin (E0.6, E0.7) ou par le seed.
+  emailValide     Boolean          @default(true)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
   proprietaireId String?       @unique
   proprietaire   Proprietaire? @relation(fields: [proprietaireId], references: [id])
 
-  refreshTokens      RefreshToken[]
-  codesOtp            CodeOtp[]
-  plansBornageSignes  PlanBornage[] @relation("GeometreSignataire")
-  conflitsOuverts     ConflitCsaf[] @relation("MagistratOuvrant")
+  refreshTokens          RefreshToken[]
+  codesOtp               CodeOtp[]
+  plansBornageSignes     PlanBornage[]          @relation("GeometreSignataire")
+  plansBornageImportes   PlanBornage[]          @relation("GeometreImportateur")
+  conflitsOuverts        ConflitCsaf[]          @relation("MagistratOuvrant")
+  cessionsAcquises       Convention[]           @relation("CessionAcquereur")
+  hypothequesInscrites   Hypotheque[]           @relation("HypothequeInscripteur")
+  hypothequesLevees      Hypotheque[]           @relation("HypothequeLeveur")
+  cessionsValidees       Convention[]           @relation("CessionValidateur")
+  annoncesPubliees       Annonce[]              @relation("AnnoncePubliee")
+  annoncesVerifiees      Annonce[]              @relation("AnnonceVerifieeAndf")
+  exclusivitesRecues     Annonce[]              @relation("AnnonceExclusivite")
+  recherchesSauvegardees RechercheSauvegardee[] @relation("RechercheSauvegardeeAcheteur")
+  interetsExprimes       InteretAchat[]         @relation("InteretAcheteur")
+  signalementsDeposes    Signalement[]          @relation("SignalementAuteur")
+  signalementsQualifies  Signalement[]          @relation("SignalementQualificateur")
+  avisDeposes            Avis[]                 @relation("AvisAuteur")
+  avisRecus              Avis[]                 @relation("AvisCite")
+  sequestresDeclares     Sequestre[]            @relation("SequestreDeclarant")
+  sequestresConfirmes    Sequestre[]            @relation("SequestreConfirmateur")
+  visitesDemandees       Visite[]               @relation("VisiteAcheteur")
+  demandesFinancement    DemandeFinancement[]   @relation("FinancementAcheteur")
+  financementsTraites    DemandeFinancement[]   @relation("FinancementTraite")
+  batisValides           Bati[]                 @relation("BatiValidateur")
+  parcellesUsageSolValidees Parcelle[]          @relation("UsageSolValidateur")
+
+  /// Declare uniquement par un VENDEUR (E0.3) : adapte les pieces demandees lors de la publication.
+  statutDeclarant StatutDeclarantVendeur?
+
+  /// E0.5/E0.6 : numero d'agrement/d'ordre declare par un GEOMETRE/NOTAIRE/AGENT_BANQUE en
+  /// auto-inscription, et statut de la validation admin qui en decoule. NON_APPLICABLE (par
+  /// defaut) pour tout compte non concerne (grand public, ou cree directement par un admin).
+  numeroAgrement      String?
+  statutValidationPro StatutValidationPro @default(NON_APPLICABLE)
+  motifRejetPro       String?
+  valideParId         String?
+  validePar           Utilisateur?        @relation("ValidationProAdmin", fields: [valideParId], references: [id])
+  comptesProValides   Utilisateur[]       @relation("ValidationProAdmin")
 
   @@index([role])
+  @@index([statutValidationPro])
 }
 
 model RefreshToken {
-  id            String    @id @default(uuid())
+  id            String      @id @default(uuid())
   utilisateurId String
   utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
   tokenHash     String
   expiresAt     DateTime
   revokedAt     DateTime?
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime    @default(now())
 
   @@index([utilisateurId])
 }
 
 /// OTP generique (verrouillage de parcelle, signature de mandat familial, ...). En dev, le code est journalise au lieu d'etre envoye par SMS.
 model CodeOtp {
-  id            String   @id @default(uuid())
+  id            String      @id @default(uuid())
   utilisateurId String
   utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
   code          String
   contexte      String
   expiresAt     DateTime
-  utilise       Boolean  @default(false)
-  createdAt     DateTime @default(now())
+  utilise       Boolean     @default(false)
+  createdAt     DateTime    @default(now())
 
   @@index([utilisateurId, contexte])
 }
@@ -167,20 +375,29 @@ model Proprietaire {
 /// La geometrie (geom) est un polygone PostGIS SRID 4326, manipule via des
 /// requetes SQL brutes ($queryRaw) dans ParcellesService.
 model Parcelle {
-  id              String                         @id @default(uuid())
-  nup             String                         @unique
+  id              String                                 @id @default(uuid())
+  nup             String                                 @unique
   geom            Unsupported("geometry(Polygon, 4326)")
   superficieM2    Float
-  statut          StatutParcelle                 @default(EN_COURS)
+  statut          StatutParcelle                         @default(EN_COURS)
   poleTerritorial PoleTerritorial
   commune         String
   arrondissement  String?
-  verrouAntiVente Boolean                        @default(false)
-  createdAt       DateTime                       @default(now())
-  updatedAt       DateTime                       @updatedAt
+  verrouAntiVente Boolean                                @default(false)
+  createdAt       DateTime                               @default(now())
+  updatedAt       DateTime                               @updatedAt
 
   proprietaireId String?
   proprietaire   Proprietaire? @relation(fields: [proprietaireId], references: [id])
+
+  /// Occupation du sol derivee automatiquement par recoupement spatial avec ZoneOccupationSol
+  /// (donnee satellite indicative, ex. ESA WorldCover) — jamais presentee comme officielle.
+  usageSolIndicatif TypeUsageSol?
+  /// Confirme ou corrige par un agent ANDF depuis l'indicatif ; prioritaire sur usageSolIndicatif
+  /// des qu'il est renseigne.
+  usageSolValide      TypeUsageSol?
+  usageSolValideParId String?
+  usageSolValidePar   Utilisateur?  @relation("UsageSolValidateur", fields: [usageSolValideParId], references: [id])
 
   titres            Titre[]
   conventions       Convention[]
@@ -188,10 +405,48 @@ model Parcelle {
   signaturesFamille SignatureFamille[]
   bansOpposition    BanOpposition[]
   conflitsCsaf      ConflitCsaf[]
+  hypotheques       Hypotheque[]
   mutationsAudit    MutationAudit[]
+  annonces          Annonce[]
+  signalements      Signalement[]
+  batis             Bati[]
 
   @@index([statut])
   @@index([poleTerritorial])
+}
+
+/// Empreinte d'un batiment/construction, geolocalisee independamment de la parcelle (le
+/// recoupement spatial via ST_Intersects determine parcelleId, souvent absent tant que le
+/// batiment detecte ne recoupe aucune parcelle cadastree connue). Voir apps/api/src/batis.
+model Bati {
+  id             String       @id @default(uuid())
+  geom           Unsupported("geometry(Polygon, 4326)")
+  source         SourceBati
+  /// Score de confiance du modele de detection (0-1), uniquement pour source = IMPORT_IA.
+  scoreConfiance Float?
+  parcelleId     String?
+  parcelle       Parcelle?    @relation(fields: [parcelleId], references: [id])
+  valide         Boolean      @default(false)
+  valideParId    String?
+  validePar      Utilisateur? @relation("BatiValidateur", fields: [valideParId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([parcelleId])
+  @@index([valide])
+}
+
+/// Polygone d'occupation du sol importe d'un jeu de donnees satellite (ex. classe "Cropland"
+/// d'ESA WorldCover), independant des limites de parcelle — le recoupement spatial avec Parcelle
+/// (ST_Intersection/ST_Area) derive usageSolIndicatif. Purement indicatif, jamais un zonage officiel.
+model ZoneOccupationSol {
+  id        String       @id @default(uuid())
+  geom      Unsupported("geometry(Polygon, 4326)")
+  typeUsage TypeUsageSol
+  source    String       @default("ESA_WORLDCOVER_2021")
+  createdAt DateTime     @default(now())
+
+  @@index([typeUsage])
 }
 
 model Titre {
@@ -204,12 +459,20 @@ model Titre {
   signatureEd25519 String
   createdAt        DateTime @default(now())
 
+  /// Cession ayant donne lieu a la delivrance de ce titre (absent pour les titres seedes hors workflow).
+  conventionId String?     @unique
+  convention   Convention? @relation(fields: [conventionId], references: [id])
+
   @@index([parcelleId])
 }
 
 /// Convention de vente numerisee : scellee par hash SHA-256 + signature Ed25519,
 /// le QR appose sur le document papier encode qrPayload et est verifie hors-ligne
 /// par le Scanner Anti-Fraude cote citoyen (voir apps/api/src/conventions).
+///
+/// statutCession porte le cycle de vie du parcours d'achat/vente (voir apps/api/src/cessions) :
+/// les conventions historiques/seedees restent VALIDEE par defaut (documents deja scelles, hors
+/// workflow de proposition), seules les nouvelles cessions initiees via /cessions demarrent a PROPOSEE.
 model Convention {
   id               String   @id @default(uuid())
   parcelleId       String
@@ -225,28 +488,216 @@ model Convention {
   creeParId        String?
   createdAt        DateTime @default(now())
 
+  statutCession   StatutCession @default(VALIDEE)
+  dateAcceptation DateTime?
+  motifRejet      String?
+  dateValidation  DateTime?
+
+  acquereurId String?
+  acquereur   Utilisateur? @relation("CessionAcquereur", fields: [acquereurId], references: [id])
+
+  valideParId String?
+  validePar   Utilisateur? @relation("CessionValidateur", fields: [valideParId], references: [id])
+
+  titre Titre?
+
+  /// Annonce ayant donne lieu a cette cession, le cas echeant (une cession peut aussi naitre d'un
+  /// accord direct hors vitrine, auquel cas ce champ reste vide).
+  annonceId String?
+  annonce   Annonce? @relation(fields: [annonceId], references: [id])
+
+  avis      Avis[]
+  sequestre Sequestre?
+
   @@index([parcelleId])
+  @@index([statutCession])
+}
+
+/// Annonce publique : un VENDEUR publie une parcelle qu'il possede sur la vitrine (visible sans
+/// compte, comme la carte cadastrale), un ACHETEUR manifeste son interet, le vendeur choisit un
+/// interet retenu et cela demarre une Convention/cession classique (voir apps/api/src/annonces).
+model Annonce {
+  id                String        @id @default(uuid())
+  parcelleId        String
+  parcelle          Parcelle      @relation(fields: [parcelleId], references: [id])
+  prixIndicatifFcfa Float?
+  description       String?
+  statut            StatutAnnonce @default(ACTIVE)
+  createdAt         DateTime      @default(now())
+  retireeLe         DateTime?
+
+  publieeParId String
+  publieePar   Utilisateur @relation("AnnoncePubliee", fields: [publieeParId], references: [id])
+
+  /// Badge "situation fonciere controlee" (E2.2) : pose par un agent ANDF apres verification du
+  /// titre/statut de la parcelle. Le badge "limites certifiees" (E2.3) n'est pas stocke ici : il
+  /// se deduit directement de PlanBornage (signe + non conflictuel) pour ne jamais desynchroniser
+  /// un booleen dedie de la realite du plan de bornage.
+  verifieeParAndfId    String?
+  verifieeParAndf      Utilisateur? @relation("AnnonceVerifieeAndf", fields: [verifieeParAndfId], references: [id])
+  dateVerificationAndf DateTime?
+
+  /// Exclusivite temporaire (E4.5) : le vendeur suspend l'arrivee de nouveaux interets au profit
+  /// d'un acheteur deja interesse, le temps de securiser la negociation. Purement declarative (pas
+  /// de statut stocke a part : leve automatiquement des que exclusiviteJusqua est depassee).
+  exclusiviteAcheteurId String?
+  exclusiviteAcheteur   Utilisateur? @relation("AnnonceExclusivite", fields: [exclusiviteAcheteurId], references: [id])
+  exclusiviteJusqua     DateTime?
+
+  interets            InteretAchat[]
+  cessions            Convention[]
+  signalements        Signalement[]
+  visites             Visite[]
+  demandesFinancement DemandeFinancement[]
+
+  @@index([parcelleId])
+  @@index([statut])
+}
+
+/// Recherche sauvegardee avec alerte (E3.2) : les memes filtres combinables que GET /annonces,
+/// figes au moment de l'enregistrement. "Alerte" = in-app uniquement (nombre de nouvelles annonces
+/// correspondantes depuis la derniere consultation), coherent avec l'absence de passerelle SMS/
+/// email/push reelle deja actee (voir docs/decisions.md, "Notifications").
+model RechercheSauvegardee {
+  id                   String   @id @default(uuid())
+  nom                  String
+  commune              String?
+  prixMinFcfa          Float?
+  prixMaxFcfa          Float?
+  superficieMinM2      Float?
+  superficieMaxM2      Float?
+  verifieeAndf         Boolean?
+  limitesCertifiees    Boolean?
+  createdAt            DateTime @default(now())
+  derniereConsultation DateTime @default(now())
+
+  acheteurId String
+  acheteur   Utilisateur @relation("RechercheSauvegardeeAcheteur", fields: [acheteurId], references: [id])
+
+  @@index([acheteurId])
+}
+
+/// Manifestation d'interet d'un ACHETEUR sur une annonce : le vendeur voit tous les interets
+/// recus et choisit celui qu'il retient (RETENU), les autres restant EN_ATTENTE ou passant a
+/// DECLINE.
+model InteretAchat {
+  id        String        @id @default(uuid())
+  annonceId String
+  annonce   Annonce       @relation(fields: [annonceId], references: [id])
+  message   String?
+  statut    StatutInteret @default(EN_ATTENTE)
+  createdAt DateTime      @default(now())
+
+  acheteurId String
+  acheteur   Utilisateur @relation("InteretAcheteur", fields: [acheteurId], references: [id])
+
+  @@unique([annonceId, acheteurId])
+  @@index([annonceId])
+}
+
+/// Demande de visite (E3.5/E3.6) : l'acheteur propose un creneau, le vendeur confirme, refuse ou
+/// reprogramme (propose une autre date, que l'acheteur doit alors confirmer/refuser a son tour).
+/// Pas de delegation a un accompagnateur de terrain dans cette iteration (aucun role dedie
+/// n'existe pour ca), ni d'integration de visioconference reelle (voir enum ModeVisite).
+model Visite {
+  id              String       @id @default(uuid())
+  annonceId       String
+  annonce         Annonce      @relation(fields: [annonceId], references: [id])
+  mode            ModeVisite
+  dateProposee    DateTime
+  messageAcheteur String?
+  statut          StatutVisite @default(DEMANDEE)
+
+  /// Renseignee uniquement quand le vendeur reprogramme (statut REPROGRAMMEE).
+  nouvelleDateProposee DateTime?
+  motifRefus           String?
+  createdAt            DateTime  @default(now())
+  traiteeLe            DateTime?
+
+  acheteurId String
+  acheteur   Utilisateur @relation("VisiteAcheteur", fields: [acheteurId], references: [id])
+
+  @@index([annonceId])
+  @@index([acheteurId])
+}
+
+/// Gage bancaire inscrit sur une parcelle titree : tant qu'une hypotheque ACTIVE existe, la
+/// parcelle n'est pas consideree "libre de charge" par la verification de solvabilite (voir
+/// apps/api/src/hypotheques). Une parcelle ne peut porter qu'une seule hypotheque active a la fois.
+model Hypotheque {
+  id                 String           @id @default(uuid())
+  parcelleId         String
+  parcelle           Parcelle         @relation(fields: [parcelleId], references: [id])
+  banqueNom          String
+  montantGarantiFcfa Float
+  statut             StatutHypotheque @default(ACTIVE)
+  dateInscription    DateTime         @default(now())
+  dateLevee          DateTime?
+  motifLevee         String?
+
+  inscriteParId String
+  inscritePar   Utilisateur  @relation("HypothequeInscripteur", fields: [inscriteParId], references: [id])
+  leveeParId    String?
+  leveePar      Utilisateur? @relation("HypothequeLeveur", fields: [leveeParId], references: [id])
+
+  @@index([parcelleId])
+  @@index([statut])
+}
+
+/// Demande d'accord de financement (E4.6-E4.8) : l'acheteur demande un accord de principe a une
+/// banque partenaire, avec une piece jointe optionnelle (preuve de revenus...) qu'elle seule peut
+/// consulter (acces trace via dateConsultation). L'accord genere un code de verification que le
+/// vendeur peut utiliser pour authentifier l'attestation sans avoir a contacter la banque.
+model DemandeFinancement {
+  id                  String                   @id @default(uuid())
+  montantSouhaiteFcfa Float
+  cheminDocument      String?
+  statut              StatutDemandeFinancement @default(EN_ATTENTE)
+  createdAt           DateTime                 @default(now())
+  dateConsultation    DateTime?
+
+  acheteurId String
+  acheteur   Utilisateur @relation("FinancementAcheteur", fields: [acheteurId], references: [id])
+
+  annonceId String?
+  annonce   Annonce? @relation(fields: [annonceId], references: [id])
+
+  traiteeParId       String?
+  traiteePar         Utilisateur? @relation("FinancementTraite", fields: [traiteeParId], references: [id])
+  dateTraitement     DateTime?
+  montantAccordeFcfa Float?
+  motifRefus         String?
+  codeVerification   String?      @unique
+
+  @@index([acheteurId])
+  @@index([statut])
 }
 
 /// Plan de bornage televerse par un geometre-expert. chevauchementDetecte et
 /// parcellesEnConflit sont calcules par GeometreService via ST_Intersects/ST_Area.
 model PlanBornage {
-  id                   String   @id @default(uuid())
+  id                   String                                 @id @default(uuid())
   parcelleId           String
-  parcelle             Parcelle @relation(fields: [parcelleId], references: [id])
+  parcelle             Parcelle                               @relation(fields: [parcelleId], references: [id])
   geometrie            Unsupported("geometry(Polygon, 4326)")
   referenceDossier     String
-  chevauchementDetecte Boolean  @default(false)
+  chevauchementDetecte Boolean                                @default(false)
   parcellesEnConflit   String[]
   numeroOrdreOgeb      String?
   hashSha256           String
   signatureEd25519     String?
-  createdAt            DateTime @default(now())
+  createdAt            DateTime                               @default(now())
 
   signeParId String?
   signePar   Utilisateur? @relation("GeometreSignataire", fields: [signeParId], references: [id])
 
+  /// Geometre ayant televerse le plan (distinct du signataire : un plan peut etre importe puis
+  /// signe plus tard, ou par un confrere). Alimente le tableau "mes imports recents" du geometre.
+  importeParId String?
+  importePar   Utilisateur? @relation("GeometreImportateur", fields: [importeParId], references: [id])
+
   @@index([parcelleId])
+  @@index([importeParId])
 }
 
 // ---------------------------------------------------------------------------
@@ -283,13 +734,13 @@ model SignatureFamille {
 /// Affichage de Ban Numerique : periode legale de 15 jours (DUREE_BAN_OPPOSITION_JOURS)
 /// ouvrant droit d'opposition aux voisins avant signature definitive de la mutation.
 model BanOpposition {
-  id         String       @id @default(uuid())
+  id         String    @id @default(uuid())
   parcelleId String
-  parcelle   Parcelle     @relation(fields: [parcelleId], references: [id])
-  dateDebut  DateTime     @default(now())
+  parcelle   Parcelle  @relation(fields: [parcelleId], references: [id])
+  dateDebut  DateTime  @default(now())
   dateFin    DateTime
-  statut     StatutBan    @default(OUVERT)
-  createdAt  DateTime     @default(now())
+  statut     StatutBan @default(OUVERT)
+  createdAt  DateTime  @default(now())
 
   oppositions Opposition[]
 
@@ -328,6 +779,10 @@ model ConflitCsaf {
   dateGel                    DateTime          @default(now())
   dateLevee                  DateTime?
   motifLevee                 String?
+  /// E8.8 : effet applique par la decision definitive, et chemin du document televerse le cas
+  /// echeant (renseignes uniquement a la levee, jamais a l'ouverture du gel).
+  typeDecision               TypeDecisionCsaf?
+  cheminDecision             String?
   createdAt                  DateTime          @default(now())
 
   ouvertParId String
@@ -335,6 +790,83 @@ model ConflitCsaf {
 
   @@index([parcelleId])
   @@index([statut])
+}
+
+/// Signalement citoyen ou litige foncier (E2.6/E2.7/E8.1/E8.2) : deposant une preuve/description,
+/// un admin qualifie ensuite le signalement (FONDE/REJETE). Pour ANNONCE fonde, l'admin retire
+/// lui-meme l'annonce (relevant de la moderation, pas de l'autorite judiciaire). Pour
+/// LITIGE_FONCIER fonde, seule la visibilite change : le gel effectif de la parcelle reste un acte
+/// reserve au magistrat CSAF (voir CsafService.gelerParcelle), jamais declenche automatiquement.
+model Signalement {
+  id         String            @id @default(uuid())
+  type       TypeSignalement
+  parcelleId String
+  parcelle   Parcelle          @relation(fields: [parcelleId], references: [id])
+  annonceId  String?
+  annonce    Annonce?          @relation(fields: [annonceId], references: [id])
+  motif      String
+  descriptif String?
+  statut     StatutSignalement @default(DEPOSE)
+  createdAt  DateTime          @default(now())
+
+  signalantId String
+  signalant   Utilisateur @relation("SignalementAuteur", fields: [signalantId], references: [id])
+
+  qualifieParId String?
+  qualifiePar   Utilisateur? @relation("SignalementQualificateur", fields: [qualifieParId], references: [id])
+  decisionMotif String?
+  traiteLe      DateTime?
+
+  @@index([parcelleId])
+  @@index([statut])
+  @@index([type])
+}
+
+/// Avis reciproque en fin de transaction (E7.7) : chaque partie d'une Convention VALIDEE peut noter
+/// une seule fois l'autre partie. Publie immediatement (pas de file de moderation prealable dans
+/// cette iteration, voir docs/decisions.md), mais uniquement depose par une des deux parties reelles
+/// de la transaction, jamais librement par un tiers.
+model Avis {
+  id           String     @id @default(uuid())
+  conventionId String
+  convention   Convention @relation(fields: [conventionId], references: [id])
+  note         Int
+  commentaire  String?
+  createdAt    DateTime   @default(now())
+
+  auteurId String
+  auteur   Utilisateur @relation("AvisAuteur", fields: [auteurId], references: [id])
+  citeId   String
+  cite     Utilisateur @relation("AvisCite", fields: [citeId], references: [id])
+
+  @@unique([conventionId, auteurId])
+  @@index([citeId])
+}
+
+/// Sequestre en pur suivi de statut (Epic 5, voir docs/decisions.md : aucun mouvement d'argent
+/// reel). L'acheteur declare un depot, un agent banque confirme l'encaissement declare, puis le
+/// statut passe automatiquement a LIBERE des que la cession est validee par l'ANDF, ou a
+/// REMBOURSE des que la cession est rejetee (quelle qu'en soit la cause) — jamais sur simple
+/// demande manuelle, puisqu'aucun argent reel n'est en jeu (voir CessionsService.valider/repondre).
+model Sequestre {
+  id           String          @id @default(uuid())
+  conventionId String          @unique
+  convention   Convention      @relation(fields: [conventionId], references: [id])
+  montantFcfa  Float
+  statut       StatutSequestre @default(DEPOT_DECLARE)
+  createdAt    DateTime        @default(now())
+
+  declareParId    String
+  declarePar      Utilisateur @relation("SequestreDeclarant", fields: [declareParId], references: [id])
+  dateDeclaration DateTime    @default(now())
+
+  confirmeParId    String?
+  confirmePar      Utilisateur? @relation("SequestreConfirmateur", fields: [confirmeParId], references: [id])
+  dateConfirmation DateTime?
+
+  dateLiberation     DateTime?
+  dateRemboursement  DateTime?
+  motifRemboursement String?
 }
 
 // ---------------------------------------------------------------------------
@@ -345,22 +877,22 @@ model ConflitCsaf {
 /// formant une chaine append-only verifiable via CryptoAuditService.verifierIntegriteRegistre().
 /// Toute alteration retroactive d'une entree casse la chaine a partir de ce point.
 model MutationAudit {
-  id                String              @id @default(uuid())
+  id                String             @id @default(uuid())
   /// Compteur strictement croissant servant a determiner sans ambiguite le bloc precedent
   /// (l'horodatage seul ne suffit pas : deux ecritures rapprochees peuvent partager la
   /// meme milliseconde, ce qui casserait l'ordre du chainage si on triait uniquement dessus).
-  sequence          Int                 @unique @default(autoincrement())
+  sequence          Int                @unique @default(autoincrement())
   parcelleId        String?
-  parcelle          Parcelle?           @relation(fields: [parcelleId], references: [id])
-  typeOperation      TypeOperationAudit
-  acteurId           String?
-  roleActeur         RoleUtilisateur?
-  payload            Json
-  hashPayload        String
-  hashBlocPrecedent  String
-  hashBloc           String
-  signatureEd25519   String
-  horodatage         DateTime            @default(now())
+  parcelle          Parcelle?          @relation(fields: [parcelleId], references: [id])
+  typeOperation     TypeOperationAudit
+  acteurId          String?
+  roleActeur        RoleUtilisateur?
+  payload           Json
+  hashPayload       String
+  hashBlocPrecedent String
+  hashBloc          String
+  signatureEd25519  String
+  horodatage        DateTime           @default(now())
 
   @@index([parcelleId])
   @@index([horodatage])
