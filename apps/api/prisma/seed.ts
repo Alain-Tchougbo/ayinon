@@ -410,17 +410,24 @@ async function main() {
     kodjo.id,
   );
 
-  console.log("Creation d'un volume de parcelles supplementaires (2-3 par commune, 6 poles)...");
-  const parcellesBulk: Array<{ id: string; commune: string; pole: PoleTerritorial; proprietaireId: string | null }> = [];
-  const bassinProprietaires = [kodjo.id, akouavi.id, roukayath.id, ...proprietairesSupplementaires.map((p) => p.id), null];
+  console.log("Creation d'un volume de parcelles supplementaires (les 4 statuts, sur chaque commune)...");
+  // Chaque commune recoit au moins une parcelle de chacun des 4 statuts : garantit qu'aucune
+  // combinaison filtre "commune x statut" (carte cadastrale) ne retombe jamais sur zero resultat.
+  const csaf = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "csaf1@ayinon.bj" } });
+  const MOTIFS_GEL = [
+    "Double vente alleguee — deux conventions concurrentes deposees pour la meme parcelle",
+    "Heritier conteste la vente realisee par un cousin sans mandat de la famille",
+    "Empietement signale par un voisin lors d'un bornage recent",
+    "Document de propriete conteste, verification approfondie en cours",
+  ];
+  const STATUTS_BULK = [StatutParcelle.TITREE, StatutParcelle.EN_COURS, StatutParcelle.GEL_CSAF, StatutParcelle.DOMAINE_PUBLIC];
+  const parcellesBulk: Array<{ id: string; commune: string; pole: PoleTerritorial; proprietaireId: string | null; statut: StatutParcelle }> = [];
+  const bassinProprietaires = [kodjo.id, akouavi.id, roukayath.id, ...proprietairesSupplementaires.map((p) => p.id)];
   let indexGlobal = 0;
   for (const c of COMMUNES) {
-    const parParCommune = 3;
-    for (let i = 0; i < parParCommune; i++) {
-      const statut =
-        i === 0 ? StatutParcelle.TITREE : i === 1 ? StatutParcelle.EN_COURS : indexGlobal % 9 === 0 ? StatutParcelle.DOMAINE_PUBLIC : StatutParcelle.TITREE;
+    for (const [i, statut] of STATUTS_BULK.entries()) {
       const proprietaireId = statut === StatutParcelle.DOMAINE_PUBLIC ? etat.id : bassinProprietaires[indexGlobal % bassinProprietaires.length]!;
-      const centre: [number, number] = [c.centre[0] + i * 0.0016 - 0.0016, c.centre[1] + i * 0.0012 - 0.0006];
+      const centre: [number, number] = [c.centre[0] + i * 0.0016 - 0.0024, c.centre[1] + i * 0.0012 - 0.0018];
       const id = await inserer(
         prochainNup(ABREV_POLE[c.pole], c.abrev),
         centre,
@@ -430,10 +437,24 @@ async function main() {
         c.arrondissement,
         proprietaireId,
       );
-      parcellesBulk.push({ id, commune: c.commune, pole: c.pole, proprietaireId });
+      if (statut === StatutParcelle.GEL_CSAF) {
+        await prisma.conflitCsaf.create({
+          data: {
+            parcelleId: id,
+            motif: MOTIFS_GEL[indexGlobal % MOTIFS_GEL.length]!,
+            referenceDossierJudiciaire: `CSAF-2026-${String(100 + indexGlobal).padStart(6, "0")}`,
+            statutParcelleAvantGel: StatutParcelle.TITREE,
+            ouvertParId: csaf.id,
+          },
+        });
+      }
+      parcellesBulk.push({ id, commune: c.commune, pole: c.pole, proprietaireId, statut });
       indexGlobal++;
     }
   }
+  // Parcelles reellement disponibles pour une vente/cession/hypotheque/bornage (jamais celles
+  // sous gel judiciaire ou du domaine public — coherent avec les regles metier reelles).
+  const parcellesCessibles = parcellesBulk.filter((p) => p.statut === StatutParcelle.TITREE || p.statut === StatutParcelle.EN_COURS);
   // Deux parcelles supplementaires directement rattachees au compte citoyen1, pour que "Mes
   // parcelles" et le passeport foncier presentent un volume realiste (pas seulement 4).
   const parcelleKodjoSupp1 = await inserer(prochainNup("MOC", "DOG"), [1.7843, 6.8006], StatutParcelle.TITREE, PoleTerritorial.MONO_COUFFO, "Dogbo", "Centre", kodjo.id);
@@ -484,8 +505,8 @@ async function main() {
   // Volume d'annonces supplementaires (vitrine realiste, statuts varies) sur des parcelles du lot
   // "bulk" possedees par vendeur1/vendeur2 — on ne publie que sur des parcelles TITREE/EN_COURS,
   // jamais DOMAINE_PUBLIC ou GEL_CSAF (coherent avec les regles metier reelles).
-  const parcellesPubliablesVendeur1 = parcellesBulk.filter((p) => p.proprietaireId === roukayath.id);
-  const parcellesPubliablesVendeur2 = parcellesBulk.filter((p) => p.proprietaireId === proprietairesSupplementaires[0]!.id);
+  const parcellesPubliablesVendeur1 = parcellesCessibles.filter((p) => p.proprietaireId === roukayath.id);
+  const parcellesPubliablesVendeur2 = parcellesCessibles.filter((p) => p.proprietaireId === proprietairesSupplementaires[0]!.id);
   const descriptionsAnnonces = [
     "Terrain clos de murs, acces direct au bitume, quartier residentiel calme.",
     "Belle vue degagee, ideal pour projet hotelier ou residence secondaire.",
@@ -501,7 +522,6 @@ async function main() {
   ];
   let compteurAnnonce = 0;
   for (const p of [...parcellesPubliablesVendeur1, ...parcellesPubliablesVendeur2]) {
-    if (p.commune === "Abomey-Calavi" && p.proprietaireId === etat.id) continue; // domaine public, jamais en vente
     const prix = 6_000_000 + (compteurAnnonce % 8) * 3_500_000;
     const statut = compteurAnnonce % 11 === 0 ? StatutAnnonce.VENDUE : compteurAnnonce % 7 === 0 ? StatutAnnonce.RETIREE : StatutAnnonce.ACTIVE;
     const publieeParId = parcellesPubliablesVendeur1.includes(p) ? vendeur1.id : vendeur2.id;
@@ -594,7 +614,6 @@ async function main() {
   });
 
   console.log("Insertion d'un historique proprietaires + litige judiciaire resolu sur des parcelles avec annonce active...");
-  const csaf = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "csaf1@ayinon.bj" } });
   // Demontre l'historique public consulte par un acheteur (GET /parcelles/:id/historique) sur une
   // parcelle reellement en vitrine : mutation anterieure vers le vendeur actuel.
   const conventionVendeur = await prisma.convention.create({
@@ -630,7 +649,7 @@ async function main() {
   console.log("Cessions supplementaires (historique de prix + titres delivres + workflow en cours)...");
   // Plusieurs cessions VALIDEES sur des parcelles du lot bulk (chacune delivre un vrai Titre),
   // pour peupler le registre foncier et l'estimation de prix par commune sur plusieurs communes.
-  const parcellesPourCessionHistorique = parcellesBulk.filter((p) => p.proprietaireId && p.proprietaireId !== etat.id).slice(0, 8);
+  const parcellesPourCessionHistorique = parcellesCessibles.slice(0, 8);
   let sequenceTitre = 1;
   for (const p of parcellesPourCessionHistorique) {
     const montant = 8_000_000 + (sequenceTitre % 6) * 2_800_000;
@@ -664,7 +683,7 @@ async function main() {
   }
   // Une cession en cours de negociation (PROPOSEE) et une acceptee en attente de validation ANDF
   // (ACCEPTEE) : couvrent les etapes intermediaires du workflow, pas seulement l'etat final.
-  const parcellePourCessionProposee = parcellesBulk.find((p) => p.commune === "Bohicon" && p.proprietaireId)!;
+  const parcellePourCessionProposee = parcellesCessibles.find((p) => p.commune === "Bohicon")!;
   await prisma.convention.create({
     data: {
       parcelleId: parcellePourCessionProposee.id,
@@ -678,7 +697,7 @@ async function main() {
       acquereurId: acheteur1.id,
     },
   });
-  const parcellePourCessionAcceptee = parcellesBulk.find((p) => p.commune === "Parakou" && p.proprietaireId)!;
+  const parcellePourCessionAcceptee = parcellesCessibles.find((p) => p.commune === "Parakou")!;
   await prisma.convention.create({
     data: {
       parcelleId: parcellePourCessionAcceptee.id,
@@ -727,7 +746,7 @@ async function main() {
   });
 
   console.log("Hypotheques (verification de solvabilite)...");
-  const parcellesHypothequables = parcellesBulk.filter((p) => p.proprietaireId && p.proprietaireId !== etat.id).slice(8, 12);
+  const parcellesHypothequables = parcellesCessibles.slice(8, 12);
   const banque1 = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "banque1@ayinon.bj" } });
   for (const [i, p] of parcellesHypothequables.entries()) {
     await prisma.hypotheque.create({
@@ -770,7 +789,7 @@ async function main() {
   console.log("Plans de bornage (geometres)...");
   const geometre1 = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "geometre1@ayinon.bj" } });
   const geometre2 = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "geometre2@ayinon.bj" } });
-  const parcellesPourBornage = parcellesBulk.filter((p) => p.proprietaireId && p.proprietaireId !== etat.id).slice(12, 17);
+  const parcellesPourBornage = parcellesCessibles.slice(12, 17);
   for (const [i, p] of parcellesPourBornage.entries()) {
     const importeParId = i % 2 === 0 ? geometre1.id : geometre2.id;
     const chevauchement = i === 1;
@@ -830,21 +849,9 @@ async function main() {
     }),
     prisma.parcelle.update({ where: { id: parcelleLitige }, data: { statut: StatutParcelle.GEL_CSAF } }),
   ]);
-  // Second gel actif, sur une parcelle du lot bulk, pour que la console CSAF ne montre pas un
-  // seul dossier isole.
-  const parcellePourGel2 = parcellesBulk.find((p) => p.commune === "Kandi" && p.proprietaireId)!;
-  await prisma.$transaction([
-    prisma.conflitCsaf.create({
-      data: {
-        parcelleId: parcellePourGel2.id,
-        motif: "Heritier conteste la vente realisee par un cousin sans mandat de la famille",
-        referenceDossierJudiciaire: "CSAF-2026-000058",
-        statutParcelleAvantGel: StatutParcelle.TITREE,
-        ouvertParId: csaf.id,
-      },
-    }),
-    prisma.parcelle.update({ where: { id: parcellePourGel2.id }, data: { statut: StatutParcelle.GEL_CSAF } }),
-  ]);
+  // Un vrai conflit CSAF actif existe deja pour chaque commune (une parcelle par commune est
+  // generee directement au statut GEL_CSAF, voir plus haut) : la console CSAF n'a donc jamais un
+  // seul dossier isole, sans avoir besoin d'un second cas ecrit a la main ici.
 
   console.log("Signalements (moderation d'annonces + litiges fonciers)...");
   const citoyen1 = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "citoyen1@ayinon.bj" } });
@@ -945,7 +952,7 @@ async function main() {
   // Detection IA isolee, ne recoupant aucune parcelle cadastree connue (cas frequent en pratique).
   await insererBati([1.3816, 10.3062], SourceBati.IMPORT_IA, { scoreConfiance: 0.62 });
   // Volume supplementaire de batis IA en attente de validation, repartis sur plusieurs communes.
-  for (const [i, p] of parcellesBulk.filter((p) => p.proprietaireId && p.proprietaireId !== etat.id).slice(17, 24).entries()) {
+  for (const [i, p] of parcellesCessibles.slice(17, 24).entries()) {
     const centreCommune = COMMUNES.find((c) => c.commune === p.commune)!.centre;
     await insererBati([centreCommune[0] + i * 0.0004, centreCommune[1] + i * 0.0003], SourceBati.IMPORT_IA, {
       parcelleId: p.id,
@@ -970,7 +977,7 @@ async function main() {
   // Quelques zones supplementaires (foret, eau, agricole) sur des communes variees, pour que la
   // console "Usage du sol" du back-office ait plusieurs dossiers a traiter.
   const typesUsageBulk = [TypeUsageSol.AGRICOLE, TypeUsageSol.FORET, TypeUsageSol.EAU, TypeUsageSol.AGRICOLE, TypeUsageSol.URBAIN];
-  for (const [i, p] of parcellesBulk.filter((p) => p.proprietaireId && p.proprietaireId !== etat.id).slice(24, 29).entries()) {
+  for (const [i, p] of parcellesCessibles.slice(24, 29).entries()) {
     const centreCommune = COMMUNES.find((c) => c.commune === p.commune)!.centre;
     await insererZoneOccupationSol(centreCommune, typesUsageBulk[i % typesUsageBulk.length]!, 0.003);
     await prisma.parcelle.update({ where: { id: p.id }, data: { usageSolIndicatif: typesUsageBulk[i % typesUsageBulk.length]! } });
@@ -980,7 +987,7 @@ async function main() {
   console.log(`  - Parcelle titree prete pour le scenario 'import de bornage en chevauchement' : ${cotonouTitree}`);
   console.log(`  - Parcelle sous gel CSAF (rouge) : ${parcelleLitige}`);
   console.log(`  - Parcelle familiale en attente de multi-signature : ${parcelleFamiliale}`);
-  console.log(`  - ${parcellesBulk.length + 3} parcelles supplementaires reparties sur ${COMMUNES.length} communes`);
+  console.log(`  - ${parcellesBulk.length + 3} parcelles supplementaires reparties sur ${COMMUNES.length} communes (les 4 statuts garantis sur chacune)`);
   console.log(`  - ${annoncesBulk.length} annonces au total (dont ${annoncesActives.length} actives)`);
   void parcelleKodjoSupp1;
   void parcelleKodjoSupp2;
