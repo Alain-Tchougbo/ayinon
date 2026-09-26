@@ -132,6 +132,9 @@ export const TypeOperationAudit = {
   VALIDATION_BATI: "VALIDATION_BATI",
   REJET_BATI: "REJET_BATI",
   VALIDATION_USAGE_SOL: "VALIDATION_USAGE_SOL",
+  SUSPENSION_COMPTE: "SUSPENSION_COMPTE",
+  REACTIVATION_COMPTE: "REACTIVATION_COMPTE",
+  MODIFICATION_ADMIN_PROPRIETAIRE: "MODIFICATION_ADMIN_PROPRIETAIRE",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
 
@@ -210,6 +213,12 @@ export const LIBELLE_TYPE_USAGE_SOL: Record<TypeUsageSol, string> = {
   EAU: "Plan d'eau",
   AUTRE: "Autre",
 };
+
+export const RoleMessageChatbot = {
+  UTILISATEUR: "UTILISATEUR",
+  ASSISTANT: "ASSISTANT",
+} as const;
+export type RoleMessageChatbot = (typeof RoleMessageChatbot)[keyof typeof RoleMessageChatbot];
 
 export const LangueAssistantVocal = {
   FR: "FR",

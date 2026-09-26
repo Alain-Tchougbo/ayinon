@@ -9,6 +9,7 @@ import { AuthModule } from "./auth/auth.module";
 import { AvisModule } from "./avis/avis.module";
 import { BatisModule } from "./batis/batis.module";
 import { CessionsModule } from "./cessions/cessions.module";
+import { ChatbotModule } from "./chatbot/chatbot.module";
 import { CsrfGuard } from "./common/guards/csrf.guard";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
 import { RolesGuard } from "./common/guards/roles.guard";
@@ -54,6 +55,7 @@ import { VisitesModule } from "./visites/visites.module";
     RecherchesSauvegardeesModule,
     SyncModule,
     BatisModule,
+    ChatbotModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

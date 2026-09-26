@@ -107,8 +107,9 @@ async function main() {
   console.log("Nettoyage de la base (TRUNCATE CASCADE)...");
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE "MutationAudit","ConflitCsaf","Opposition","BanOpposition","SignatureFamille",
-      "MandataireFamille","PlanBornage","Convention","Titre","Bati","ZoneOccupationSol","Parcelle",
-      "CodeOtp","RefreshToken","Utilisateur","Proprietaire" CASCADE
+      "MandataireFamille","PlanBornage","Convention","Titre","Bati","ZoneOccupationSol",
+      "MessageChatbot","ConversationChatbot","Parcelle","CodeOtp","RefreshToken","Utilisateur",
+      "Proprietaire" CASCADE
   `);
 
   console.log("Creation des proprietaires...");

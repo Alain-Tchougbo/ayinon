@@ -21,11 +21,12 @@ interface OptionsRequete {
   method?: string;
   body?: unknown;
   formData?: FormData;
+  entetesSupplementaires?: Record<string, string>;
 }
 
 async function requete<T>(chemin: string, options: OptionsRequete = {}, dejaRetente = false): Promise<T> {
   const method = options.method ?? "GET";
-  const entetes: Record<string, string> = {};
+  const entetes: Record<string, string> = { ...options.entetesSupplementaires };
   if (METHODES_MUTANTES.has(method)) {
     const csrf = lireCookie("ayinon_csrf_token");
     if (csrf) entetes["X-CSRF-Token"] = csrf;
@@ -64,7 +65,8 @@ async function requete<T>(chemin: string, options: OptionsRequete = {}, dejaRete
 
 export const api = {
   get: <T>(chemin: string) => requete<T>(chemin),
-  post: <T>(chemin: string, body?: unknown) => requete<T>(chemin, { method: "POST", body }),
+  post: <T>(chemin: string, body?: unknown, entetesSupplementaires?: Record<string, string>) =>
+    requete<T>(chemin, { method: "POST", body, entetesSupplementaires }),
   patch: <T>(chemin: string, body?: unknown) => requete<T>(chemin, { method: "PATCH", body }),
   delete: <T>(chemin: string) => requete<T>(chemin, { method: "DELETE" }),
   postForm: <T>(chemin: string, formData: FormData) => requete<T>(chemin, { method: "POST", formData }),

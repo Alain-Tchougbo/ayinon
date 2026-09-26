@@ -395,9 +395,38 @@ des echanges — hors de portee puisque la messagerie (ET.2) n'est pas construit
 rien a scanner. "Comptes multiples" est implemente en reliant les comptes qui partagent le meme
 numero de telephone : `Utilisateur.telephone` n'est pas contraint unique (contrairement a
 `email`), donc rien n'empeche aujourd'hui un meme numero de se retrouver sur plusieurs comptes.
-Nouvelle section dans l'onglet "Utilisateurs" du back-office, purement en lecture (`GET
-/admin/comptes-lies`) : aucune action de fusion ou de suspension de compte n'existe sur la
-plateforme, pour aucun role — construire cette capacite uniquement pour cette detection
-secondaire aurait ete disproportionne. L'admin peut deja agir via les canaux existants (ex.
-rejeter une demande professionnelle, retirer/suspendre une annonce) si l'examen manuel le
-justifie.
+Section dans la page "Utilisateurs" du back-office (`GET /admin/comptes-lies`) : l'admin peut agir
+directement depuis cette liste via la suspension de compte (voir section suivante).
+
+## Back-office : navigation par menu deroulant et actions reelles par section
+
+Revient sur la decision ci-dessus ("aucune action de fusion/suspension de compte n'existe sur la
+plateforme, pour aucun role") : sur demande explicite, chaque section du back-office expose
+desormais l'action reellement pertinente pour son entite plutot que de rester en lecture seule par
+defaut.
+
+- **Navigation** : les 8 sections (auparavant des onglets internes a une seule page `/admin`) sont
+  devenues des routes independantes (`/admin/utilisateurs`, `/admin/parcelles`, etc.), exposees
+  dans la sidebar via un menu deroulant "Back-office" (replie par defaut, se deplie automatiquement
+  si la page active en fait partie) plutot qu'un simple lien — la sidebar resterait sinon
+  ingerable avec 8 entrees a plat en plus des liens Foncier/Marche/Support existants. Chaque page
+  reste un fichier Vue independant (`views/admin/BackOffice*.vue`), comme les pages ANDF
+  (`/andf`, `/andf/cessions`, `/andf/usage-sol`) : proches en taille, evoluent independamment.
+- **Utilisateurs** : nouvelle action de suspension/reactivation de compte (`PATCH
+  /admin/utilisateurs/:id/statut`, motif obligatoire pour suspendre, journalisee). Un compte
+  suspendu (`Utilisateur.compteSuspenduLe` horodate, pas un simple booleen — meme convention que
+  `retireeLe` sur `Annonce`) est bloque a la connexion (`AuthService.connexion`) et immediatement
+  a la requete suivante sur une session deja ouverte (`JwtStrategy.validate` revalide en base a
+  chaque requete) : pas besoin de revoquer les jetons existants un par un. Un admin ne peut pas se
+  suspendre lui-meme.
+- **Proprietaires** : nouvelle action de correction des coordonnees de contact (email/telephone,
+  `PATCH /admin/proprietaires/:id`) — jamais la propriete des parcelles elle-meme, qui reste
+  pilotee par les workflows de cession dedies.
+- **Parcelles** : inchange (edition des champs declaratifs commune/arrondissement + journal
+  d'audit, deja existant).
+- **Documents (conventions/titres)** : reste volontairement en lecture seule, mais gagne un acces
+  direct au journal d'audit du dossier (meme endpoint que "Parcelles") — reecrire un document
+  juridique apres coup casserait le socle anti-fraude de la plateforme (chainage crypto-audit,
+  ET.3), a la difference d'une simple coordonnee de contact ou d'un champ declaratif.
+- **Signalements / Annonces a risque** : inchange (qualification et suspension de moderation,
+  deja existantes).

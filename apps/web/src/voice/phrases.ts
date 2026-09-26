@@ -98,4 +98,32 @@ export const PHRASES = {
     id: "admin-intro",
     texteFr: "Consultez la vue d'ensemble de la plateforme et gerez les utilisateurs, proprietaires, parcelles et documents.",
   },
+  adminDemandesProIntro: {
+    id: "admin-demandes-pro-intro",
+    texteFr: "Approuvez ou rejetez les demandes de compte professionnel en attente.",
+  },
+  adminUtilisateursIntro: {
+    id: "admin-utilisateurs-intro",
+    texteFr: "Consultez les comptes de la plateforme et suspendez un compte si necessaire.",
+  },
+  adminProprietairesIntro: {
+    id: "admin-proprietaires-intro",
+    texteFr: "Consultez les proprietaires et corrigez leurs coordonnees de contact.",
+  },
+  adminParcellesIntro: {
+    id: "admin-parcelles-intro",
+    texteFr: "Consultez les parcelles, corrigez leurs informations declaratives et consultez leur journal d'audit.",
+  },
+  adminDocumentsIntro: {
+    id: "admin-documents-intro",
+    texteFr: "Consultez le registre des conventions de vente et des titres delivres.",
+  },
+  adminSignalementsIntro: {
+    id: "admin-signalements-intro",
+    texteFr: "Qualifiez les signalements deposes comme fondes ou infondes.",
+  },
+  adminAnnoncesRisqueIntro: {
+    id: "admin-annonces-risque-intro",
+    texteFr: "Passez en revue les annonces dont le prix devie significativement de la moyenne communale.",
+  },
 } as const satisfies Record<string, PhraseVocale>;
