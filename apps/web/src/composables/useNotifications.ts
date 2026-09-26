@@ -3,72 +3,154 @@ import { ref } from "vue";
 import { api } from "../services/api";
 import { useAuthStore } from "../stores/auth.store";
 
-const compte = ref(0);
-const lien = ref<string | null>(null);
-const libelle = ref("");
+export interface NotificationItem {
+  id: string;
+  titre: string;
+  sousTitre: string;
+  lien: string;
+}
+
+const items = ref<NotificationItem[]>([]);
 
 /**
- * Pastille de notification de l'en-tete : jamais un chiffre decoratif. Chaque role pointe vers
- * un decompte reellement issu de son propre flux metier (propositions de cession recues,
- * signatures familiales en attente, cessions a valider, conflits CSAF actifs...). Pas de flux ->
- * pas de pastille, plutot que d'inventer une donnee.
+ * Notifications de l'en-tete : jamais une pastille decorative. Chaque role affiche une vraie
+ * liste d'evenements issus de son propre flux metier (propositions de cession recues, signatures
+ * familiales en attente, cessions a valider, conflits CSAF actifs...). Pas de flux -> liste vide,
+ * plutot que d'inventer une donnee.
  */
 export function useNotifications() {
   const auth = useAuthStore();
 
   async function rafraichir() {
     if (!auth.estConnecte) {
-      compte.value = 0;
-      lien.value = null;
+      items.value = [];
       return;
     }
     try {
       if (auth.role === RoleUtilisateur.VENDEUR) {
+        interface AnnonceAvecInterets {
+          parcelle: { nup: string; commune: string };
+          interets: Array<{ id: string; statut: string; acheteur: { nomComplet: string } }>;
+        }
+        interface VisiteRecue {
+          id: string;
+          statut: string;
+          acheteur: { nomComplet: string };
+          annonce: { parcelle: { nup: string; commune: string } };
+        }
         const [mesAnnonces, visitesRecues] = await Promise.all([
-          api.get<Array<{ interets: Array<{ statut: string }> }>>("/annonces/mes-annonces"),
-          api.get<Array<{ statut: string }>>("/visites/recues"),
+          api.get<AnnonceAvecInterets[]>("/annonces/mes-annonces"),
+          api.get<VisiteRecue[]>("/visites/recues"),
         ]);
-        compte.value =
-          mesAnnonces.reduce((total, a) => total + a.interets.filter((i) => i.statut === "EN_ATTENTE").length, 0) +
-          visitesRecues.filter((v) => v.statut === "DEMANDEE").length;
-        lien.value = "/vendre";
-        libelle.value = "notification(s) a consulter";
+        const interets = mesAnnonces.flatMap((a) =>
+          a.interets
+            .filter((i) => i.statut === "EN_ATTENTE")
+            .map((i) => ({
+              id: `interet-${i.id}`,
+              titre: `Interet de ${i.acheteur.nomComplet}`,
+              sousTitre: `${a.parcelle.nup} — ${a.parcelle.commune}`,
+              lien: "/vendre",
+            })),
+        );
+        const visites = visitesRecues
+          .filter((v) => v.statut === "DEMANDEE")
+          .map((v) => ({
+            id: `visite-${v.id}`,
+            titre: `Visite demandee par ${v.acheteur.nomComplet}`,
+            sousTitre: `${v.annonce.parcelle.nup} — ${v.annonce.parcelle.commune}`,
+            lien: "/vendre",
+          }));
+        items.value = [...interets, ...visites];
       } else if (auth.role === RoleUtilisateur.ACHETEUR) {
+        interface MonInteret {
+          id: string;
+          statut: string;
+          annonce: { parcelle: { nup: string; commune: string } };
+        }
+        interface PropositionRecue {
+          id: string;
+          vendeurNom: string;
+          parcelle: { nup: string; commune: string };
+        }
+        interface MaVisite {
+          id: string;
+          statut: string;
+          annonce: { parcelle: { nup: string; commune: string } };
+        }
         const [mesInterets, propositionsRecues, mesVisites] = await Promise.all([
-          api.get<Array<{ statut: string }>>("/annonces/mes-interets"),
-          api.get<unknown[]>("/cessions/mes-propositions-recues"),
-          api.get<Array<{ statut: string }>>("/visites/mes-demandes"),
+          api.get<MonInteret[]>("/annonces/mes-interets"),
+          api.get<PropositionRecue[]>("/cessions/mes-propositions-recues"),
+          api.get<MaVisite[]>("/visites/mes-demandes"),
         ]);
-        compte.value =
-          mesInterets.filter((i) => i.statut === "RETENU").length +
-          propositionsRecues.length +
-          mesVisites.filter((v) => v.statut === "REPROGRAMMEE").length;
-        lien.value = "/acheter";
-        libelle.value = "notification(s) a consulter";
+        const retenus = mesInterets
+          .filter((i) => i.statut === "RETENU")
+          .map((i) => ({
+            id: `interet-${i.id}`,
+            titre: "Votre interet a ete retenu",
+            sousTitre: `${i.annonce.parcelle.nup} — ${i.annonce.parcelle.commune}`,
+            lien: "/acheter",
+          }));
+        const propositions = propositionsRecues.map((c) => ({
+          id: `proposition-${c.id}`,
+          titre: `Proposition de cession de ${c.vendeurNom}`,
+          sousTitre: `${c.parcelle.nup} — ${c.parcelle.commune}`,
+          lien: "/acheter",
+        }));
+        const reprogrammations = mesVisites
+          .filter((v) => v.statut === "REPROGRAMMEE")
+          .map((v) => ({
+            id: `visite-${v.id}`,
+            titre: "Nouvelle date de visite proposee",
+            sousTitre: `${v.annonce.parcelle.nup} — ${v.annonce.parcelle.commune}`,
+            lien: "/acheter",
+          }));
+        items.value = [...retenus, ...propositions, ...reprogrammations];
       } else if (auth.role === RoleUtilisateur.MANDATAIRE_FAMILIAL) {
-        const signatures = await api.get<unknown[]>("/familles/mes-signatures-en-attente");
-        compte.value = signatures.length;
-        lien.value = "/famille";
-        libelle.value = "signature(s) en attente";
+        interface SignatureEnAttente {
+          id: string;
+          parcelle: { nup: string; commune: string };
+        }
+        const signatures = await api.get<SignatureEnAttente[]>("/familles/mes-signatures-en-attente");
+        items.value = signatures.map((s) => ({
+          id: `signature-${s.id}`,
+          titre: "Signature requise",
+          sousTitre: `${s.parcelle.nup} — ${s.parcelle.commune}`,
+          lien: "/famille",
+        }));
       } else if (auth.role === RoleUtilisateur.AGENT_ANDF || auth.role === RoleUtilisateur.ADMIN) {
-        const aValider = await api.get<unknown[]>("/cessions/a-valider");
-        compte.value = aValider.length;
-        lien.value = "/andf/cessions";
-        libelle.value = "cession(s) a valider";
+        interface CessionAValider {
+          id: string;
+          vendeurNom: string;
+          acquereurNom: string;
+          parcelle: { nup: string; commune: string };
+        }
+        const aValider = await api.get<CessionAValider[]>("/cessions/a-valider");
+        items.value = aValider.map((c) => ({
+          id: `cession-${c.id}`,
+          titre: `Cession de ${c.vendeurNom} vers ${c.acquereurNom}`,
+          sousTitre: `${c.parcelle.nup} — ${c.parcelle.commune}`,
+          lien: "/andf/cessions",
+        }));
       } else if (auth.role === RoleUtilisateur.MAGISTRAT_CSAF) {
-        const conflits = await api.get<unknown[]>("/csaf/conflits-actifs");
-        compte.value = conflits.length;
-        lien.value = "/csaf";
-        libelle.value = "conflit(s) CSAF actif(s)";
+        interface ConflitCsaf {
+          id: string;
+          motif: string;
+          parcelle: { nup: string; commune: string };
+        }
+        const conflits = await api.get<ConflitCsaf[]>("/csaf/conflits-actifs");
+        items.value = conflits.map((c) => ({
+          id: `conflit-${c.id}`,
+          titre: c.motif,
+          sousTitre: `${c.parcelle.nup} — ${c.parcelle.commune}`,
+          lien: "/csaf",
+        }));
       } else {
-        compte.value = 0;
-        lien.value = null;
+        items.value = [];
       }
     } catch {
-      compte.value = 0;
-      lien.value = null;
+      items.value = [];
     }
   }
 
-  return { compte, lien, libelle, rafraichir };
+  return { items, rafraichir };
 }
