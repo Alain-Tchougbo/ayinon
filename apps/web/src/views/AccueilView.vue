@@ -516,8 +516,10 @@ const raccourcis = computed(() => {
     </section>
 
     <div v-if="auth.estConnecte" class="grid gap-4 lg:grid-cols-2">
-      <!-- CITOYEN : vos parcelles. -->
-      <BaseCard v-if="auth.role === RoleUtilisateur.CITOYEN">
+      <!-- CITOYEN : vos parcelles. min-w-0 : sans ca, cet item de grille ne peut pas descendre
+           sous la largeur intrinseque du tableau (NUP/statut non compressibles), ce qui empeche
+           son wrapper overflow-x-auto de devenir scrollable (colonne Statut alors invisible). -->
+      <BaseCard v-if="auth.role === RoleUtilisateur.CITOYEN" class="min-w-0">
         <h2 class="mb-3 flex items-center gap-2 font-semibold text-texte">
           <Map :size="17" class="text-primaire" aria-hidden="true" />
           Vos parcelles

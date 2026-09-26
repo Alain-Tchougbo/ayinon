@@ -352,7 +352,7 @@ async function noter(conventionId: string) {
                   <p class="mt-0.5 text-sm text-texte-attenue">Proposee par {{ c.vendeurNom }} — {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA</p>
                 </td>
                 <td class="px-4 py-3">
-                  <div class="flex gap-2">
+                  <div class="flex flex-col gap-2 sm:flex-row">
                     <BaseButton taille="sm" :disabled="actionEnCours" @click="repondre(c.id, true)">
                       <Check :size="14" aria-hidden="true" />
                       Accepter
@@ -412,7 +412,7 @@ async function noter(conventionId: string) {
                   {{ LIBELLE_STATUT_SEQUESTRE[c.sequestre.statut] }}
                 </p>
               </td>
-              <td class="whitespace-nowrap px-4 py-3">
+              <td class="px-4 py-3">
                 <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_CESSION[c.statutCession]">
                   {{ LIBELLE_STATUT_CESSION[c.statutCession] }}
                 </span>
@@ -483,7 +483,7 @@ async function noter(conventionId: string) {
                   Nouvelle date proposee : {{ new Date(v.nouvelleDateProposee).toLocaleString("fr-FR") }}
                 </p>
               </td>
-              <td class="whitespace-nowrap px-4 py-3">
+              <td class="px-4 py-3">
                 <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_VISITE[v.statut]">
                   {{ LIBELLE_STATUT_VISITE[v.statut] }}
                 </span>
@@ -542,7 +542,7 @@ async function noter(conventionId: string) {
                 </template>
                 <p v-else-if="f.statut === 'REFUSEE' && f.motifRefus" class="mt-1.5 text-xs text-danger">Motif : {{ f.motifRefus }}</p>
               </td>
-              <td class="whitespace-nowrap px-4 py-3">
+              <td class="px-4 py-3">
                 <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_FINANCEMENT[f.statut]">
                   {{ LIBELLE_STATUT_FINANCEMENT[f.statut] }}
                 </span>

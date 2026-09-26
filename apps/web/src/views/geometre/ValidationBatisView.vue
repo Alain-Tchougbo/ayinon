@@ -106,7 +106,7 @@ async function creerBati() {
     <p v-else-if="batisAValider.length === 0" class="text-sm text-texte-attenue">Aucun bati en attente de validation.</p>
 
     <div v-else class="overflow-x-auto rounded-carte border border-bordure bg-surface">
-      <table class="w-full text-left text-sm">
+      <table class="w-full table-fixed text-left text-sm">
         <thead>
           <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
             <th class="px-4 py-3 font-semibold">Bati</th>
@@ -124,7 +124,7 @@ async function creerBati() {
               <span v-else>Saisie manuelle</span>
             </td>
             <td class="px-4 py-3">
-              <div class="flex gap-2">
+              <div class="flex flex-col gap-2 sm:flex-row">
                 <BaseButton taille="sm" variant="succes" :disabled="enCoursId === b.id" @click="valider(b.id)">
                   <CheckCheck :size="14" aria-hidden="true" /> Valider
                 </BaseButton>
