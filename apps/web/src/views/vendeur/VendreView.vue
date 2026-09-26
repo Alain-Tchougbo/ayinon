@@ -557,7 +557,7 @@ async function reprogrammerVisite(id: string) {
                   Titre {{ c.titre.numeroTitre }} delivre le {{ new Date(c.titre.dateDelivrance).toLocaleDateString("fr-FR") }}
                 </div>
               </td>
-              <td class="whitespace-nowrap px-4 py-3">
+              <td class="px-4 py-3">
                 <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_CESSION[c.statutCession]">
                   {{ LIBELLE_STATUT_CESSION[c.statutCession] }}
                 </span>
@@ -608,7 +608,7 @@ async function reprogrammerVisite(id: string) {
                   </p>
                   <p v-if="v.messageAcheteur" class="mt-1.5 text-xs text-texte-attenue">« {{ v.messageAcheteur }} »</p>
                 </td>
-                <td class="whitespace-nowrap px-4 py-3">
+                <td class="px-4 py-3">
                   <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_VISITE[v.statut]">
                     {{ LIBELLE_STATUT_VISITE[v.statut] }}
                   </span>

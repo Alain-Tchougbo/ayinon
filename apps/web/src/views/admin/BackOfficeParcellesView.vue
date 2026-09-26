@@ -109,7 +109,7 @@ async function voirHistorique(parcelleId: string) {
     <p v-if="chargement" class="text-sm text-texte-attenue" role="status">Chargement…</p>
 
     <div v-if="!chargement" class="overflow-x-auto rounded-carte border border-bordure bg-surface">
-      <table class="w-full text-left text-sm">
+      <table class="w-full table-fixed text-left text-sm">
         <thead>
           <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
             <th class="px-4 py-3 font-semibold">Parcelle</th>
@@ -128,7 +128,7 @@ async function voirHistorique(parcelleId: string) {
                 <p class="text-xs text-texte-attenue">{{ p.superficieM2.toLocaleString("fr-FR") }} m² — {{ p.statut.replaceAll("_", " ") }}</p>
               </td>
               <td class="px-4 py-3">
-                <div class="flex gap-2">
+                <div class="flex flex-col gap-2 sm:flex-row">
                   <BaseButton taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
                     <Pencil :size="13" aria-hidden="true" />
                     Modifier

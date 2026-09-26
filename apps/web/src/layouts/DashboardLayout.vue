@@ -25,7 +25,6 @@ import {
   ScanLine,
   ScrollText,
   Search,
-  Shield,
   ShieldCheck,
   Sprout,
   Store,
@@ -269,7 +268,10 @@ function rechercherRapide() {
         class="flex h-16 shrink-0 items-center gap-2.5 border-b border-primaire-contraste/10 text-base font-bold tracking-tight text-primaire-contraste"
         :class="sidebarReduite ? 'justify-center px-0' : 'px-5'"
       >
-        <Shield :size="22" :stroke-width="2.25" class="shrink-0 text-accent" aria-hidden="true" />
+        <svg viewBox="0 0 32 32" fill="none" class="h-[22px] w-[22px] shrink-0" aria-hidden="true">
+          <path d="M6 22L10 8L24 6L27 20L16 27Z" stroke="#F2A93B" stroke-width="1.6" stroke-linejoin="round" />
+          <circle cx="10" cy="8" r="1.6" fill="#F2A93B" />
+        </svg>
         <span v-if="!sidebarReduite">AYINON</span>
       </RouterLink>
 
@@ -366,7 +368,10 @@ function rechercherRapide() {
       <aside class="relative flex h-full w-72 max-w-[85vw] flex-col bg-primaire shadow-flottant">
         <div class="flex items-center justify-between px-5 py-4">
           <RouterLink to="/public" class="flex items-center gap-2.5 text-base font-bold tracking-tight text-primaire-contraste">
-            <Shield :size="22" :stroke-width="2.25" class="text-accent" aria-hidden="true" />
+            <svg viewBox="0 0 32 32" fill="none" class="h-[22px] w-[22px] shrink-0" aria-hidden="true">
+              <path d="M6 22L10 8L24 6L27 20L16 27Z" stroke="#F2A93B" stroke-width="1.6" stroke-linejoin="round" />
+              <circle cx="10" cy="8" r="1.6" fill="#F2A93B" />
+            </svg>
             AYINON
           </RouterLink>
           <button
