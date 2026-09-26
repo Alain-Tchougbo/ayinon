@@ -51,6 +51,16 @@ services:
     # entrerait en conflit).
     expose:
       - "80"
+    # Le proxy Traefik de Coolify tourne sur le reseau Docker externe "coolify" : sans y
+    # rattacher aussi ce service, Traefik trouve bien un routeur pour le domaine mais aucun
+    # backend joignable ("no available server").
+    networks:
+      - default
+      - coolify
+
+networks:
+  coolify:
+    external: true
 
 volumes:
   ayinon_db_data:
