@@ -1,6 +1,12 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { RoleUtilisateur, TypeOperationAudit, type RechercheParcelleDto, type SimulationFraisDto } from "@ayinon/shared";
+import {
+  RoleUtilisateur,
+  TypeOperationAudit,
+  type RechercheParcelleDto,
+  type SimulationFraisDto,
+  type ValidationUsageSolDto,
+} from "@ayinon/shared";
 import { CryptoAuditService } from "../crypto-audit/crypto-audit.service";
 import { OtpService } from "../otp/otp.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -21,6 +27,28 @@ export interface ParcelleAvecGeometrie {
   geometrie: GeoJSON.Polygon;
   proprietaireId: string | null;
   proprietaireNom: string | null;
+  usageSolIndicatif: string | null;
+  usageSolValide: string | null;
+}
+
+export interface EvenementJudiciairePublic {
+  statut: string;
+  dateGel: Date;
+  dateLevee: Date | null;
+  motifLevee: string | null;
+  typeDecision: string | null;
+}
+
+export interface MutationProprietePublique {
+  vendeurNom: string;
+  acquereurNom: string;
+  date: Date;
+}
+
+export interface HistoriqueParcellePublic {
+  statutJudiciaire: "AUCUN_LITIGE" | "GEL_EN_COURS" | "ANTECEDENT_LEVE";
+  evenementsJudiciaires: EvenementJudiciairePublic[];
+  proprietairesSuccessifs: MutationProprietePublique[];
 }
 
 @Injectable()
@@ -37,7 +65,8 @@ export class ParcellesService {
       SELECT p.id, p.nup, p."superficieM2"::float AS "superficieM2", p.statut, p."poleTerritorial",
              p.commune, p.arrondissement, p."verrouAntiVente",
              ST_AsGeoJSON(p.geom)::json AS geometrie,
-             pr.id AS "proprietaireId", pr."nomComplet" AS "proprietaireNom"
+             pr.id AS "proprietaireId", pr."nomComplet" AS "proprietaireNom",
+             p."usageSolIndicatif", p."usageSolValide"
       FROM "Parcelle" p
       LEFT JOIN "Proprietaire" pr ON pr.id = p."proprietaireId"
       ORDER BY p."createdAt" DESC
@@ -50,7 +79,8 @@ export class ParcellesService {
       SELECT p.id, p.nup, p."superficieM2"::float AS "superficieM2", p.statut, p."poleTerritorial",
              p.commune, p.arrondissement, p."verrouAntiVente",
              ST_AsGeoJSON(p.geom)::json AS geometrie,
-             pr.id AS "proprietaireId", pr."nomComplet" AS "proprietaireNom"
+             pr.id AS "proprietaireId", pr."nomComplet" AS "proprietaireNom",
+             p."usageSolIndicatif", p."usageSolValide"
       FROM "Parcelle" p
       LEFT JOIN "Proprietaire" pr ON pr.id = p."proprietaireId"
       WHERE p."updatedAt" >= ${depuis}
@@ -63,7 +93,8 @@ export class ParcellesService {
       SELECT p.id, p.nup, p."superficieM2"::float AS "superficieM2", p.statut, p."poleTerritorial",
              p.commune, p.arrondissement, p."verrouAntiVente",
              ST_AsGeoJSON(p.geom)::json AS geometrie,
-             pr.id AS "proprietaireId", pr."nomComplet" AS "proprietaireNom"
+             pr.id AS "proprietaireId", pr."nomComplet" AS "proprietaireNom",
+             p."usageSolIndicatif", p."usageSolValide"
       FROM "Parcelle" p
       LEFT JOIN "Proprietaire" pr ON pr.id = p."proprietaireId"
       WHERE p.id = ${id}
@@ -74,13 +105,66 @@ export class ParcellesService {
     return parcelle;
   }
 
+  /**
+   * Historique public d'une parcelle pour un acheteur potentiel : volet judiciaire (gels CSAF) et
+   * volet proprietaires successifs (via les conventions finalisees). Version deliberement
+   * anonymisee/resumee — le dossier judiciaire complet (reference de dossier, motif tant que le
+   * gel est actif, chemin de la decision) reste reserve aux roles regaliens via
+   * GET /audit/parcelles/:id/historique et GET /csaf/conflits-actifs.
+   */
+  async obtenirHistoriquePublic(id: string): Promise<HistoriqueParcellePublic> {
+    const parcelleExiste = await this.prisma.parcelle.findUnique({ where: { id }, select: { id: true } });
+    if (!parcelleExiste) {
+      throw new NotFoundException("Parcelle introuvable");
+    }
+
+    const [conflits, conventions] = await Promise.all([
+      this.prisma.conflitCsaf.findMany({
+        where: { parcelleId: id },
+        orderBy: { dateGel: "asc" },
+        select: { statut: true, dateGel: true, dateLevee: true, motifLevee: true, typeDecision: true },
+      }),
+      this.prisma.convention.findMany({
+        where: { parcelleId: id, statutCession: "VALIDEE" },
+        orderBy: { createdAt: "asc" },
+        select: { vendeurNom: true, acquereurNom: true, dateValidation: true, createdAt: true },
+      }),
+    ]);
+
+    const gelActif = conflits.some((conflit) => conflit.statut === "ACTIF");
+    const statutJudiciaire: HistoriqueParcellePublic["statutJudiciaire"] = gelActif
+      ? "GEL_EN_COURS"
+      : conflits.length > 0
+        ? "ANTECEDENT_LEVE"
+        : "AUCUN_LITIGE";
+
+    return {
+      statutJudiciaire,
+      evenementsJudiciaires: conflits.map((conflit) => ({
+        statut: conflit.statut,
+        dateGel: conflit.dateGel,
+        // Le motif et le type de decision ne sont restitues qu'une fois le gel leve (transparence
+        // sur l'issue), jamais pendant une procedure en cours (allegations non tranchees).
+        dateLevee: conflit.dateLevee,
+        motifLevee: conflit.statut === "LEVE" ? conflit.motifLevee : null,
+        typeDecision: conflit.statut === "LEVE" ? conflit.typeDecision : null,
+      })),
+      proprietairesSuccessifs: conventions.map((convention) => ({
+        vendeurNom: convention.vendeurNom,
+        acquereurNom: convention.acquereurNom,
+        date: convention.dateValidation ?? convention.createdAt,
+      })),
+    };
+  }
+
   async rechercher(dto: RechercheParcelleDto): Promise<ParcelleAvecGeometrie[]> {
     if (dto.nup) {
       return this.prisma.$queryRaw<ParcelleAvecGeometrie[]>(Prisma.sql`
         SELECT p.id, p.nup, p."superficieM2"::float AS "superficieM2", p.statut, p."poleTerritorial",
                p.commune, p.arrondissement, p."verrouAntiVente",
                ST_AsGeoJSON(p.geom)::json AS geometrie,
-               pr.id AS "proprietaireId", pr."nomComplet" AS "proprietaireNom"
+               pr.id AS "proprietaireId", pr."nomComplet" AS "proprietaireNom",
+               p."usageSolIndicatif", p."usageSolValide"
         FROM "Parcelle" p
         LEFT JOIN "Proprietaire" pr ON pr.id = p."proprietaireId"
         WHERE p.nup ILIKE ${`%${dto.nup}%`}
@@ -93,7 +177,8 @@ export class ParcellesService {
         SELECT p.id, p.nup, p."superficieM2"::float AS "superficieM2", p.statut, p."poleTerritorial",
                p.commune, p.arrondissement, p."verrouAntiVente",
                ST_AsGeoJSON(p.geom)::json AS geometrie,
-               pr.id AS "proprietaireId", pr."nomComplet" AS "proprietaireNom"
+               pr.id AS "proprietaireId", pr."nomComplet" AS "proprietaireNom",
+               p."usageSolIndicatif", p."usageSolValide"
         FROM "Parcelle" p
         JOIN "Proprietaire" pr ON pr.id = p."proprietaireId"
         WHERE pr."nomComplet" ILIKE ${`%${dto.nomProprietaire}%`}
@@ -106,7 +191,8 @@ export class ParcellesService {
         SELECT p.id, p.nup, p."superficieM2"::float AS "superficieM2", p.statut, p."poleTerritorial",
                p.commune, p.arrondissement, p."verrouAntiVente",
                ST_AsGeoJSON(p.geom)::json AS geometrie,
-               pr.id AS "proprietaireId", pr."nomComplet" AS "proprietaireNom"
+               pr.id AS "proprietaireId", pr."nomComplet" AS "proprietaireNom",
+               p."usageSolIndicatif", p."usageSolValide"
         FROM "Parcelle" p
         LEFT JOIN "Proprietaire" pr ON pr.id = p."proprietaireId"
         WHERE ST_DWithin(
@@ -205,5 +291,47 @@ export class ParcellesService {
         "Simulation indicative destinee a eliminer les rackets des demarcheurs informels (kpatchi-kpatchi) — " +
         "le montant definitif est etabli par le notaire et les services de la DGI.",
     };
+  }
+
+  /** File d'attente ANDF : parcelles ou l'occupation du sol satellite (indicative) attend une confirmation humaine. */
+  async listerAValiderUsageSol(): Promise<ParcelleAvecGeometrie[]> {
+    return this.prisma.$queryRaw<ParcelleAvecGeometrie[]>(Prisma.sql`
+      SELECT p.id, p.nup, p."superficieM2"::float AS "superficieM2", p.statut, p."poleTerritorial",
+             p.commune, p.arrondissement, p."verrouAntiVente",
+             ST_AsGeoJSON(p.geom)::json AS geometrie,
+             pr.id AS "proprietaireId", pr."nomComplet" AS "proprietaireNom",
+             p."usageSolIndicatif", p."usageSolValide"
+      FROM "Parcelle" p
+      LEFT JOIN "Proprietaire" pr ON pr.id = p."proprietaireId"
+      WHERE p."usageSolIndicatif" IS NOT NULL AND p."usageSolValide" IS NULL
+      ORDER BY p."createdAt" ASC
+    `);
+  }
+
+  /** Confirme ou corrige, par un agent ANDF, l'usage du sol indicatif derive du calque satellite. */
+  async validerUsageSol(
+    id: string,
+    dto: ValidationUsageSolDto,
+    utilisateur: UtilisateurAuthentifie,
+  ): Promise<ParcelleAvecGeometrie> {
+    const parcelle = await this.prisma.parcelle.findUnique({ where: { id } });
+    if (!parcelle) {
+      throw new NotFoundException("Parcelle introuvable");
+    }
+
+    await this.prisma.parcelle.update({
+      where: { id },
+      data: { usageSolValide: dto.usageSol, usageSolValideParId: utilisateur.id },
+    });
+
+    await this.cryptoAudit.enregistrer({
+      parcelleId: id,
+      typeOperation: TypeOperationAudit.VALIDATION_USAGE_SOL,
+      acteurId: utilisateur.id,
+      roleActeur: utilisateur.role as RoleUtilisateur,
+      payload: { nup: parcelle.nup, usageSolIndicatif: parcelle.usageSolIndicatif, usageSolValide: dto.usageSol },
+    });
+
+    return this.obtenirParId(id);
   }
 }

@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { randomBytes } from "node:crypto";
-import { ConnexionSchema } from "@ayinon/shared";
+import { ConfirmerInscriptionSchema, ConnexionSchema, InscriptionSchema, type ConfirmerInscriptionDto, type InscriptionDto } from "@ayinon/shared";
 import { COOKIE_ACCES, COOKIE_CSRF, COOKIE_RAFRAICHISSEMENT, optionsCookieAuth, optionsCookieCsrf } from "../common/cookies.util";
 import { CurrentUser, type UtilisateurAuthentifie } from "../common/decorators/current-user.decorator";
 import { Public } from "../common/decorators/public.decorator";
@@ -21,6 +21,39 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const { utilisateur, jetons } = await this.authService.connexion(dto.email, dto.motDePasse);
+    this.poserCookiesSession(res, jetons);
+    return this.serialiserUtilisateur(utilisateur);
+  }
+
+  /** E0.1 : inscription en libre-service, reservee aux roles grand public (voir InscriptionSchema). */
+  @Public()
+  @SkipCsrf()
+  @Post("inscription")
+  async inscription(@Body(new ZodValidationPipe(InscriptionSchema)) dto: InscriptionDto) {
+    const { codeDebug } = await this.authService.inscrire(dto);
+    return {
+      message: "Compte cree. Confirmez avec le code envoye pour l'activer.",
+      // En dev uniquement : en production, le code part par SMS/e-mail, jamais dans la reponse HTTP.
+      codeDebug: process.env.NODE_ENV === "production" ? undefined : codeDebug,
+    };
+  }
+
+  @Public()
+  @SkipCsrf()
+  @Post("inscription/confirmer")
+  async confirmerInscription(
+    @Body(new ZodValidationPipe(ConfirmerInscriptionSchema)) dto: ConfirmerInscriptionDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { utilisateur, jetons } = await this.authService.confirmerInscription(dto.email, dto.code);
+    if (!jetons) {
+      // Compte professionnel confirme mais encore en attente de validation admin (E0.6) : pas de
+      // session ouverte, l'utilisateur doit repasser par /connexion une fois approuve.
+      return {
+        enAttenteValidation: true,
+        message: "E-mail confirme. Votre compte professionnel est desormais en attente de validation par un administrateur.",
+      };
+    }
     this.poserCookiesSession(res, jetons);
     return this.serialiserUtilisateur(utilisateur);
   }

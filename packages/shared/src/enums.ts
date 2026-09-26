@@ -5,11 +5,14 @@
 
 export const RoleUtilisateur = {
   CITOYEN: "CITOYEN",
+  VENDEUR: "VENDEUR",
+  ACHETEUR: "ACHETEUR",
   GEOMETRE: "GEOMETRE",
   NOTAIRE: "NOTAIRE",
   MANDATAIRE_FAMILIAL: "MANDATAIRE_FAMILIAL",
   AGENT_ANDF: "AGENT_ANDF",
   MAGISTRAT_CSAF: "MAGISTRAT_CSAF",
+  AGENT_BANQUE: "AGENT_BANQUE",
   ADMIN: "ADMIN",
 } as const;
 export type RoleUtilisateur = (typeof RoleUtilisateur)[keyof typeof RoleUtilisateur];
@@ -69,6 +72,14 @@ export const StatutConflitCsaf = {
 } as const;
 export type StatutConflitCsaf = (typeof StatutConflitCsaf)[keyof typeof StatutConflitCsaf];
 
+/** Effet applique par la decision definitive du magistrat CSAF (E8.8) au moment de la levee. */
+export const TypeDecisionCsaf = {
+  LEVEE_SIMPLE: "LEVEE_SIMPLE",
+  ANNULATION_VENTE: "ANNULATION_VENTE",
+  TRANSFERT_FORCE: "TRANSFERT_FORCE",
+} as const;
+export type TypeDecisionCsaf = (typeof TypeDecisionCsaf)[keyof typeof TypeDecisionCsaf];
+
 export const TypeOperationAudit = {
   CREATION_PARCELLE: "CREATION_PARCELLE",
   VERROUILLAGE_ANTI_VENTE: "VERROUILLAGE_ANTI_VENTE",
@@ -84,8 +95,70 @@ export const TypeOperationAudit = {
   CLOTURE_BAN: "CLOTURE_BAN",
   GEL_CSAF: "GEL_CSAF",
   LEVEE_GEL_CSAF: "LEVEE_GEL_CSAF",
+  PROPOSITION_CESSION: "PROPOSITION_CESSION",
+  ACCEPTATION_CESSION: "ACCEPTATION_CESSION",
+  REJET_CESSION: "REJET_CESSION",
+  VALIDATION_CESSION: "VALIDATION_CESSION",
+  DELIVRANCE_TITRE: "DELIVRANCE_TITRE",
+  INSCRIPTION_HYPOTHEQUE: "INSCRIPTION_HYPOTHEQUE",
+  LEVEE_HYPOTHEQUE: "LEVEE_HYPOTHEQUE",
+  MODIFICATION_ADMIN_PARCELLE: "MODIFICATION_ADMIN_PARCELLE",
+  PUBLICATION_ANNONCE: "PUBLICATION_ANNONCE",
+  RETRAIT_ANNONCE: "RETRAIT_ANNONCE",
+  MANIFESTATION_INTERET: "MANIFESTATION_INTERET",
+  RETENUE_INTERET: "RETENUE_INTERET",
+  VERIFICATION_ANDF_ANNONCE: "VERIFICATION_ANDF_ANNONCE",
+  CREATION_COMPTE: "CREATION_COMPTE",
+  DEPOT_SIGNALEMENT: "DEPOT_SIGNALEMENT",
+  QUALIFICATION_SIGNALEMENT: "QUALIFICATION_SIGNALEMENT",
+  DEPOT_AVIS: "DEPOT_AVIS",
+  DECLARATION_SEQUESTRE: "DECLARATION_SEQUESTRE",
+  CONFIRMATION_SEQUESTRE: "CONFIRMATION_SEQUESTRE",
+  LIBERATION_SEQUESTRE: "LIBERATION_SEQUESTRE",
+  REMBOURSEMENT_SEQUESTRE: "REMBOURSEMENT_SEQUESTRE",
+  DEMANDE_VALIDATION_PRO: "DEMANDE_VALIDATION_PRO",
+  VALIDATION_COMPTE_PRO: "VALIDATION_COMPTE_PRO",
+  REJET_COMPTE_PRO: "REJET_COMPTE_PRO",
+  DEMANDE_VISITE: "DEMANDE_VISITE",
+  REPONSE_VISITE: "REPONSE_VISITE",
+  DECISION_CSAF_ANNULATION_VENTE: "DECISION_CSAF_ANNULATION_VENTE",
+  DECISION_CSAF_TRANSFERT_FORCE: "DECISION_CSAF_TRANSFERT_FORCE",
+  DEMANDE_FINANCEMENT: "DEMANDE_FINANCEMENT",
+  CONSULTATION_FINANCEMENT: "CONSULTATION_FINANCEMENT",
+  TRAITEMENT_FINANCEMENT: "TRAITEMENT_FINANCEMENT",
+  ACCORD_EXCLUSIVITE: "ACCORD_EXCLUSIVITE",
+  SUSPENSION_ADMIN_ANNONCE: "SUSPENSION_ADMIN_ANNONCE",
+  IMPORT_BATI: "IMPORT_BATI",
+  VALIDATION_BATI: "VALIDATION_BATI",
+  REJET_BATI: "REJET_BATI",
+  VALIDATION_USAGE_SOL: "VALIDATION_USAGE_SOL",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
+
+/** Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
+ * -> VALIDEE par un agent ANDF (genere le Titre et transfere la propriete), ou REJETEE a toute etape
+ * avant validation (par l'acquereur ou par l'ANDF). */
+export const StatutCession = {
+  PROPOSEE: "PROPOSEE",
+  ACCEPTEE: "ACCEPTEE",
+  VALIDEE: "VALIDEE",
+  REJETEE: "REJETEE",
+} as const;
+export type StatutCession = (typeof StatutCession)[keyof typeof StatutCession];
+
+export const StatutHypotheque = {
+  ACTIVE: "ACTIVE",
+  LEVEE: "LEVEE",
+} as const;
+export type StatutHypotheque = (typeof StatutHypotheque)[keyof typeof StatutHypotheque];
+
+/** Demande de financement (E4.6-E4.8) : aucun scoring automatique, la decision reste toujours humaine. */
+export const StatutDemandeFinancement = {
+  EN_ATTENTE: "EN_ATTENTE",
+  ACCORD_PRINCIPE: "ACCORD_PRINCIPE",
+  REFUSEE: "REFUSEE",
+} as const;
+export type StatutDemandeFinancement = (typeof StatutDemandeFinancement)[keyof typeof StatutDemandeFinancement];
 
 /**
  * Six poles territoriaux (regroupement des 12 departements du Benin), reference structurante
@@ -111,6 +184,33 @@ export const LIBELLE_POLE_TERRITORIAL: Record<PoleTerritorial, string> = {
   ATACORA_DONGA: "Pole Atacora-Donga (Natitingou, Djougou)",
 };
 
+/// Detection automatique par imagerie satellite (a valider) vs dessin direct par un
+/// geometre/agent sur la carte.
+export const SourceBati = {
+  IMPORT_IA: "IMPORT_IA",
+  SAISIE_MANUELLE: "SAISIE_MANUELLE",
+} as const;
+export type SourceBati = (typeof SourceBati)[keyof typeof SourceBati];
+
+/// Usage du sol d'une parcelle (voir usageSolIndicatif/usageSolValide sur Parcelle) : reste
+/// indicatif (donnee satellite) tant qu'un agent ANDF ne l'a pas confirme.
+export const TypeUsageSol = {
+  AGRICOLE: "AGRICOLE",
+  URBAIN: "URBAIN",
+  FORET: "FORET",
+  EAU: "EAU",
+  AUTRE: "AUTRE",
+} as const;
+export type TypeUsageSol = (typeof TypeUsageSol)[keyof typeof TypeUsageSol];
+
+export const LIBELLE_TYPE_USAGE_SOL: Record<TypeUsageSol, string> = {
+  AGRICOLE: "Agricole",
+  URBAIN: "Urbain / bati",
+  FORET: "Foret",
+  EAU: "Plan d'eau",
+  AUTRE: "Autre",
+};
+
 export const LangueAssistantVocal = {
   FR: "FR",
   FON: "FON",
@@ -118,3 +218,78 @@ export const LangueAssistantVocal = {
   BARIBA: "BARIBA",
 } as const;
 export type LangueAssistantVocal = (typeof LangueAssistantVocal)[keyof typeof LangueAssistantVocal];
+
+/** Cycle de vie d'une annonce (vitrine publique) : ACTIVE tant que le vendeur cherche un
+ * acquereur, RETIREE si le vendeur l'annule, VENDUE des qu'une cession issue de cette annonce
+ * est validee. */
+export const StatutAnnonce = {
+  ACTIVE: "ACTIVE",
+  RETIREE: "RETIREE",
+  VENDUE: "VENDUE",
+} as const;
+export type StatutAnnonce = (typeof StatutAnnonce)[keyof typeof StatutAnnonce];
+
+export const StatutInteret = {
+  EN_ATTENTE: "EN_ATTENTE",
+  RETENU: "RETENU",
+  DECLINE: "DECLINE",
+} as const;
+export type StatutInteret = (typeof StatutInteret)[keyof typeof StatutInteret];
+
+/** Statut declare par un vendeur : adapte les pieces attendues lors de la publication d'une annonce. */
+export const StatutDeclarantVendeur = {
+  PROPRIETAIRE: "PROPRIETAIRE",
+  HERITIER: "HERITIER",
+  MANDATAIRE: "MANDATAIRE",
+  AGENCE: "AGENCE",
+} as const;
+export type StatutDeclarantVendeur = (typeof StatutDeclarantVendeur)[keyof typeof StatutDeclarantVendeur];
+
+/** Modalite d'une visite (E3.5) : VIDEO ne suppose aucune integration de visioconference reelle,
+ * les parties conviennent elles-memes du lien a utiliser. */
+export const ModeVisite = {
+  PRESENTIEL: "PRESENTIEL",
+  VIDEO: "VIDEO",
+} as const;
+export type ModeVisite = (typeof ModeVisite)[keyof typeof ModeVisite];
+
+export const StatutVisite = {
+  DEMANDEE: "DEMANDEE",
+  CONFIRMEE: "CONFIRMEE",
+  REFUSEE: "REFUSEE",
+  REPROGRAMMEE: "REPROGRAMMEE",
+} as const;
+export type StatutVisite = (typeof StatutVisite)[keyof typeof StatutVisite];
+
+/** File d'attente de validation des comptes professionnels (E0.5/E0.6). */
+export const StatutValidationPro = {
+  NON_APPLICABLE: "NON_APPLICABLE",
+  EN_ATTENTE: "EN_ATTENTE",
+  APPROUVE: "APPROUVE",
+  REJETE: "REJETE",
+} as const;
+export type StatutValidationPro = (typeof StatutValidationPro)[keyof typeof StatutValidationPro];
+
+/** Portee d'un signalement : ANNONCE (probleme sur une annonce publiee) ou LITIGE_FONCIER
+ * (contestation sur la parcelle elle-meme, susceptible d'aboutir a un gel CSAF). */
+export const TypeSignalement = {
+  ANNONCE: "ANNONCE",
+  LITIGE_FONCIER: "LITIGE_FONCIER",
+} as const;
+export type TypeSignalement = (typeof TypeSignalement)[keyof typeof TypeSignalement];
+
+export const StatutSignalement = {
+  DEPOSE: "DEPOSE",
+  FONDE: "FONDE",
+  REJETE: "REJETE",
+} as const;
+export type StatutSignalement = (typeof StatutSignalement)[keyof typeof StatutSignalement];
+
+/** Sequestre en pur suivi de statut (Epic 5) : aucun mouvement d'argent reel (voir docs/decisions.md). */
+export const StatutSequestre = {
+  DEPOT_DECLARE: "DEPOT_DECLARE",
+  DEPOT_CONFIRME: "DEPOT_CONFIRME",
+  LIBERE: "LIBERE",
+  REMBOURSE: "REMBOURSE",
+} as const;
+export type StatutSequestre = (typeof StatutSequestre)[keyof typeof StatutSequestre];

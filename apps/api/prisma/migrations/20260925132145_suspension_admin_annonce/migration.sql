@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "TypeOperationAudit" ADD VALUE 'SUSPENSION_ADMIN_ANNONCE';
+

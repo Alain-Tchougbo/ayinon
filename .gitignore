@@ -17,6 +17,11 @@ apps/web/dev-dist/
 # Prisma
 apps/api/prisma/migrations/dev.db
 
+# Extraits GeoJSON volumineux (batis/zonage) prepares hors du depot par l'utilisateur — voir les
+# README dans ces dossiers pour le format attendu et les scripts d'import.
+apps/api/prisma/data/batis/*.geojson
+apps/api/prisma/data/zonage/*.geojson
+
 # TypeScript incremental build cache
 *.tsbuildinfo
 

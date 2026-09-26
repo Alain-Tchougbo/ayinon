@@ -1,7 +1,18 @@
 /* eslint-disable no-console */
 import { PrismaClient, Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
-import { RoleFamilial, RoleUtilisateur, StatutParcelle, PoleTerritorial } from "@ayinon/shared";
+import {
+  RoleFamilial,
+  RoleUtilisateur,
+  SourceBati,
+  StatutCession,
+  StatutConflitCsaf,
+  StatutDeclarantVendeur,
+  StatutParcelle,
+  PoleTerritorial,
+  TypeDecisionCsaf,
+  TypeUsageSol,
+} from "@ayinon/shared";
 import { hacherMotDePasse } from "../src/auth/password.util";
 
 const prisma = new PrismaClient();
@@ -51,12 +62,53 @@ async function inserer(
   return id;
 }
 
+async function insererBati(
+  centre: [number, number],
+  source: SourceBati,
+  options: { parcelleId?: string | null; scoreConfiance?: number; valide?: boolean; valideParId?: string } = {},
+) {
+  const id = randomUUID();
+  const geometrie = carre(centre, 0.00008);
+
+  await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO "Bati" (id, geom, source, "scoreConfiance", "parcelleId", valide, "valideParId", "createdAt", "updatedAt")
+    VALUES (
+      ${id},
+      ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geometrie)}), 4326),
+      ${source}::"SourceBati",
+      ${options.scoreConfiance ?? null},
+      ${options.parcelleId ?? null},
+      ${options.valide ?? false},
+      ${options.valideParId ?? null},
+      now(), now()
+    )
+  `);
+  return id;
+}
+
+async function insererZoneOccupationSol(centre: [number, number], typeUsage: TypeUsageSol, demiCoteDeg = 0.004) {
+  const id = randomUUID();
+  const geometrie = carre(centre, demiCoteDeg);
+
+  await prisma.$executeRaw(Prisma.sql`
+    INSERT INTO "ZoneOccupationSol" (id, geom, "typeUsage", source, "createdAt")
+    VALUES (
+      ${id},
+      ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geometrie)}), 4326),
+      ${typeUsage}::"TypeUsageSol",
+      'ESA_WORLDCOVER_2021',
+      now()
+    )
+  `);
+  return id;
+}
+
 async function main() {
   console.log("Nettoyage de la base (TRUNCATE CASCADE)...");
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE "MutationAudit","ConflitCsaf","Opposition","BanOpposition","SignatureFamille",
-      "MandataireFamille","PlanBornage","Convention","Titre","Parcelle","CodeOtp","RefreshToken",
-      "Utilisateur","Proprietaire" CASCADE
+      "MandataireFamille","PlanBornage","Convention","Titre","Bati","ZoneOccupationSol","Parcelle",
+      "CodeOtp","RefreshToken","Utilisateur","Proprietaire" CASCADE
   `);
 
   console.log("Creation des proprietaires...");
@@ -81,12 +133,30 @@ async function main() {
   });
   const cadet = await prisma.proprietaire.create({ data: { nomComplet: "Fifame DOSSOU", telephone: "+229 97 00 00 05" } });
   const etat = await prisma.proprietaire.create({ data: { nomComplet: "Domaine de l'Etat beninois" } });
+  const roukayath = await prisma.proprietaire.create({
+    data: { nomComplet: "Roukayath ALAO", telephone: "+229 97 00 00 06", numeroPieceIdentite: "BJ-CIP-000107" },
+  });
 
   console.log("Creation des comptes de demonstration...");
   const motDePasseHash = await hacherMotDePasse(MOT_DE_PASSE_DEMO);
-  const comptes: Array<{ email: string; role: RoleUtilisateur; nomComplet: string; proprietaireId?: string; poleTerritorial?: PoleTerritorial }> = [
+  const comptes: Array<{
+    email: string;
+    role: RoleUtilisateur;
+    nomComplet: string;
+    proprietaireId?: string;
+    poleTerritorial?: PoleTerritorial;
+    statutDeclarant?: StatutDeclarantVendeur;
+  }> = [
     { email: "citoyen1@ayinon.bj", role: RoleUtilisateur.CITOYEN, nomComplet: kodjo.nomComplet, proprietaireId: kodjo.id },
     { email: "diaspora1@ayinon.bj", role: RoleUtilisateur.CITOYEN, nomComplet: akouavi.nomComplet, proprietaireId: akouavi.id },
+    {
+      email: "vendeur1@ayinon.bj",
+      role: RoleUtilisateur.VENDEUR,
+      nomComplet: roukayath.nomComplet,
+      proprietaireId: roukayath.id,
+      statutDeclarant: StatutDeclarantVendeur.PROPRIETAIRE,
+    },
+    { email: "acheteur1@ayinon.bj", role: RoleUtilisateur.ACHETEUR, nomComplet: "Ganiou SALIFOU" },
     { email: "geometre1@ayinon.bj", role: RoleUtilisateur.GEOMETRE, nomComplet: "Cyriaque DOSSOU-YOVO (OGEB n.512)" },
     { email: "mandataire.aine@ayinon.bj", role: RoleUtilisateur.MANDATAIRE_FAMILIAL, nomComplet: aine.nomComplet, proprietaireId: aine.id },
     {
@@ -103,6 +173,7 @@ async function main() {
       poleTerritorial: PoleTerritorial.LITTORAL_ATLANTIQUE,
     },
     { email: "csaf1@ayinon.bj", role: RoleUtilisateur.MAGISTRAT_CSAF, nomComplet: "Magistrat CSAF — Cour Speciale des Affaires Foncieres" },
+    { email: "banque1@ayinon.bj", role: RoleUtilisateur.AGENT_BANQUE, nomComplet: "Agent Credit — Microfinance ALAFIA" },
     { email: "admin@ayinon.bj", role: RoleUtilisateur.ADMIN, nomComplet: "Administrateur plateforme AYINON" },
   ];
   for (const compte of comptes) {
@@ -114,6 +185,7 @@ async function main() {
         nomComplet: compte.nomComplet,
         proprietaireId: compte.proprietaireId,
         poleTerritorial: compte.poleTerritorial,
+        statutDeclarant: compte.statutDeclarant,
       },
     });
   }
@@ -200,6 +272,107 @@ async function main() {
     "Centre",
     kodjo.id,
   );
+  const parcelleVendeur = await inserer(
+    "BJ-LIT-COT-0009",
+    [2.3945, 6.3688],
+    StatutParcelle.TITREE,
+    PoleTerritorial.LITTORAL_ATLANTIQUE,
+    "Cotonou",
+    "3e Arrondissement",
+    roukayath.id,
+  );
+  const parcelleVenteHistorique = await inserer(
+    "BJ-LIT-COT-0010",
+    [2.3968, 6.3675],
+    StatutParcelle.TITREE,
+    PoleTerritorial.LITTORAL_ATLANTIQUE,
+    "Cotonou",
+    "3e Arrondissement",
+    kodjo.id,
+  );
+
+  console.log("Publication d'annonces de demonstration (vitrine des terrains a vendre)...");
+  const vendeur1 = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "vendeur1@ayinon.bj" } });
+  const andfLittoral = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "andf.littoral@ayinon.bj" } });
+  const acheteur1 = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "acheteur1@ayinon.bj" } });
+  const parcellePortoNovo = await prisma.parcelle.findUniqueOrThrow({ where: { nup: "BJ-OUE-PN-0004" } });
+  const parcelleLokossa = await prisma.parcelle.findUniqueOrThrow({ where: { nup: "BJ-MOC-LOK-0008" } });
+  await prisma.annonce.createMany({
+    data: [
+      {
+        // Vitrine complete : badge ANDF + exclusivite temporaire en cours (E4.5), pour verifier
+        // le rendu de tous les badges simultanement sur une meme carte.
+        parcelleId: parcelleVendeur,
+        publieeParId: vendeur1.id,
+        prixIndicatifFcfa: 35_000_000,
+        description: "Parcelle titree, viabilisee, proche de la voie bitumee — ideale pour habitation.",
+        verifieeParAndfId: andfLittoral.id,
+        dateVerificationAndf: new Date(),
+        exclusiviteAcheteurId: acheteur1.id,
+        exclusiviteJusqua: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      },
+      {
+        // Carte simple, sans badge : prix indicatif renseigne, aucune verification ANDF encore.
+        parcelleId: parcellePortoNovo.id,
+        publieeParId: vendeur1.id,
+        prixIndicatifFcfa: 12_500_000,
+      },
+      {
+        // Prix "a discuter" (prixIndicatifFcfa null) : verifie ce cas d'affichage specifique.
+        parcelleId: parcelleLokossa.id,
+        publieeParId: vendeur1.id,
+        description: "Terrain agricole en bordure de route nationale, potentiel construction.",
+      },
+    ],
+  });
+
+  console.log("Insertion d'une cession historique validee (peuple l'estimation de prix par commune)...");
+  await prisma.convention.create({
+    data: {
+      parcelleId: parcelleVenteHistorique,
+      vendeurNom: "Ancien proprietaire (avant AYINON)",
+      acquereurNom: kodjo.nomComplet,
+      montantFcfa: 18_000_000,
+      hashSha256: "0".repeat(64),
+      signatureEd25519: "",
+      qrPayload: {},
+      statutCession: StatutCession.VALIDEE,
+    },
+  });
+
+  console.log("Insertion d'un historique proprietaires + litige judiciaire resolu sur des parcelles avec annonce active...");
+  const csaf = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "csaf1@ayinon.bj" } });
+  // Demontre l'historique public consulte par un acheteur (GET /parcelles/:id/historique) sur une
+  // parcelle reellement en vitrine : mutation anterieure vers le vendeur actuel.
+  await prisma.convention.create({
+    data: {
+      parcelleId: parcelleVendeur,
+      vendeurNom: "Ancien proprietaire (avant AYINON)",
+      acquereurNom: roukayath.nomComplet,
+      montantFcfa: 22_000_000,
+      hashSha256: "0".repeat(64),
+      signatureEd25519: "",
+      qrPayload: {},
+      statutCession: StatutCession.VALIDEE,
+      createdAt: new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000),
+    },
+  });
+  // Litige judiciaire deja resolu (pas actif) sur une autre parcelle en vitrine, pour verifier le
+  // rendu "transparence apres resolution" plutot que le seul cas de gel bloquant.
+  await prisma.conflitCsaf.create({
+    data: {
+      parcelleId: parcelleLokossa.id,
+      motif: "Opposition d'un voisin sur la delimitation lors du bornage initial",
+      referenceDossierJudiciaire: "CSAF-2024-000017",
+      statut: StatutConflitCsaf.LEVE,
+      statutParcelleAvantGel: StatutParcelle.TITREE,
+      ouvertParId: csaf.id,
+      dateGel: new Date(Date.now() - 730 * 24 * 60 * 60 * 1000),
+      dateLevee: new Date(Date.now() - 545 * 24 * 60 * 60 * 1000),
+      motifLevee: "Bornage contradictoire realise, limites confirmees par le geometre — opposition levee",
+      typeDecision: TypeDecisionCsaf.LEVEE_SIMPLE,
+    },
+  });
 
   console.log("Ouverture d'un protocole de multi-signature familiale sur une parcelle hereditaire...");
   await prisma.signatureFamille.createMany({
@@ -211,7 +384,6 @@ async function main() {
   });
 
   console.log("Ouverture d'un conflit CSAF de demonstration...");
-  const csaf = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "csaf1@ayinon.bj" } });
   await prisma.$transaction([
     prisma.conflitCsaf.create({
       data: {
@@ -224,6 +396,32 @@ async function main() {
     }),
     prisma.parcelle.update({ where: { id: parcelleLitige }, data: { statut: StatutParcelle.GEL_CSAF } }),
   ]);
+
+  console.log("Identification des batis de demonstration (import IA + saisie manuelle)...");
+  const geometre1 = await prisma.utilisateur.findUniqueOrThrow({ where: { email: "geometre1@ayinon.bj" } });
+  // Detecte par IA (type Google Open Buildings) sur une parcelle en vitrine, pas encore valide.
+  await insererBati([2.3945, 6.3688], SourceBati.IMPORT_IA, { parcelleId: parcelleVendeur, scoreConfiance: 0.91 });
+  // Dessine directement par un geometre sur la carte : valide d'emblee.
+  await insererBati([1.7167, 6.6389], SourceBati.SAISIE_MANUELLE, {
+    parcelleId: parcelleLokossa.id,
+    valide: true,
+    valideParId: geometre1.id,
+  });
+  // Detection IA isolee, ne recoupant aucune parcelle cadastree connue (cas frequent en pratique).
+  await insererBati([1.3816, 10.3062], SourceBati.IMPORT_IA, { scoreConfiance: 0.62 });
+
+  console.log("Occupation du sol indicative (calque satellite type ESA WorldCover)...");
+  // Zone agricole recoupant la parcelle de Lokossa, deja decrite comme terrain agricole dans son annonce.
+  await insererZoneOccupationSol([1.7167, 6.6389], TypeUsageSol.AGRICOLE);
+  await prisma.parcelle.update({ where: { id: parcelleLokossa.id }, data: { usageSolIndicatif: TypeUsageSol.AGRICOLE } });
+  // Zone urbaine recoupant la parcelle vendeur de Cotonou, encore en attente de confirmation ANDF.
+  await insererZoneOccupationSol([2.3945, 6.3688], TypeUsageSol.URBAIN);
+  await prisma.parcelle.update({ where: { id: parcelleVendeur }, data: { usageSolIndicatif: TypeUsageSol.URBAIN } });
+  // Parcelle dont l'usage indicatif a deja ete confirme par un agent ANDF (etat final du workflow).
+  await prisma.parcelle.update({
+    where: { id: parcelleVenteHistorique },
+    data: { usageSolIndicatif: TypeUsageSol.URBAIN, usageSolValide: TypeUsageSol.URBAIN, usageSolValideParId: andfLittoral.id },
+  });
 
   console.log("Cree :");
   console.log(`  - Parcelle titree prete pour le scenario 'import de bornage en chevauchement' : ${cotonouTitree}`);

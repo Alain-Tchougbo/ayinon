@@ -31,7 +31,10 @@ export class GeometreService {
    * marque chevauchementDetecte s'il empiete sur une parcelle voisine ; il ne pourra alors
    * pas etre signe tant que le conflit n'est pas resolu (voir signerPlan).
    */
-  async importerBornage(dto: ImportBornageDto): Promise<{
+  async importerBornage(
+    dto: ImportBornageDto,
+    utilisateur: UtilisateurAuthentifie,
+  ): Promise<{
     planBornageId: string;
     chevauchementDetecte: boolean;
     parcellesEnConflit: ParcelleEnConflit[];
@@ -55,7 +58,7 @@ export class GeometreService {
 
     await this.prisma.$executeRaw(Prisma.sql`
       INSERT INTO "PlanBornage"
-        (id, "parcelleId", geometrie, "referenceDossier", "chevauchementDetecte", "parcellesEnConflit", "hashSha256", "createdAt")
+        (id, "parcelleId", geometrie, "referenceDossier", "chevauchementDetecte", "parcellesEnConflit", "hashSha256", "importeParId", "createdAt")
       VALUES (
         ${id},
         ${dto.parcelleId},
@@ -64,6 +67,7 @@ export class GeometreService {
         ${chevauchementDetecte},
         ${parcellesEnConflitLiteral}::text[],
         ${hashSha256},
+        ${utilisateur.id},
         now()
       )
     `);
@@ -71,6 +75,8 @@ export class GeometreService {
     await this.cryptoAudit.enregistrer({
       parcelleId: dto.parcelleId,
       typeOperation: TypeOperationAudit.IMPORT_BORNAGE,
+      acteurId: utilisateur.id,
+      roleActeur: utilisateur.role as RoleUtilisateur,
       payload: { planBornageId: id, referenceDossier: dto.referenceDossier, hashSha256 },
     });
 
@@ -120,6 +126,24 @@ export class GeometreService {
     });
 
     return planSigne;
+  }
+
+  /** Historique des plans televerses par ce geometre — alimente son tableau de bord ("mes imports"). */
+  async listerMesImports(utilisateurId: string) {
+    return this.prisma.planBornage.findMany({
+      where: { importeParId: utilisateurId },
+      select: {
+        id: true,
+        referenceDossier: true,
+        chevauchementDetecte: true,
+        numeroOrdreOgeb: true,
+        signeParId: true,
+        createdAt: true,
+        parcelle: { select: { id: true, nup: true, commune: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    });
   }
 
   async listerParParcelle(parcelleId: string) {

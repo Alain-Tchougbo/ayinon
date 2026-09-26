@@ -166,6 +166,18 @@ export class FamillesService {
     return banCloture;
   }
 
+  /**
+   * Signatures reellement en attente POUR CET utilisateur (via ses mandats familiaux) : evite au
+   * mandataire de devoir deviner/chercher le NUP d'une parcelle pour savoir qu'on attend sa signature.
+   */
+  async listerMesSignaturesEnAttente(proprietaireId: string) {
+    return this.prisma.signatureFamille.findMany({
+      where: { statut: StatutSignatureFamille.EN_ATTENTE, mandataire: { proprietaireId } },
+      include: { parcelle: { select: { id: true, nup: true, commune: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
   async obtenirEtatParcelle(parcelleId: string) {
     const [signatures, bans] = await Promise.all([
       this.prisma.signatureFamille.findMany({

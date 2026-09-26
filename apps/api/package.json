@@ -11,6 +11,8 @@
     "start:prod": "node dist/main.js",
     "preseed": "pnpm --filter @ayinon/shared build",
     "seed": "ts-node --transpile-only prisma/seed.ts",
+    "import:batis": "ts-node --transpile-only scripts/importer-batis.ts",
+    "import:zonage": "ts-node --transpile-only scripts/importer-zonage-esa.ts",
     "pretest": "pnpm --filter @ayinon/shared build",
     "test": "jest",
     "test:watch": "jest --watch",

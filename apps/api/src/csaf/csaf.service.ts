@@ -1,8 +1,14 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { createHash } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { extname, join } from "node:path";
 import {
   RoleUtilisateur,
+  StatutCession,
   StatutConflitCsaf,
   StatutParcelle,
+  StatutSequestre,
+  TypeDecisionCsaf,
   TypeOperationAudit,
   type GelConservatoireDto,
   type LeveeGelDto,
@@ -10,6 +16,8 @@ import {
 import type { UtilisateurAuthentifie } from "../common/decorators/current-user.decorator";
 import { CryptoAuditService } from "../crypto-audit/crypto-audit.service";
 import { PrismaService } from "../prisma/prisma.service";
+
+const DOSSIER_DECISIONS = join(process.cwd(), "uploads", "decisions-csaf");
 
 /**
  * Bouton de Gel Conservatoire Judiciaire : en un appel, un magistrat CSAF place une parcelle
@@ -57,7 +65,10 @@ export class CsafService {
     return conflit;
   }
 
-  async leverGel(dto: LeveeGelDto, magistrat: UtilisateurAuthentifie) {
+  /** E8.8 : la levee porte la decision definitive du magistrat. LEVEE_SIMPLE restaure juste le
+   * statut anterieur ; ANNULATION_VENTE/TRANSFERT_FORCE annulent en plus toute cession/annonce en
+   * cours sur la parcelle, TRANSFERT_FORCE reassignant directement la propriete au nom designe. */
+  async leverGel(dto: LeveeGelDto, fichier: Express.Multer.File | undefined, magistrat: UtilisateurAuthentifie) {
     const conflit = await this.prisma.conflitCsaf.findUnique({ where: { id: dto.conflitId } });
     if (!conflit) {
       throw new NotFoundException("Conflit CSAF introuvable");
@@ -66,24 +77,91 @@ export class CsafService {
       throw new BadRequestException("Ce gel a deja ete leve");
     }
 
-    const [conflitLeve] = await this.prisma.$transaction([
-      this.prisma.conflitCsaf.update({
+    let cheminDecision: string | null = null;
+    if (fichier) {
+      await mkdir(DOSSIER_DECISIONS, { recursive: true });
+      const hash = createHash("sha256").update(fichier.buffer).digest("hex");
+      const nomFichier = `${hash}${extname(fichier.originalname) || ".pdf"}`;
+      await writeFile(join(DOSSIER_DECISIONS, nomFichier), fichier.buffer);
+      cheminDecision = join("uploads", "decisions-csaf", nomFichier);
+    }
+
+    const invalideMutationsEnCours = dto.typeDecision !== TypeDecisionCsaf.LEVEE_SIMPLE;
+    let sequestresRembourses: Array<{ id: string; conventionId: string }> = [];
+
+    const conflitLeve = await this.prisma.$transaction(async (tx) => {
+      const misAJour = await tx.conflitCsaf.update({
         where: { id: dto.conflitId },
-        data: { statut: StatutConflitCsaf.LEVE, dateLevee: new Date(), motifLevee: dto.motifLevee },
-      }),
-      this.prisma.parcelle.update({
-        where: { id: conflit.parcelleId },
-        data: { statut: conflit.statutParcelleAvantGel },
-      }),
-    ]);
+        data: { statut: StatutConflitCsaf.LEVE, dateLevee: new Date(), motifLevee: dto.motifLevee, typeDecision: dto.typeDecision, cheminDecision },
+      });
+
+      if (dto.typeDecision === TypeDecisionCsaf.TRANSFERT_FORCE) {
+        const nouveauProprietaire = await tx.proprietaire.create({ data: { nomComplet: dto.nouveauProprietaireNom! } });
+        await tx.parcelle.update({
+          where: { id: conflit.parcelleId },
+          data: { proprietaireId: nouveauProprietaire.id, statut: StatutParcelle.TITREE, verrouAntiVente: false },
+        });
+      } else {
+        await tx.parcelle.update({ where: { id: conflit.parcelleId }, data: { statut: conflit.statutParcelleAvantGel } });
+      }
+
+      if (invalideMutationsEnCours) {
+        const conventionsAnnulees = await tx.convention.findMany({
+          where: { parcelleId: conflit.parcelleId, statutCession: { in: [StatutCession.PROPOSEE, StatutCession.ACCEPTEE] } },
+          select: { id: true },
+        });
+        await tx.convention.updateMany({
+          where: { parcelleId: conflit.parcelleId, statutCession: { in: [StatutCession.PROPOSEE, StatutCession.ACCEPTEE] } },
+          data: { statutCession: StatutCession.REJETEE, motifRejet: `Annulee par decision CSAF : ${dto.motifLevee}` },
+        });
+        await tx.annonce.updateMany({
+          where: { parcelleId: conflit.parcelleId, statut: "ACTIVE" },
+          data: { statut: "RETIREE", retireeLe: new Date() },
+        });
+
+        // E5.8/E8.5 : un depot deja declare/confirme sur une cession que le CSAF annule doit
+        // etre rembourse, comme pour un rejet ANDF classique (voir CessionsService.valider) —
+        // sinon les fonds resteraient bloques indefiniment sans qu'aucune autorite ne les libere.
+        const conventionIds = conventionsAnnulees.map((c: { id: string }) => c.id);
+        if (conventionIds.length > 0) {
+          const sequestresARembourser = await tx.sequestre.findMany({
+            where: { conventionId: { in: conventionIds }, statut: { notIn: [StatutSequestre.LIBERE, StatutSequestre.REMBOURSE] } },
+          });
+          if (sequestresARembourser.length > 0) {
+            await tx.sequestre.updateMany({
+              where: { id: { in: sequestresARembourser.map((s: { id: string }) => s.id) } },
+              data: { statut: StatutSequestre.REMBOURSE, dateRemboursement: new Date(), motifRemboursement: `Annulee par decision CSAF : ${dto.motifLevee}` },
+            });
+            sequestresRembourses = sequestresARembourser.map((s: { id: string; conventionId: string }) => ({ id: s.id, conventionId: s.conventionId }));
+          }
+        }
+      }
+
+      return misAJour;
+    });
 
     await this.cryptoAudit.enregistrer({
       parcelleId: conflit.parcelleId,
-      typeOperation: TypeOperationAudit.LEVEE_GEL_CSAF,
+      typeOperation:
+        dto.typeDecision === TypeDecisionCsaf.TRANSFERT_FORCE
+          ? TypeOperationAudit.DECISION_CSAF_TRANSFERT_FORCE
+          : dto.typeDecision === TypeDecisionCsaf.ANNULATION_VENTE
+            ? TypeOperationAudit.DECISION_CSAF_ANNULATION_VENTE
+            : TypeOperationAudit.LEVEE_GEL_CSAF,
       acteurId: magistrat.id,
       roleActeur: magistrat.role as RoleUtilisateur,
-      payload: { conflitId: dto.conflitId, motifLevee: dto.motifLevee },
+      payload: { conflitId: dto.conflitId, motifLevee: dto.motifLevee, typeDecision: dto.typeDecision },
     });
+
+    for (const sequestre of sequestresRembourses) {
+      await this.cryptoAudit.enregistrer({
+        parcelleId: conflit.parcelleId,
+        typeOperation: TypeOperationAudit.REMBOURSEMENT_SEQUESTRE,
+        acteurId: magistrat.id,
+        roleActeur: magistrat.role as RoleUtilisateur,
+        payload: { sequestreId: sequestre.id, conventionId: sequestre.conventionId, motif: `Annulee par decision CSAF : ${dto.motifLevee}` },
+      });
+    }
 
     return conflitLeve;
   }

@@ -12,6 +12,6 @@
     "incremental": true,
     "strictPropertyInitialization": false
   },
-  "include": ["src/**/*", "prisma/**/*"],
+  "include": ["src/**/*", "prisma/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "dist", "test"]
 }

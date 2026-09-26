@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@ayinon/shared": "workspace:*",
+    "@lucide/vue": "^1.47.0",
     "@turf/turf": "^7.1.0",
     "dexie": "^4.0.9",
     "jsqr": "^1.4.0",
