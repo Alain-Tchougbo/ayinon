@@ -25,11 +25,15 @@ ENV NODE_ENV=production
 COPY --from=build /repo/node_modules /repo/node_modules
 COPY --from=build /repo/apps/api/node_modules /repo/apps/api/node_modules
 COPY --from=build /repo/packages/shared/dist /repo/packages/shared/dist
+COPY --from=build /repo/packages/shared/package.json /repo/packages/shared/package.json
+COPY --from=build /repo/packages/shared/node_modules /repo/packages/shared/node_modules
 COPY --from=build /repo/apps/api/dist /repo/apps/api/dist
 COPY --from=build /repo/apps/api/prisma /repo/apps/api/prisma
 COPY apps/api/package.json apps/api/package.json
 WORKDIR /repo/apps/api
 EXPOSE 3000
-# prisma migrate deploy applique les migrations en attente puis demarre l'API ; jamais
-# `migrate dev` (interactif, deconseille en production).
-CMD ["sh", "-c", "pnpm exec prisma migrate deploy && node dist/src/main.js"]
+# Binaire prisma appele directement (pas "pnpm exec") : le contexte pnpm workspace (lockfile,
+# pnpm-workspace.yaml) n'existe pas dans cette image runtime, seuls les node_modules deja
+# installes. prisma migrate deploy applique les migrations en attente puis demarre l'API ;
+# jamais `migrate dev` (interactif, deconseille en production).
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node dist/src/main.js"]
