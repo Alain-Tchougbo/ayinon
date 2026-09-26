@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Shield } from "@lucide/vue";
 import { useRoute } from "vue-router";
 import DashboardLayout from "./layouts/DashboardLayout.vue";
 import PublicLayout from "./layouts/PublicLayout.vue";
@@ -21,7 +20,12 @@ const route = useRoute();
 
 <template>
   <div v-if="auth.chargementInitial" class="flex h-screen items-center justify-center bg-fond" role="status" aria-label="Chargement">
-    <Shield :size="32" class="animate-pulse text-primaire" aria-hidden="true" />
+    <span class="flex h-14 w-14 animate-pulse items-center justify-center rounded-carte bg-primaire">
+      <svg viewBox="0 0 32 32" fill="none" class="h-7 w-7" aria-hidden="true">
+        <path d="M6 22L10 8L24 6L27 20L16 27Z" stroke="#F2A93B" stroke-width="1.6" stroke-linejoin="round" />
+        <circle cx="10" cy="8" r="1.6" fill="#F2A93B" />
+      </svg>
+    </span>
   </div>
   <DashboardLayout v-else-if="auth.estConnecte && !route.meta.forcerPublic" />
   <PublicLayout v-else />
