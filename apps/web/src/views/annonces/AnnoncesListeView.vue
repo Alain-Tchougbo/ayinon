@@ -5,6 +5,7 @@ import { computed, onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth.store";
 import { tuileSatellitePour } from "../../services/tuileSatellite";
+import BaseCheckbox from "../../components/ui/BaseCheckbox.vue";
 
 interface AnnonceResume {
   id: string;
@@ -247,8 +248,8 @@ const visuelVedette = computed(() => (anconceVedette.value ? visuelPour(anconceV
         <button type="submit" :disabled="chargement">Rechercher</button>
       </form>
       <div class="options-recherche">
-        <label><input v-model="filtres.verifieeAndf" type="checkbox" /> Situation controlee ANDF</label>
-        <label><input v-model="filtres.limitesCertifiees" type="checkbox" /> Limites certifiees</label>
+        <BaseCheckbox id="filtre-verifiee-andf" v-model="filtres.verifieeAndf" label="Situation controlee ANDF" />
+        <BaseCheckbox id="filtre-limites-certifiees" v-model="filtres.limitesCertifiees" label="Limites certifiees" />
         <button v-if="filtresActifs" type="button" class="lien-discret" @click="reinitialiserFiltres">
           <X :size="12" aria-hidden="true" /> Reinitialiser
         </button>
@@ -934,8 +935,12 @@ const visuelVedette = computed(() => (anconceVedette.value ? visuelPour(anconceV
 }
 .carte-annonce {
   position: relative;
+  height: 100%;
 }
 .case-comparer-flottante {
+  /* La cible tactile accessible (voir tokens.css, "Cibles tactiles genereuses") est portee par
+     ce label dans son ensemble, pas par la petite case ronde a l'interieur — cliquer n'importe
+     ou sur la pastille "Comparer" reste possible et confortable au doigt. */
   position: absolute;
   top: 0.6rem;
   right: 0.6rem;
@@ -943,6 +948,7 @@ const visuelVedette = computed(() => (anconceVedette.value ? visuelPour(anconceV
   display: flex;
   align-items: center;
   gap: 0.3rem;
+  min-height: var(--taille-cible-tactile);
   background: rgba(255, 255, 255, 0.95);
   padding: 0.3rem 0.6rem;
   border-radius: 99px;
@@ -950,11 +956,46 @@ const visuelVedette = computed(() => (anconceVedette.value ? visuelPour(anconceV
   color: rgb(var(--color-texte));
   box-shadow: 0 2px 6px rgba(36, 31, 23, 0.15);
 }
+/* Case ronde personnalisee (le rendu par defaut du navigateur, carre, jurait avec la pastille
+   pilule qui l'entoure) : coche visible par une pastille pleine + un liseret, pas juste une teinte.
+   min-height/min-width a 0 : neutralise la regle globale de cible tactile (deja assuree par le
+   label ci-dessus), sinon le navigateur etire cette case en ovale. */
 .case-comparer-flottante input {
-  accent-color: var(--bronze);
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 0.95rem;
+  height: 0.95rem;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  border: 1.5px solid var(--bronze);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.case-comparer-flottante input:checked {
+  background: var(--bronze);
+}
+.case-comparer-flottante input:checked::after {
+  content: "";
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  width: 0.25rem;
+  height: 0.45rem;
+  border: solid var(--surface);
+  border-width: 0 1.5px 1.5px 0;
+  transform: translate(-50%, -55%) rotate(45deg);
+}
+.case-comparer-flottante input:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }
 .carte-lien {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   background: var(--surface);
   border: 1px solid var(--hairline);
   border-radius: 8px;
@@ -967,11 +1008,15 @@ const visuelVedette = computed(() => (anconceVedette.value ? visuelPour(anconceV
 }
 .motif {
   height: 6.5rem;
+  flex-shrink: 0;
   background-size: cover;
   background-position: center;
   background-color: var(--papier);
 }
 .carte-corps {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   padding: 1.1rem 1.2rem;
 }
 .carte-corps .nup {
@@ -1010,7 +1055,11 @@ const visuelVedette = computed(() => (anconceVedette.value ? visuelPour(anconceV
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  margin-top: 0.6rem;
+  /* Toujours ancres au bas de la carte (auto pousse vers le bas, quel que soit le nombre de
+     badges) : les cartes d'une meme rangee restent alignees (prix a la meme hauteur) meme quand
+     certaines n'ont aucun badge et d'autres en ont plusieurs. */
+  margin-top: auto;
+  padding-top: 0.6rem;
 }
 
 /* ---- Outils (estimation + recherches sauvegardees) ---- */

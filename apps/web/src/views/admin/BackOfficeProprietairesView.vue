@@ -5,8 +5,8 @@ import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
-import BaseCard from "../../components/ui/BaseCard.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface Proprietaire {
@@ -66,7 +66,7 @@ async function enregistrerEdition(id: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+  <div class="w-full space-y-6 p-4 sm:p-6">
     <PageHeader titre="Proprietaires" description="Registre des proprietaires : corrigez une coordonnee de contact si necessaire.">
       <template #icone><UserRoundSearch :size="22" class="text-primaire" aria-hidden="true" /></template>
     </PageHeader>
@@ -75,27 +75,44 @@ async function enregistrerEdition(id: string) {
     <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes" role="status">{{ message }}</p>
     <p v-if="chargement" class="text-sm text-texte-attenue" role="status">Chargement…</p>
 
-    <ul v-if="!chargement" class="space-y-2.5">
-      <li v-for="p in proprietaires" :key="p.id">
-        <BaseCard rembourrage="sm">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p class="font-medium text-texte">{{ p.nomComplet }}<span v-if="p.estDiaspora" class="ml-2 text-xs font-semibold text-accent">Diaspora</span></p>
-              <p class="text-xs text-texte-attenue">{{ p.email ?? "—" }}<span v-if="p.telephone"> — {{ p.telephone }}</span> — {{ p.nombreParcelles }} parcelle(s)</p>
-            </div>
-            <BaseButton v-if="editionEnCours !== p.id" taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
-              <Pencil :size="13" aria-hidden="true" />
-              Modifier
-            </BaseButton>
-          </div>
-          <div v-if="editionEnCours === p.id" class="mt-3 flex flex-wrap items-end gap-2">
-            <div class="w-56"><BaseInput id="email-edition" v-model="emailEdition" label="Email" type="email" /></div>
-            <div class="w-48"><BaseInput id="telephone-edition" v-model="telephoneEdition" label="Telephone" /></div>
-            <BaseButton taille="sm" @click="enregistrerEdition(p.id)">Enregistrer</BaseButton>
-            <BaseButton taille="sm" variant="secondaire" @click="editionEnCours = null">Annuler</BaseButton>
-          </div>
-        </BaseCard>
-      </li>
-    </ul>
+    <div v-if="!chargement" class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+            <th class="px-4 py-3 font-semibold">Proprietaire</th>
+            <th class="px-4 py-3 font-semibold">Contact</th>
+            <th class="px-4 py-3 font-semibold">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-bordure">
+          <template v-for="p in proprietaires" :key="p.id">
+            <tr class="align-top">
+              <td class="px-4 py-3">
+                <p class="font-medium text-texte">{{ p.nomComplet }}<span v-if="p.estDiaspora" class="ml-2 text-xs font-semibold text-accent">Diaspora</span></p>
+                <p class="text-xs text-texte-attenue">{{ p.nombreParcelles }} parcelle(s)</p>
+              </td>
+              <td class="px-4 py-3 text-xs text-texte-attenue">{{ p.email ?? "—" }}<span v-if="p.telephone"> — {{ p.telephone }}</span></td>
+              <td class="px-4 py-3">
+                <BaseButton taille="sm" variant="secondaire" @click="ouvrirEdition(p)">
+                  <Pencil :size="13" aria-hidden="true" />
+                  Modifier
+                </BaseButton>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
+    <BaseModal :model-value="editionEnCours !== null" titre="Modifier le proprietaire" @update:model-value="editionEnCours = null">
+      <div class="space-y-3">
+        <BaseInput id="email-edition" v-model="emailEdition" label="Email" type="email" />
+        <BaseInput id="telephone-edition" v-model="telephoneEdition" label="Telephone" />
+        <div class="flex gap-2">
+          <BaseButton taille="sm" @click="enregistrerEdition(editionEnCours!)">Enregistrer</BaseButton>
+          <BaseButton taille="sm" variant="secondaire" @click="editionEnCours = null">Annuler</BaseButton>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>

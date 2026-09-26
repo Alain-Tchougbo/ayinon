@@ -6,6 +6,7 @@ import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
+import BaseCheckbox from "../../components/ui/BaseCheckbox.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface ResultatSimulation {
@@ -68,10 +69,7 @@ const CHAMP_NUMERIQUE = "mt-1 w-full rounded-carte border border-bordure bg-fond
           <label for="superficie" class="block text-sm font-medium text-texte">Superficie de la parcelle (m²)</label>
           <input id="superficie" v-model.number="superficieM2" type="number" min="1" :class="CHAMP_NUMERIQUE" />
         </div>
-        <label for="zone" class="flex items-center gap-2.5 text-sm text-texte">
-          <input id="zone" v-model="enZoneUrbaine" type="checkbox" class="h-5 w-5 min-h-0 rounded border-bordure text-primaire" />
-          Zone urbaine
-        </label>
+        <BaseCheckbox id="zone" v-model="enZoneUrbaine" label="Zone urbaine" />
         <BaseButton type="submit" :disabled="chargement">Calculer</BaseButton>
       </form>
     </BaseCard>

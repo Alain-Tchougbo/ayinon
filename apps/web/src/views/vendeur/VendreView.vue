@@ -5,6 +5,7 @@ import { computed, onMounted, ref } from "vue";
 import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import BaseInput from "../../components/ui/BaseInput.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 import { ApiError, api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth.store";
@@ -359,7 +360,7 @@ async function reprogrammerVisite(id: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl space-y-8 p-4 sm:p-6">
+  <div class="w-full space-y-8 p-4 sm:p-6">
     <PageHeader
       titre="Vendre un terrain"
       description="Publiez une parcelle que vous possedez dans la vitrine publique, suivez les acheteurs interesses et retenez celui de votre choix."
@@ -465,65 +466,89 @@ async function reprogrammerVisite(id: string) {
       <p class="mb-3 text-xs text-texte-attenue">
         Vous connaissez deja l'acheteur (proche, connaissance) ? Proposez-lui directement une cession, sans passer par la vitrine publique.
       </p>
-      <ul class="space-y-3">
-        <li v-for="p in mesParcelles" :key="p.id">
-          <BaseCard rembourrage="sm">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p class="font-semibold text-texte">{{ p.nup }}</p>
-                <p class="text-sm text-texte-attenue">{{ p.commune }} — {{ p.superficieM2.toLocaleString("fr-FR") }} m²</p>
-              </div>
-              <span v-if="p.verrouAntiVente" class="rounded-full bg-succes/10 px-3 py-1 text-xs font-semibold text-succes" title="Deverrouillez depuis le Passeport foncier avant de ceder">
-                Verrouillee
-              </span>
-            </div>
+      <p v-if="mesParcelles.length === 0" class="text-sm text-texte-attenue">Aucune parcelle associee a votre compte pour le moment.</p>
+      <div v-else class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+              <th class="px-4 py-3 font-semibold">Parcelle</th>
+              <th class="px-4 py-3 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-bordure">
+            <template v-for="p in mesParcelles" :key="p.id">
+              <tr class="align-top">
+                <td class="px-4 py-3">
+                  <p class="font-semibold text-texte">{{ p.nup }}</p>
+                  <p class="text-sm text-texte-attenue">{{ p.commune }} — {{ p.superficieM2.toLocaleString("fr-FR") }} m²</p>
+                  <span v-if="p.verrouAntiVente" class="mt-1 inline-flex rounded-full bg-succes/10 px-3 py-1 text-xs font-semibold text-succes" title="Deverrouillez depuis le Passeport foncier avant de ceder">
+                    Verrouillee
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <BaseButton taille="sm" variant="secondaire" :disabled="p.verrouAntiVente" @click="propositionEnCours = p.id">
+                    Proposer une cession
+                  </BaseButton>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
 
-            <div v-if="propositionEnCours === p.id" class="mt-3 space-y-2.5">
-              <BaseInput id="acquereur-email" v-model="acquereurEmail" type="email" label="E-mail de l'acheteur (doit avoir un compte AYINON acheteur)" />
-              <BaseInput id="montant-cession-directe" v-model="montantCessionDirecte" type="number" label="Montant convenu (FCFA)" />
-              <div class="flex gap-2">
-                <BaseButton taille="sm" :disabled="actionEnCours || !acquereurEmail || !montantCessionDirecte" @click="proposerCessionDirecte(p.id)">
-                  <Send :size="14" aria-hidden="true" />
-                  Envoyer la proposition
-                </BaseButton>
-                <BaseButton taille="sm" variant="secondaire" @click="propositionEnCours = null">Annuler</BaseButton>
-              </div>
-            </div>
-            <BaseButton v-else taille="sm" variant="secondaire" class="mt-3" :disabled="p.verrouAntiVente" @click="propositionEnCours = p.id">
-              Proposer une cession
+      <BaseModal :model-value="propositionEnCours !== null" titre="Proposer une cession directe" @update:model-value="propositionEnCours = null">
+        <div class="space-y-2.5">
+          <BaseInput id="acquereur-email" v-model="acquereurEmail" type="email" label="E-mail de l'acheteur (doit avoir un compte AYINON acheteur)" />
+          <BaseInput id="montant-cession-directe" v-model="montantCessionDirecte" type="number" label="Montant convenu (FCFA)" />
+          <div class="flex gap-2">
+            <BaseButton
+              taille="sm"
+              :disabled="actionEnCours || !acquereurEmail || !montantCessionDirecte"
+              @click="proposerCessionDirecte(propositionEnCours!)"
+            >
+              <Send :size="14" aria-hidden="true" />
+              Envoyer la proposition
             </BaseButton>
-          </BaseCard>
-        </li>
-        <li v-if="mesParcelles.length === 0" class="text-sm text-texte-attenue">Aucune parcelle associee a votre compte pour le moment.</li>
-      </ul>
+            <BaseButton taille="sm" variant="secondaire" @click="propositionEnCours = null">Annuler</BaseButton>
+          </div>
+        </div>
+      </BaseModal>
     </section>
 
     <section v-if="cessionsEmises.length > 0">
       <h2 class="mb-3 font-semibold text-texte">Vos cessions directes</h2>
-      <ul class="space-y-3">
-        <li v-for="c in cessionsEmises" :key="c.id">
-          <BaseCard rembourrage="sm">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div>
+      <div class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+              <th class="px-4 py-3 font-semibold">Cession</th>
+              <th class="px-4 py-3 font-semibold">Statut</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-bordure">
+            <tr v-for="c in cessionsEmises" :key="c.id" class="align-top">
+              <td class="px-4 py-3">
                 <p class="font-semibold text-texte">{{ c.parcelle.nup }} — {{ c.parcelle.commune }}</p>
                 <p class="text-xs text-texte-attenue">Vers {{ c.acquereur?.nomComplet ?? "acheteur" }} — {{ c.montantFcfa.toLocaleString("fr-FR") }} FCFA</p>
-              </div>
-              <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_CESSION[c.statutCession]">
-                {{ LIBELLE_STATUT_CESSION[c.statutCession] }}
-              </span>
-            </div>
-            <p v-if="c.statutCession === 'REJETEE' && c.motifRejet" class="mt-1.5 text-xs text-danger">Motif : {{ c.motifRejet }}</p>
-            <p v-if="c.sequestre" class="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-primaire">
-              <Banknote :size="13" aria-hidden="true" />
-              {{ LIBELLE_STATUT_SEQUESTRE[c.sequestre.statut] }}
-            </p>
-            <div v-if="c.titre" class="mt-2.5 flex items-center gap-2 rounded-carte bg-succes/10 px-3 py-2 text-xs font-semibold text-succes">
-              <Award :size="14" aria-hidden="true" />
-              Titre {{ c.titre.numeroTitre }} delivre le {{ new Date(c.titre.dateDelivrance).toLocaleDateString("fr-FR") }}
-            </div>
-          </BaseCard>
-        </li>
-      </ul>
+                <p v-if="c.statutCession === 'REJETEE' && c.motifRejet" class="mt-1.5 text-xs text-danger">Motif : {{ c.motifRejet }}</p>
+                <p v-if="c.sequestre" class="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-primaire">
+                  <Banknote :size="13" aria-hidden="true" />
+                  {{ LIBELLE_STATUT_SEQUESTRE[c.sequestre.statut] }}
+                </p>
+                <div v-if="c.titre" class="mt-2.5 flex items-center gap-2 rounded-carte bg-succes/10 px-3 py-2 text-xs font-semibold text-succes">
+                  <Award :size="14" aria-hidden="true" />
+                  Titre {{ c.titre.numeroTitre }} delivre le {{ new Date(c.titre.dateDelivrance).toLocaleDateString("fr-FR") }}
+                </div>
+              </td>
+              <td class="whitespace-nowrap px-4 py-3">
+                <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_CESSION[c.statutCession]">
+                  {{ LIBELLE_STATUT_CESSION[c.statutCession] }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section v-if="visitesRecues.length > 0">
@@ -531,44 +556,57 @@ async function reprogrammerVisite(id: string) {
         <CalendarClock :size="16" class="text-primaire" aria-hidden="true" />
         Visites recues
       </h2>
-      <ul class="space-y-3">
-        <li v-for="v in visitesRecues" :key="v.id">
-          <BaseCard rembourrage="sm">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p class="font-semibold text-texte">{{ v.annonce.parcelle.nup }} — {{ v.annonce.parcelle.commune }}</p>
-                <p class="text-xs text-texte-attenue">
-                  {{ v.acheteur.nomComplet }} — {{ v.mode === "PRESENTIEL" ? "Sur place" : "A distance" }} —
-                  {{ new Date(v.dateProposee).toLocaleString("fr-FR") }}
-                </p>
-              </div>
-              <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_VISITE[v.statut]">
-                {{ LIBELLE_STATUT_VISITE[v.statut] }}
-              </span>
-            </div>
-            <p v-if="v.messageAcheteur" class="mt-1.5 text-xs text-texte-attenue">« {{ v.messageAcheteur }} »</p>
-
-            <template v-if="v.statut === 'DEMANDEE'">
-              <div v-if="reprogrammationEnCours === v.id" class="mt-3 flex flex-wrap items-center gap-2">
-                <input v-model="nouvelleDateVisite" type="datetime-local" class="rounded-carte border border-bordure bg-fond px-3 py-1.5 text-xs text-texte" />
-                <BaseButton taille="sm" :disabled="actionEnCours" @click="reprogrammerVisite(v.id)">Envoyer</BaseButton>
-                <BaseButton taille="sm" variant="secondaire" @click="reprogrammationEnCours = null">Annuler</BaseButton>
-              </div>
-              <div v-else class="mt-3 flex flex-wrap gap-2">
-                <BaseButton taille="sm" :disabled="actionEnCours" @click="repondreVisite(v.id, 'CONFIRMER')">
-                  <Check :size="12" aria-hidden="true" />
-                  Confirmer
-                </BaseButton>
-                <BaseButton taille="sm" variant="secondaire" :disabled="actionEnCours" @click="repondreVisite(v.id, 'REFUSER')">
-                  <X :size="12" aria-hidden="true" />
-                  Refuser
-                </BaseButton>
-                <BaseButton taille="sm" variant="secondaire" @click="reprogrammationEnCours = v.id">Reprogrammer</BaseButton>
-              </div>
+      <div class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+              <th class="px-4 py-3 font-semibold">Visite</th>
+              <th class="px-4 py-3 font-semibold">Statut</th>
+              <th class="px-4 py-3 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-bordure">
+            <template v-for="v in visitesRecues" :key="v.id">
+              <tr class="align-top">
+                <td class="px-4 py-3">
+                  <p class="font-semibold text-texte">{{ v.annonce.parcelle.nup }} — {{ v.annonce.parcelle.commune }}</p>
+                  <p class="text-xs text-texte-attenue">
+                    {{ v.acheteur.nomComplet }} — {{ v.mode === "PRESENTIEL" ? "Sur place" : "A distance" }} —
+                    {{ new Date(v.dateProposee).toLocaleString("fr-FR") }}
+                  </p>
+                  <p v-if="v.messageAcheteur" class="mt-1.5 text-xs text-texte-attenue">« {{ v.messageAcheteur }} »</p>
+                </td>
+                <td class="whitespace-nowrap px-4 py-3">
+                  <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" :class="COULEUR_STATUT_VISITE[v.statut]">
+                    {{ LIBELLE_STATUT_VISITE[v.statut] }}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <div v-if="v.statut === 'DEMANDEE'" class="flex flex-wrap gap-2">
+                    <BaseButton taille="sm" :disabled="actionEnCours" @click="repondreVisite(v.id, 'CONFIRMER')">
+                      <Check :size="12" aria-hidden="true" />
+                      Confirmer
+                    </BaseButton>
+                    <BaseButton taille="sm" variant="secondaire" :disabled="actionEnCours" @click="repondreVisite(v.id, 'REFUSER')">
+                      <X :size="12" aria-hidden="true" />
+                      Refuser
+                    </BaseButton>
+                    <BaseButton taille="sm" variant="secondaire" @click="reprogrammationEnCours = v.id">Reprogrammer</BaseButton>
+                  </div>
+                </td>
+              </tr>
             </template>
-          </BaseCard>
-        </li>
-      </ul>
+          </tbody>
+        </table>
+      </div>
+
+      <BaseModal :model-value="reprogrammationEnCours !== null" titre="Reprogrammer la visite" @update:model-value="reprogrammationEnCours = null">
+        <div class="flex flex-wrap items-center gap-2">
+          <input v-model="nouvelleDateVisite" type="datetime-local" class="rounded-carte border border-bordure bg-fond px-3 py-1.5 text-xs text-texte" />
+          <BaseButton taille="sm" :disabled="actionEnCours" @click="reprogrammerVisite(reprogrammationEnCours!)">Envoyer</BaseButton>
+          <BaseButton taille="sm" variant="secondaire" @click="reprogrammationEnCours = null">Annuler</BaseButton>
+        </div>
+      </BaseModal>
     </section>
 
     <section>

@@ -5,7 +5,7 @@ import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
 import BaseButton from "../../components/ui/BaseButton.vue";
-import BaseCard from "../../components/ui/BaseCard.vue";
+import BaseModal from "../../components/ui/BaseModal.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
 interface AnnonceARisque {
@@ -70,7 +70,7 @@ async function suspendreAnnonce(id: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+  <div class="w-full space-y-6 p-4 sm:p-6">
     <PageHeader
       titre="Annonces a risque"
       description="Detection automatique des annonces dont le prix devie significativement de la moyenne communale reelle."
@@ -81,43 +81,60 @@ async function suspendreAnnonce(id: string) {
     <p v-if="erreur" class="rounded-carte bg-danger/10 p-3 text-sm text-danger" role="alert">{{ erreur }}</p>
     <p v-if="message" class="rounded-carte bg-succes/10 p-3 text-sm text-succes" role="status">{{ message }}</p>
     <p v-if="chargement" class="text-sm text-texte-attenue" role="status">Chargement…</p>
+    <p v-else-if="annoncesARisque.length === 0" class="text-sm text-texte-attenue">
+      Aucune annonce active ne devie significativement de la moyenne communale.
+    </p>
 
-    <ul v-if="!chargement" class="space-y-2.5">
-      <li v-if="annoncesARisque.length === 0" class="text-sm text-texte-attenue">Aucune annonce active ne devie significativement de la moyenne communale.</li>
-      <li v-for="a in annoncesARisque" :key="a.id">
-        <BaseCard accentue="danger" rembourrage="sm">
-          <div class="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <p class="flex items-center gap-1.5 font-medium text-texte">
-                <TriangleAlert :size="13" class="text-danger" aria-hidden="true" />
-                {{ a.parcelle.nup }} — {{ a.parcelle.commune }}
-              </p>
-              <p class="mt-0.5 text-xs text-texte-attenue">Publiee par {{ a.publieePar.nomComplet }} le {{ new Date(a.createdAt).toLocaleDateString("fr-FR") }}</p>
-              <p class="mt-1.5 text-sm text-texte">
+    <div v-else class="overflow-x-auto rounded-carte border border-bordure bg-surface">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="border-b border-bordure bg-fond/60 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+            <th class="px-4 py-3 font-semibold">Annonce</th>
+            <th class="px-4 py-3 font-semibold">Ecart de prix</th>
+            <th class="px-4 py-3 font-semibold">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-bordure">
+          <template v-for="a in annoncesARisque" :key="a.id">
+            <tr class="align-top">
+              <td class="px-4 py-3">
+                <p class="flex items-center gap-1.5 font-medium text-texte">
+                  <TriangleAlert :size="13" class="text-danger" aria-hidden="true" />
+                  {{ a.parcelle.nup }} — {{ a.parcelle.commune }}
+                </p>
+                <p class="mt-0.5 text-xs text-texte-attenue">Publiee par {{ a.publieePar.nomComplet }} le {{ new Date(a.createdAt).toLocaleDateString("fr-FR") }}</p>
+              </td>
+              <td class="px-4 py-3 text-sm text-texte">
                 {{ a.prixParM2.toLocaleString("fr-FR") }} FCFA/m² —
                 {{ a.deviationPourcentage > 0 ? "+" : "" }}{{ a.deviationPourcentage }}% par rapport a la moyenne communale
                 ({{ a.moyenneCommuneFcfaParM2.toLocaleString("fr-FR") }} FCFA/m²)
-              </p>
-            </div>
-          </div>
+              </td>
+              <td class="px-4 py-3">
+                <BaseButton taille="sm" variant="secondaire" @click="suspensionEnCours = a.id">
+                  Mettre en revue
+                </BaseButton>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
 
-          <div v-if="suspensionEnCours === a.id" class="mt-3 space-y-2 rounded-carte border border-bordure bg-fond p-3">
-            <label :for="`motif-suspension-${a.id}`" class="block text-xs font-medium text-texte">Motif de la suspension (obligatoire)</label>
-            <textarea
-              :id="`motif-suspension-${a.id}`"
-              v-model="motifSuspension"
-              rows="2"
-              placeholder="Ex. prix trois fois superieur a la moyenne communale constatee, sans justification apparente"
-              class="w-full rounded-carte border border-bordure bg-surface px-3 py-2 text-xs text-texte"
-            />
-            <div class="flex gap-2">
-              <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="suspendreAnnonce(a.id)">Suspendre l'annonce</BaseButton>
-              <BaseButton taille="sm" variant="secondaire" @click="suspensionEnCours = null">Annuler</BaseButton>
-            </div>
-          </div>
-          <BaseButton v-else taille="sm" variant="secondaire" class="mt-3" @click="suspensionEnCours = a.id">Mettre en revue</BaseButton>
-        </BaseCard>
-      </li>
-    </ul>
+    <BaseModal :model-value="suspensionEnCours !== null" titre="Suspendre l'annonce" @update:model-value="suspensionEnCours = null">
+      <div class="space-y-2">
+        <label for="motif-suspension" class="block text-xs font-medium text-texte">Motif de la suspension (obligatoire)</label>
+        <textarea
+          id="motif-suspension"
+          v-model="motifSuspension"
+          rows="3"
+          placeholder="Ex. prix trois fois superieur a la moyenne communale constatee, sans justification apparente"
+          class="w-full rounded-carte border border-bordure bg-fond px-3 py-2 text-xs text-texte"
+        />
+        <div class="flex gap-2">
+          <BaseButton taille="sm" variant="danger" :disabled="actionEnCours" @click="suspendreAnnonce(suspensionEnCours!)">Suspendre l'annonce</BaseButton>
+          <BaseButton taille="sm" variant="secondaire" @click="suspensionEnCours = null">Annuler</BaseButton>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>
