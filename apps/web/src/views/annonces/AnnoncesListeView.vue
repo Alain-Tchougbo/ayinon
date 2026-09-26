@@ -5,6 +5,7 @@ import { computed, onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth.store";
 import { tuileSatellitePour } from "../../services/tuileSatellite";
+import BaseCheckbox from "../../components/ui/BaseCheckbox.vue";
 
 interface AnnonceResume {
   id: string;
@@ -247,8 +248,8 @@ const visuelVedette = computed(() => (anconceVedette.value ? visuelPour(anconceV
         <button type="submit" :disabled="chargement">Rechercher</button>
       </form>
       <div class="options-recherche">
-        <label><input v-model="filtres.verifieeAndf" type="checkbox" /> Situation controlee ANDF</label>
-        <label><input v-model="filtres.limitesCertifiees" type="checkbox" /> Limites certifiees</label>
+        <BaseCheckbox id="filtre-verifiee-andf" v-model="filtres.verifieeAndf" label="Situation controlee ANDF" />
+        <BaseCheckbox id="filtre-limites-certifiees" v-model="filtres.limitesCertifiees" label="Limites certifiees" />
         <button v-if="filtresActifs" type="button" class="lien-discret" @click="reinitialiserFiltres">
           <X :size="12" aria-hidden="true" /> Reinitialiser
         </button>
