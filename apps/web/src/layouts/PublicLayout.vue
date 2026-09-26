@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown, Languages, LogIn, Menu, SunMoon, Wifi, WifiOff, X } from "@lucide/vue";
+import { ChevronDown, LayoutDashboard, Languages, LogIn, LogOut, Menu, SunMoon, Wifi, WifiOff, X } from "@lucide/vue";
 import type { LangueAssistantVocal } from "@ayinon/shared";
 import { onMounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
@@ -7,6 +7,7 @@ import VoiceAssistantButton from "../components/accessibility/VoiceAssistantButt
 import ChatbotWidget from "../components/chatbot/ChatbotWidget.vue";
 import { useOnlineStatus } from "../composables/useOnlineStatus";
 import { useVoiceAssistant } from "../composables/useVoiceAssistant";
+import { useAuthStore } from "../stores/auth.store";
 import { LANGUES } from "../voice/langues";
 
 // Habillage des pages accessibles sans compte (accueil vitrine, carte publique, scanner
@@ -21,7 +22,15 @@ const LIENS_PUBLICS = [
 ];
 
 const route = useRoute();
+const auth = useAuthStore();
 const { enLigne } = useOnlineStatus();
+
+// Un utilisateur connecte peut atterrir ici via le logo (route /public, meta.forcerPublic — voir
+// App.vue) sans jamais perdre sa session : l'en-tete propose alors de revenir a son espace ou de
+// se deconnecter, plutot que de lui remontrer "Se connecter"/"Creer un compte" comme a un visiteur.
+async function seDeconnecter() {
+  await auth.deconnexion();
+}
 const { languePreferee, definirLangue } = useVoiceAssistant();
 
 type Theme = "clair" | "sombre" | "contraste-eleve";
@@ -106,7 +115,23 @@ watch(() => route.fullPath, () => (menuMobileOuvert.value = false));
           </RouterLink>
         </nav>
 
-        <div class="hidden shrink-0 items-center gap-4 lg:flex">
+        <div v-if="auth.estConnecte" class="hidden shrink-0 items-center gap-4 lg:flex">
+          <button
+            type="button"
+            class="relative min-h-0 py-1 text-sm font-semibold text-primaire-contraste/80 transition-colors hover:text-primaire-contraste"
+            @click="seDeconnecter"
+          >
+            Se deconnecter
+          </button>
+          <RouterLink
+            to="/"
+            class="inline-flex min-h-0 items-center gap-1.5 rounded-full bg-accent px-5 py-2 text-sm font-bold text-accent-contraste shadow-sm transition-transform hover:-translate-y-px"
+          >
+            <LayoutDashboard :size="15" aria-hidden="true" />
+            Acceder a mon espace
+          </RouterLink>
+        </div>
+        <div v-else class="hidden shrink-0 items-center gap-4 lg:flex">
           <RouterLink
             to="/connexion"
             class="relative min-h-0 py-1 text-sm font-semibold text-primaire-contraste/80 transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-0.5 after:origin-left after:scale-x-0 after:bg-primaire-contraste/50 after:transition-transform hover:text-primaire-contraste hover:after:scale-x-100"
@@ -184,7 +209,24 @@ watch(() => route.fullPath, () => (menuMobileOuvert.value = false));
           </div>
         </div>
 
-        <div class="mt-3 flex gap-2 border-t border-bordure pt-3">
+        <div v-if="auth.estConnecte" class="mt-3 flex gap-2 border-t border-bordure pt-3">
+          <button
+            type="button"
+            class="flex flex-1 items-center justify-center gap-2 rounded-carte border border-bordure px-4 py-2.5 text-sm font-semibold text-texte"
+            @click="seDeconnecter"
+          >
+            <LogOut :size="16" aria-hidden="true" />
+            Se deconnecter
+          </button>
+          <RouterLink
+            to="/"
+            class="flex flex-1 items-center justify-center gap-2 rounded-carte bg-accent px-4 py-2.5 text-sm font-bold text-accent-contraste"
+          >
+            <LayoutDashboard :size="16" aria-hidden="true" />
+            Mon espace
+          </RouterLink>
+        </div>
+        <div v-else class="mt-3 flex gap-2 border-t border-bordure pt-3">
           <RouterLink
             to="/connexion"
             class="flex flex-1 items-center justify-center gap-2 rounded-carte border border-bordure px-4 py-2.5 text-sm font-semibold text-texte"

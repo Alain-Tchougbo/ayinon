@@ -183,7 +183,7 @@ function rechercherRapide() {
     <!-- Sidebar desktop : nav verticale, plus aucune contrainte de largeur horizontale a gerer
          role par role (fini les calculs de debordement d'une barre horizontale). -->
     <aside class="hidden w-64 shrink-0 flex-col border-r border-bordure bg-surface lg:flex" aria-label="Navigation principale">
-      <RouterLink to="/" class="flex h-16 shrink-0 items-center gap-2.5 border-b border-bordure px-5 text-base font-bold tracking-tight text-primaire">
+      <RouterLink to="/public" class="flex h-16 shrink-0 items-center gap-2.5 border-b border-bordure px-5 text-base font-bold tracking-tight text-primaire">
         <span class="flex h-9 w-9 items-center justify-center rounded-carte bg-primaire text-primaire-contraste">
           <Shield :size="20" :stroke-width="2.25" aria-hidden="true" />
         </span>
@@ -247,7 +247,7 @@ function rechercherRapide() {
       <div class="absolute inset-0 bg-texte/40" @click="menuMobileOuvert = false" />
       <aside class="relative flex h-full w-72 max-w-[85vw] flex-col bg-surface shadow-flottant">
         <div class="flex items-center justify-between px-5 py-4">
-          <RouterLink to="/" class="flex items-center gap-2.5 text-base font-bold tracking-tight text-primaire">
+          <RouterLink to="/public" class="flex items-center gap-2.5 text-base font-bold tracking-tight text-primaire">
             <span class="flex h-9 w-9 items-center justify-center rounded-carte bg-primaire text-primaire-contraste">
               <Shield :size="20" :stroke-width="2.25" aria-hidden="true" />
             </span>

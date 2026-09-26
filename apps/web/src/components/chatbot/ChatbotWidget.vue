@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MessageCircle, Send, X } from "@lucide/vue";
+import { Bot, Send, Sparkles, X } from "@lucide/vue";
 import { nextTick, ref, watch } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useAuthStore } from "../../stores/auth.store";
@@ -10,6 +10,15 @@ interface MessageAffiche {
 }
 
 const CLE_SESSION = "ayinon_chat_session";
+
+/** Amorces concretes (pas des questions au hasard) : chacune correspond a un outil reellement
+ * cable cote serveur (voir chatbot-tools.service.ts), donc le premier echange est toujours utile. */
+const SUGGESTIONS = [
+  "Comment verifier la fiabilite d'une parcelle ?",
+  "Quelles annonces sont disponibles a Cotonou ?",
+  "Estimer les frais de mutation pour un achat",
+  "Quel est le prix moyen au m² dans une commune ?",
+];
 
 const auth = useAuthStore();
 const ouvert = ref(false);
@@ -44,8 +53,8 @@ async function defilerVersLeBas() {
   zoneMessages.value?.scrollTo({ top: zoneMessages.value.scrollHeight });
 }
 
-async function envoyer() {
-  const texte = saisie.value.trim();
+async function envoyer(texteSuggere?: string) {
+  const texte = (texteSuggere ?? saisie.value).trim();
   if (!texte || enCours.value) return;
   erreur.value = null;
   messages.value.push({ role: "utilisateur", contenu: texte });
@@ -81,17 +90,33 @@ function basculer() {
       class="flex h-[28rem] w-[20rem] max-w-[90vw] flex-col overflow-hidden rounded-carte border border-bordure bg-surface shadow-flottant"
     >
       <div class="flex items-center justify-between border-b border-bordure px-3.5 py-2.5">
-        <p class="text-sm font-semibold text-texte">Assistant AYINON</p>
+        <p class="flex items-center gap-1.5 text-sm font-semibold text-texte">
+          <Sparkles :size="14" class="text-accent" aria-hidden="true" />
+          Assistant AYINON
+        </p>
         <button type="button" class="min-h-0 text-texte-attenue hover:text-texte" aria-label="Fermer l'assistant" @click="basculer">
           <X :size="16" aria-hidden="true" />
         </button>
       </div>
 
       <div ref="zoneMessages" class="flex-1 space-y-2.5 overflow-y-auto p-3.5">
-        <p v-if="messages.length === 0" class="text-xs text-texte-attenue">
-          Posez une question sur une parcelle, une annonce ou les frais de mutation — je m'appuie uniquement sur les donnees reelles
-          d'AYINON, jamais sur une information inventee.
-        </p>
+        <template v-if="messages.length === 0">
+          <p class="text-xs text-texte-attenue">
+            Posez une question sur une parcelle, une annonce ou les frais de mutation — je m'appuie uniquement sur les donnees reelles
+            d'AYINON, jamais sur une information inventee.
+          </p>
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <button
+              v-for="suggestion in SUGGESTIONS"
+              :key="suggestion"
+              type="button"
+              class="min-h-0 rounded-full border border-bordure bg-fond px-2.5 py-1.5 text-left text-xs text-texte transition-colors hover:border-primaire hover:text-primaire"
+              @click="envoyer(suggestion)"
+            >
+              {{ suggestion }}
+            </button>
+          </div>
+        </template>
         <div
           v-for="(m, i) in messages"
           :key="i"
@@ -105,7 +130,7 @@ function basculer() {
 
       <p v-if="erreur" class="border-t border-bordure px-3.5 py-2 text-xs text-danger" role="alert">{{ erreur }}</p>
 
-      <form class="flex items-center gap-2 border-t border-bordure p-2.5" @submit.prevent="envoyer">
+      <form class="flex items-center gap-2 border-t border-bordure p-2.5" @submit.prevent="envoyer()">
         <input
           v-model="saisie"
           type="text"
@@ -126,13 +151,16 @@ function basculer() {
 
     <button
       type="button"
-      class="flex h-14 w-14 items-center justify-center rounded-full bg-primaire text-primaire-contraste shadow-flottant transition-colors hover:bg-primaire-hover"
+      class="relative flex h-14 w-14 items-center justify-center rounded-full bg-primaire text-primaire-contraste shadow-flottant transition-colors hover:bg-primaire-hover"
       :aria-label="ouvert ? 'Fermer l\'assistant AYINON' : 'Ouvrir l\'assistant AYINON'"
       :aria-pressed="ouvert"
       @click="basculer"
     >
       <X v-if="ouvert" :size="22" aria-hidden="true" />
-      <MessageCircle v-else :size="22" aria-hidden="true" />
+      <template v-else>
+        <Bot :size="22" aria-hidden="true" />
+        <Sparkles :size="12" class="absolute -right-0.5 -top-0.5 rounded-full bg-accent p-0.5 text-accent-contraste" aria-hidden="true" />
+      </template>
     </button>
   </div>
 </template>
