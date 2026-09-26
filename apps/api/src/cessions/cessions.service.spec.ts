@@ -61,7 +61,7 @@ function creerService(
     },
     convention: {
       create: async ({ data }: any) => {
-        convention = { id: "convention-1", ...data };
+        convention = { id: "convention-1", createdAt: new Date(), ...data };
         return convention;
       },
       findUnique: async () => convention,

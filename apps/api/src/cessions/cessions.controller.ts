@@ -60,6 +60,13 @@ export class CessionsController {
     return this.cessions.obtenirParId(id, utilisateur);
   }
 
+  /** QR anti-fraude a imprimer/presenter : verifiable via le Scanner Anti-Fraude. */
+  @Roles(RoleUtilisateur.VENDEUR, RoleUtilisateur.ACHETEUR, RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.MAGISTRAT_CSAF, RoleUtilisateur.ADMIN)
+  @Get(":id/qr")
+  async obtenirQrCode(@Param("id") id: string, @CurrentUser() utilisateur: UtilisateurAuthentifie) {
+    return this.cessions.obtenirQrCode(id, utilisateur);
+  }
+
   @Roles(RoleUtilisateur.ACHETEUR)
   @Patch(":id/repondre")
   async repondre(

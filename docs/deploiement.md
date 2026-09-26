@@ -33,6 +33,8 @@ uniquement) :
 | `JWT_ACCESS_SECRET` | `openssl rand -hex 32` |
 | `AUDIT_ED25519_PRIVATE_KEY` / `AUDIT_ED25519_PUBLIC_KEY` | a generer une seule fois puis conserver durablement (paire de signature du registre d'audit ; si regeneree, l'historique existant ne se verifie plus) |
 | `GEMINI_API_KEY` | https://aistudio.google.com/apikey (chatbot inoperant sans elle, degrade proprement) |
+| `RESEND_API_KEY` | https://resend.com/api-keys (codes OTP non envoyes par e-mail sans elle, journalises en repli) |
+| `RESEND_FROM_EMAIL` | adresse `nom@domaine-verifie` — le domaine doit etre verifie dans Resend (Domains > Add Domain, enregistrements DNS SPF/DKIM) |
 | `WEB_ORIGIN` | l'URL publique finale du site (ex. `https://ayinon.mondomaine.bj`) |
 
 ## Etapes cote Coolify

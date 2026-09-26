@@ -10,6 +10,7 @@ import {
   type AccorderExclusiviteDto,
   type CreerAnnonceDto,
   type ManifesterInteretDto,
+  type QrConventionPayload,
   type RechercheAnnonceDto,
   type RetenirInteretDto,
   type VerifierAnnonceDto,
@@ -255,18 +256,20 @@ export class AnnoncesService {
       }),
     ]);
 
-    const donnees = {
-      annonceId,
-      parcelleId: annonce.parcelleId,
-      vendeurId: vendeur.id,
-      acquereurId: interet.acheteurId,
-      montantFcfa: dto.montantFcfa,
-      horodatage: new Date().toISOString(),
-    };
-    const hashSha256 = createHash("sha256").update(JSON.stringify(donnees)).digest("hex");
-    const signatureEd25519 = this.cryptoAudit.signerDonnees(Buffer.from(hashSha256, "hex"));
+    const hashSha256 = createHash("sha256")
+      .update(
+        JSON.stringify({
+          annonceId,
+          parcelleId: annonce.parcelleId,
+          vendeurId: vendeur.id,
+          acquereurId: interet.acheteurId,
+          montantFcfa: dto.montantFcfa,
+          horodatage: new Date().toISOString(),
+        }),
+      )
+      .digest("hex");
 
-    const convention = await this.prisma.convention.create({
+    const brouillon = await this.prisma.convention.create({
       data: {
         parcelleId: annonce.parcelleId,
         annonceId,
@@ -274,13 +277,22 @@ export class AnnoncesService {
         acquereurNom: interet.acheteur.nomComplet,
         montantFcfa: dto.montantFcfa,
         hashSha256,
-        signatureEd25519,
+        signatureEd25519: "",
         qrPayload: {},
         statutCession: StatutCession.ACCEPTEE,
         dateAcceptation: new Date(),
         creeParId: vendeur.id,
         acquereurId: interet.acheteurId,
       },
+    });
+
+    // Meme schema de scellement que ConventionsService.enregistrer() (payload JSON signe, pas le
+    // hash brut) : c'est ce que ConventionsService.verifier() (Scanner Anti-Fraude) attend.
+    const payload: QrConventionPayload = { conventionId: brouillon.id, hashSha256, horodatage: brouillon.createdAt.toISOString() };
+    const signatureEd25519 = this.cryptoAudit.signerDonnees(Buffer.from(JSON.stringify(payload)));
+    const convention = await this.prisma.convention.update({
+      where: { id: brouillon.id },
+      data: { qrPayload: payload, signatureEd25519 },
     });
 
     await this.cryptoAudit.enregistrer({
