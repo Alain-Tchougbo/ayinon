@@ -42,7 +42,6 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import VoiceAssistantButton from "../components/accessibility/VoiceAssistantButton.vue";
 import ChatbotWidget from "../components/chatbot/ChatbotWidget.vue";
-import BaseModal from "../components/ui/BaseModal.vue";
 import { useNotifications } from "../composables/useNotifications";
 import { useOnlineStatus } from "../composables/useOnlineStatus";
 import { useVoiceAssistant } from "../composables/useVoiceAssistant";
@@ -544,13 +543,16 @@ function rechercherRapide() {
             </div>
           </div>
 
-          <div class="flex items-center gap-1 border-r border-bordure pr-3">
+          <div class="relative flex items-center gap-1 border-r border-bordure pr-3">
+            <div v-if="notificationsOuvertes" class="fixed inset-0 z-10" @click="notificationsOuvertes = false" />
             <button
               type="button"
-              class="relative flex h-11 w-11 items-center justify-center rounded-full text-texte-attenue hover:bg-fond hover:text-texte"
+              class="relative z-20 flex h-11 w-11 items-center justify-center rounded-full text-texte-attenue hover:bg-fond hover:text-texte"
+              :aria-expanded="notificationsOuvertes"
+              aria-haspopup="true"
               :aria-label="`${notifications.items.value.length} notification(s)`"
               :title="`${notifications.items.value.length} notification(s)`"
-              @click="notificationsOuvertes = true"
+              @click="notificationsOuvertes = !notificationsOuvertes"
             >
               <Bell :size="18" aria-hidden="true" />
               <span
@@ -560,6 +562,28 @@ function rechercherRapide() {
                 {{ notifications.items.value.length }}
               </span>
             </button>
+
+            <div
+              v-if="notificationsOuvertes"
+              class="absolute right-0 top-full z-20 mt-2 w-80 max-w-[90vw] rounded-carte border border-bordure bg-surface shadow-flottant"
+            >
+              <div class="border-b border-bordure px-4 py-3">
+                <p class="font-semibold text-texte">Notifications</p>
+              </div>
+              <div class="max-h-96 overflow-y-auto">
+                <p v-if="notifications.items.value.length === 0" class="px-4 py-6 text-center text-sm text-texte-attenue">
+                  Aucune notification pour le moment.
+                </p>
+                <ul v-else class="divide-y divide-bordure">
+                  <li v-for="item in notifications.items.value" :key="item.id">
+                    <RouterLink :to="item.lien" class="block px-4 py-2.5 hover:bg-fond" @click="notificationsOuvertes = false">
+                      <p class="text-sm font-medium text-texte">{{ item.titre }}</p>
+                      <p class="text-xs text-texte-attenue">{{ item.sousTitre }}</p>
+                    </RouterLink>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
 
           <div class="relative ml-3">
@@ -606,17 +630,5 @@ function rechercherRapide() {
 
     <VoiceAssistantButton />
     <ChatbotWidget />
-
-    <BaseModal v-model="notificationsOuvertes" titre="Notifications">
-      <p v-if="notifications.items.value.length === 0" class="text-sm text-texte-attenue">Aucune notification pour le moment.</p>
-      <ul v-else class="-mx-2 divide-y divide-bordure">
-        <li v-for="item in notifications.items.value" :key="item.id">
-          <RouterLink :to="item.lien" class="block rounded-carte px-2 py-2.5 hover:bg-fond" @click="notificationsOuvertes = false">
-            <p class="text-sm font-medium text-texte">{{ item.titre }}</p>
-            <p class="text-xs text-texte-attenue">{{ item.sousTitre }}</p>
-          </RouterLink>
-        </li>
-      </ul>
-    </BaseModal>
   </div>
 </template>
