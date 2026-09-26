@@ -7,7 +7,7 @@ defineEmits<{ "update:modelValue": [boolean] }>();
 <template>
   <label
     :for="id"
-    class="inline-flex min-h-0 items-center gap-2 text-sm text-texte"
+    class="flex min-h-0 items-center gap-2 text-sm text-texte"
     :class="disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'"
   >
     <input
