@@ -28,6 +28,10 @@ const REPARTITION = [
   { cle: "DOMAINE_PUBLIC", label: "Domaine public", couleur: "bg-statut-domaine-public" },
 ];
 
+function imprimerRapport() {
+  window.print();
+}
+
 onMounted(async () => {
   definirPhraseCourante(PHRASES.consolePolesIntro);
   stats.value = await api.get<StatistiquesPole[]>("/andf/statistiques-poles");
@@ -42,7 +46,7 @@ onMounted(async () => {
     </PageHeader>
 
     <div class="no-print flex justify-end">
-      <BaseButton taille="sm" variant="secondaire" @click="window.print()">
+      <BaseButton taille="sm" variant="secondaire" @click="imprimerRapport">
         <Printer :size="14" aria-hidden="true" />
         Imprimer le rapport
       </BaseButton>
