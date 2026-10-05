@@ -54,12 +54,10 @@ export default defineConfig({
     }),
   ],
   server: {
-    // Configurable via variables d'environnement (defauts inchanges) : utile quand les ports
-    // 3000/5173 sont deja pris par un autre projet sur le meme poste.
-    port: process.env.WEB_PORT ? Number(process.env.WEB_PORT) : 5173,
+    port: 5173,
     proxy: {
       "/api": {
-        target: `http://localhost:${process.env.API_PORT ?? 3000}`,
+        target: "http://localhost:3000",
         changeOrigin: true,
       },
     },
