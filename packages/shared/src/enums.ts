@@ -135,6 +135,9 @@ export const TypeOperationAudit = {
   SUSPENSION_COMPTE: "SUSPENSION_COMPTE",
   REACTIVATION_COMPTE: "REACTIVATION_COMPTE",
   MODIFICATION_ADMIN_PROPRIETAIRE: "MODIFICATION_ADMIN_PROPRIETAIRE",
+  INVALIDATION_CONVENTION: "INVALIDATION_CONVENTION",
+  SCELLEMENT_DOCUMENT_INSTITUTIONNEL: "SCELLEMENT_DOCUMENT_INSTITUTIONNEL",
+  INVALIDATION_DOCUMENT_INSTITUTIONNEL: "INVALIDATION_DOCUMENT_INSTITUTIONNEL",
 } as const;
 export type TypeOperationAudit = (typeof TypeOperationAudit)[keyof typeof TypeOperationAudit];
 
@@ -302,3 +305,20 @@ export const StatutSequestre = {
   REMBOURSE: "REMBOURSE",
 } as const;
 export type StatutSequestre = (typeof StatutSequestre)[keyof typeof StatutSequestre];
+
+/** Type d'un document institutionnel scelle (hors convention de vente) : decision judiciaire/
+ * administrative numerisee, acte institutionnel divers, ou autre piece officielle. Reutilise
+ * exactement le mecanisme de scellement (SHA-256 + Ed25519 + QR) deja construit pour les
+ * conventions de vente, ouvert ici a n'importe quel document officiel depose par une autorite. */
+export const TypeDocumentInstitutionnel = {
+  DECISION_ADMINISTRATIVE: "DECISION_ADMINISTRATIVE",
+  ACTE_INSTITUTIONNEL: "ACTE_INSTITUTIONNEL",
+  AUTRE: "AUTRE",
+} as const;
+export type TypeDocumentInstitutionnel = (typeof TypeDocumentInstitutionnel)[keyof typeof TypeDocumentInstitutionnel];
+
+export const LIBELLE_TYPE_DOCUMENT_INSTITUTIONNEL: Record<TypeDocumentInstitutionnel, string> = {
+  DECISION_ADMINISTRATIVE: "Decision administrative",
+  ACTE_INSTITUTIONNEL: "Acte institutionnel",
+  AUTRE: "Autre document officiel",
+};

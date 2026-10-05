@@ -21,9 +21,11 @@ export class CryptoAuditController {
     return { clePubliquePem: this.cryptoAudit.clePubliqueRegistre };
   }
 
-  /** Dossier de preuves numerique : historique chronologique complet d'une parcelle pour instruire un dossier judiciaire. */
+  /** Dossier de preuves numerique : historique chronologique complet d'une parcelle pour instruire
+   * un dossier judiciaire ou dresser un acte (NOTAIRE : voir l'historique avant de sceller une
+   * convention, meme besoin que E6.7). */
   @Get("parcelles/:id/historique")
-  @Roles(RoleUtilisateur.ADMIN, RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.MAGISTRAT_CSAF)
+  @Roles(RoleUtilisateur.ADMIN, RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.MAGISTRAT_CSAF, RoleUtilisateur.NOTAIRE)
   async historiqueParcelle(@Param("id") id: string) {
     return this.cryptoAudit.historiqueParcelle(id);
   }

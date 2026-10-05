@@ -10,9 +10,12 @@ import {
   ChevronsLeft,
   ChevronsRight,
   CircleQuestionMark,
+  FileBadge,
+  FileSignature,
   FileStack,
   Flag,
   Gavel,
+  Globe,
   Handshake,
   Landmark,
   Languages,
@@ -98,7 +101,10 @@ const ROLES_AVEC_SIGNALEMENTS: RoleUtilisateur[] = [
  * adaptee au role (chaque lien n'apparait que si le role y a effectivement acces, voir router/index.ts),
  * pas un menu identique pour tout le monde. */
 const groupesNav = computed<GroupeNav[]>(() => {
-  const foncier: LienNav[] = [{ to: "/carte", label: "Carte cadastrale", icone: Map }];
+  const foncier: LienNav[] = [
+    { to: "/carte", label: "Carte cadastrale", icone: Map },
+    { to: "/observatoire", label: "Observatoire foncier", icone: Globe },
+  ];
   const marche: LienNav[] = [{ to: "/annonces", label: "Vitrine des annonces", icone: Store }];
   const support: LienNav[] = [];
 
@@ -130,10 +136,16 @@ const groupesNav = computed<GroupeNav[]>(() => {
     foncier.push({ to: "/andf/cessions", label: "Cessions a valider", icone: Handshake });
     foncier.push({ to: "/geometre/batis", label: "Validation des batis", icone: Building });
     foncier.push({ to: "/andf/usage-sol", label: "Usage du sol", icone: Sprout });
+    foncier.push({ to: "/documents-institutionnels", label: "Documents institutionnels", icone: FileBadge });
   }
   if (auth.role === RoleUtilisateur.MAGISTRAT_CSAF) {
     foncier.push({ to: "/andf", label: "Console des poles", icone: Landmark });
     foncier.push({ to: "/csaf", label: "Gel conservatoire", icone: Gavel });
+    foncier.push({ to: "/documents-institutionnels", label: "Documents institutionnels", icone: FileBadge });
+  }
+  if (auth.role === RoleUtilisateur.NOTAIRE) {
+    foncier.push({ to: "/notaire", label: "Espace notaire", icone: FileSignature });
+    foncier.push({ to: "/documents-institutionnels", label: "Documents institutionnels", icone: FileBadge });
   }
   if (auth.role === RoleUtilisateur.AGENT_BANQUE) {
     marche.push({ to: "/banque/solvabilite", label: "Solvabilite", icone: Banknote });
@@ -259,7 +271,7 @@ function rechercherRapide() {
     <!-- Sidebar desktop : nav verticale, plus aucune contrainte de largeur horizontale a gerer
          role par role (fini les calculs de debordement d'une barre horizontale). -->
     <aside
-      class="hidden shrink-0 flex-col bg-primaire transition-[width] duration-150 lg:flex"
+      class="no-print hidden shrink-0 flex-col bg-primaire transition-[width] duration-150 lg:flex"
       :class="sidebarReduite ? 'w-[4.5rem]' : 'w-64'"
       aria-label="Navigation principale"
     >
@@ -474,7 +486,7 @@ function rechercherRapide() {
     </div>
 
     <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
-      <header class="flex h-16 shrink-0 items-center gap-4 border-b border-bordure bg-surface px-4 sm:px-6">
+      <header class="no-print flex h-16 shrink-0 items-center gap-4 border-b border-bordure bg-surface px-4 sm:px-6">
         <button
           type="button"
           class="flex h-11 w-11 shrink-0 items-center justify-center rounded-carte text-texte hover:bg-fond lg:hidden"
@@ -626,14 +638,14 @@ function rechercherRapide() {
 
       <main id="contenu-principal" class="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <RouterView />
-        <footer class="mt-auto border-t border-bordure bg-surface px-4 py-4 pb-20 text-center text-xs text-texte-attenue sm:pb-4">
+        <footer class="no-print mt-auto border-t border-bordure bg-surface px-4 py-4 pb-20 text-center text-xs text-texte-attenue sm:pb-4">
           AYINON - Le Gardien Numerique de la Terre · Republique du Benin ·
           <RouterLink to="/aide" class="underline underline-offset-2 hover:text-texte">Aide</RouterLink>
         </footer>
       </main>
     </div>
 
-    <VoiceAssistantButton />
-    <ChatbotWidget />
+    <VoiceAssistantButton class="no-print" />
+    <ChatbotWidget class="no-print" />
   </div>
 </template>

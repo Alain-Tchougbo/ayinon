@@ -166,3 +166,12 @@ textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Impression d'un rapport (ex. console des poles ANDF) : masque le chrome applicatif (sidebar,
+   en-tete, widgets flottants) pour ne laisser que le contenu de la page, voir .no-print ci-dessous
+   pose sur ces elements dans DashboardLayout.vue. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

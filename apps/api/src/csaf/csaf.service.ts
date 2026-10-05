@@ -1,5 +1,6 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, StreamableFile } from "@nestjs/common";
 import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import {
@@ -172,6 +173,17 @@ export class CsafService {
       include: { parcelle: { select: { nup: true, commune: true, poleTerritorial: true } } },
       orderBy: { dateGel: "desc" },
     });
+  }
+
+  /** Sert le document de decision joint a la levee d'un gel (chemin relatif au repertoire de
+   * travail du processus, voir DOSSIER_DECISIONS et leverGel ci-dessus). */
+  async telechargerDecision(conflitId: string): Promise<StreamableFile> {
+    const conflit = await this.prisma.conflitCsaf.findUnique({ where: { id: conflitId } });
+    if (!conflit?.cheminDecision) {
+      throw new NotFoundException("Aucun document de decision joint a ce dossier");
+    }
+    const flux = createReadStream(join(process.cwd(), conflit.cheminDecision));
+    return new StreamableFile(flux, { disposition: `attachment; filename="decision-${conflitId}${extname(conflit.cheminDecision)}"` });
   }
 
   /** A appeler avant toute operation de mutation (vente, multi-signature, ...) sur une parcelle. */
