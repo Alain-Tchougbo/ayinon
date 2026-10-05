@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, StreamableFile } from "@nestjs/common";
 import { createHash, randomBytes } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { RoleUtilisateur, StatutDemandeFinancement, TypeOperationAudit, type DemanderFinancementDto, type TraiterFinancementDto } from "@ayinon/shared";
@@ -113,6 +114,24 @@ export class FinancementsService {
     });
 
     return misAJour;
+  }
+
+  /** Sert le justificatif joint a la demande : reserve a la banque qui la traite, a l'admin, ou a
+   * l'acheteur auteur de la demande (jamais a un tiers). */
+  async telechargerJustificatif(id: string, utilisateur: UtilisateurAuthentifie): Promise<StreamableFile> {
+    const demande = await this.prisma.demandeFinancement.findUnique({ where: { id } });
+    if (!demande?.cheminDocument) {
+      throw new NotFoundException("Aucun justificatif joint a cette demande");
+    }
+    const estAutorise =
+      utilisateur.role === RoleUtilisateur.ADMIN ||
+      utilisateur.role === RoleUtilisateur.AGENT_BANQUE ||
+      demande.acheteurId === utilisateur.id;
+    if (!estAutorise) {
+      throw new ForbiddenException("Acces reserve a la banque, a l'administration ou a l'auteur de la demande");
+    }
+    const flux = createReadStream(join(process.cwd(), demande.cheminDocument));
+    return new StreamableFile(flux, { disposition: `attachment; filename="justificatif-${id}${extname(demande.cheminDocument)}"` });
   }
 
   /** E4.8 : le vendeur verifie une attestation sans avoir a contacter la banque. */

@@ -135,6 +135,9 @@ enum TypeOperationAudit {
   SUSPENSION_COMPTE
   REACTIVATION_COMPTE
   MODIFICATION_ADMIN_PROPRIETAIRE
+  INVALIDATION_CONVENTION
+  SCELLEMENT_DOCUMENT_INSTITUTIONNEL
+  INVALIDATION_DOCUMENT_INSTITUTIONNEL
 }
 
 /// Cycle de vie d'une cession (achat/vente) : PROPOSEE par le vendeur -> ACCEPTEE par l'acquereur
@@ -271,6 +274,13 @@ enum RoleMessageChatbot {
   ASSISTANT
 }
 
+/// Type d'un document institutionnel scelle (hors convention de vente) : voir DocumentInstitutionnel.
+enum TypeDocumentInstitutionnel {
+  DECISION_ADMINISTRATIVE
+  ACTE_INSTITUTIONNEL
+  AUTRE
+}
+
 // ---------------------------------------------------------------------------
 // Identite & acces
 // ---------------------------------------------------------------------------
@@ -318,6 +328,7 @@ model Utilisateur {
   batisValides           Bati[]                 @relation("BatiValidateur")
   parcellesUsageSolValidees Parcelle[]          @relation("UsageSolValidateur")
   conversationsChatbot   ConversationChatbot[]
+  documentsInstitutionnelsEmis DocumentInstitutionnel[] @relation("DocumentInstitutionnelEmetteur")
 
   /// Declare uniquement par un VENDEUR (E0.3) : adapte les pieces demandees lors de la publication.
   statutDeclarant StatutDeclarantVendeur?
@@ -529,6 +540,28 @@ model Convention {
 
   @@index([parcelleId])
   @@index([statutCession])
+}
+
+/// Document institutionnel scelle (hors convention de vente) : reutilise exactement le meme
+/// mecanisme de scellement (hash SHA-256 + signature Ed25519 + QR) que Convention, ouvert a toute
+/// autorite habilitee (ANDF, CSAF, notaire, admin) pour un document officiel qui n'est pas une
+/// vente — ex. une decision institutionnelle numerisee independante d'un dossier CSAF particulier.
+model DocumentInstitutionnel {
+  id               String                     @id @default(uuid())
+  titre            String
+  type             TypeDocumentInstitutionnel
+  description      String?
+  cheminFichier    String?
+  hashSha256       String
+  signatureEd25519 String
+  qrPayload        Json
+  valide           Boolean                    @default(true)
+  createdAt        DateTime                   @default(now())
+
+  emetteurId String
+  emetteur   Utilisateur @relation("DocumentInstitutionnelEmetteur", fields: [emetteurId], references: [id])
+
+  @@index([type])
 }
 
 /// Annonce publique : un VENDEUR publie une parcelle qu'il possede sur la vitrine (visible sans

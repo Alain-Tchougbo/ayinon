@@ -19,3 +19,4 @@ export * from "./schemas/financement.schema";
 export * from "./schemas/recherche-sauvegardee.schema";
 export * from "./schemas/bati.schema";
 export * from "./schemas/chatbot.schema";
+export * from "./schemas/document-institutionnel.schema";

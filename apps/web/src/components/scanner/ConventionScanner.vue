@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { CircleCheck, ScanLine, TriangleAlert } from "@lucide/vue";
-import { VerifierConventionSchema, type VerifierConventionDto } from "@ayinon/shared";
+import {
+  VerifierConventionSchema,
+  VerifierDocumentInstitutionnelSchema,
+  type VerifierConventionDto,
+  type VerifierDocumentInstitutionnelDto,
+} from "@ayinon/shared";
 import jsQR from "jsqr";
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
@@ -15,6 +20,7 @@ interface ResultatVerification {
   authentique: boolean;
   motif?: string;
   convention?: { vendeurNom: string; acquereurNom: string; montantFcfa: number; creeLe: string };
+  document?: { titre: string; type: string; description: string | null; creeLe: string };
 }
 
 const { lire, definirPhraseCourante } = useVoiceAssistant();
@@ -91,11 +97,22 @@ async function verifierSaisieManuelle() {
   }
 }
 
+/** Deux types de documents scellables partagent le meme mecanisme (hash + signature Ed25519) :
+ * une convention de vente (payload.conventionId) ou un document institutionnel generique
+ * (payload.documentId, voir apps/api/src/documents-institutionnels). Le contenu du QR determine
+ * lequel verifier - jamais a l'utilisateur de le preciser lui-meme. */
+function estDocumentInstitutionnel(donneesBrutes: unknown): boolean {
+  return Boolean((donneesBrutes as { payload?: { documentId?: unknown } })?.payload?.documentId);
+}
+
 async function verifier(donneesBrutes: unknown) {
   enVerification.value = true;
   resultat.value = null;
   try {
-    const dto: VerifierConventionDto = VerifierConventionSchema.parse(donneesBrutes);
+    const estDocument = estDocumentInstitutionnel(donneesBrutes);
+    const dto: VerifierConventionDto | VerifierDocumentInstitutionnelDto = estDocument
+      ? VerifierDocumentInstitutionnelSchema.parse(donneesBrutes)
+      : VerifierConventionSchema.parse(donneesBrutes);
 
     if (!navigator.onLine) {
       // Zone blanche : pas d'appel serveur possible, on retombe sur la verification Ed25519
@@ -111,7 +128,9 @@ async function verifier(donneesBrutes: unknown) {
               }
             : { authentique: false, motif: "Signature cryptographique invalide : document falsifie ou corrompu." };
     } else {
-      resultat.value = await api.post<ResultatVerification>("/conventions/verifier", dto);
+      resultat.value = estDocument
+        ? await api.post<ResultatVerification>("/documents-institutionnels/verifier", dto)
+        : await api.post<ResultatVerification>("/conventions/verifier", dto);
     }
     await lire(resultat.value.authentique ? PHRASES.scannerOk : PHRASES.scannerKo);
   } catch (e) {
@@ -191,6 +210,10 @@ onBeforeUnmount(arreterCamera);
           <dt class="inline font-medium">Montant :</dt>
           <dd class="inline">{{ resultat.convention.montantFcfa.toLocaleString("fr-FR") }} FCFA</dd>
         </div>
+      </dl>
+      <dl v-if="resultat.document" class="mt-3 space-y-1 text-sm">
+        <div><dt class="inline font-medium">Titre :</dt> <dd class="inline">{{ resultat.document.titre }}</dd></div>
+        <div v-if="resultat.document.description"><dt class="inline font-medium">Description :</dt> <dd class="inline">{{ resultat.document.description }}</dd></div>
       </dl>
       <BaseButton taille="sm" variant="secondaire" class="mt-3.5" @click="relancer">Scanner un autre document</BaseButton>
     </BaseCard>

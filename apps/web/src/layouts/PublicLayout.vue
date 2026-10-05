@@ -17,6 +17,7 @@ import { LANGUES } from "../voice/langues";
 const LIENS_PUBLICS = [
   { to: "/annonces", label: "Annonces" },
   { to: "/carte", label: "Carte cadastrale" },
+  { to: "/observatoire", label: "Observatoire" },
   { to: "/scanner", label: "Scanner anti-fraude" },
   { to: "/simulateur-frais", label: "Simulateur de frais" },
 ];

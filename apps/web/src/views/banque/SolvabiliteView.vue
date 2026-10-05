@@ -268,7 +268,16 @@ async function lever(hypothequeId: string) {
                   <p class="font-semibold text-texte">{{ d.acheteur.nomComplet }} - {{ d.montantSouhaiteFcfa.toLocaleString("fr-FR") }} FCFA souhaites</p>
                   <p v-if="d.annonce" class="mt-0.5 text-xs text-texte-attenue">Pour {{ d.annonce.parcelle.nup }} - {{ d.annonce.parcelle.commune }}</p>
                   <p class="mt-0.5 text-xs text-texte-attenue">Demande le {{ new Date(d.createdAt).toLocaleDateString("fr-FR") }}</p>
-                  <p v-if="d.cheminDocument" class="mt-0.5 text-xs text-texte-attenue">Un justificatif a ete joint a cette demande.</p>
+                  <a
+                    v-if="d.cheminDocument"
+                    :href="`/api/financements/${d.id}/justificatif`"
+                    target="_blank"
+                    rel="noopener"
+                    class="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-primaire underline underline-offset-2"
+                  >
+                    <FileCheck :size="12" aria-hidden="true" />
+                    Telecharger le justificatif joint
+                  </a>
                 </td>
                 <td class="whitespace-nowrap px-4 py-3">
                   <BaseButton taille="sm" @click="examinerDemandeFinancement(d.id)">

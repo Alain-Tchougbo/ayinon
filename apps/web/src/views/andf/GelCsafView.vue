@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Download, FileText, Flag, Gavel, Lock, Search, Unlock } from "@lucide/vue";
+import { Download, FileText, Flag, Gavel, Lock, Paperclip, Search, Unlock } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useParcellesStore } from "../../stores/parcelles.store";
@@ -19,6 +19,17 @@ interface EntreeAudit {
   payload: Record<string, unknown>;
   hashBloc: string;
   horodatage: string;
+}
+
+// Une piece de decision n'est jamais garantie presente (televersement optionnel a la levee du
+// gel, voir CsafService.leverGel) : le lien n'est affiche que pour ces trois types d'entree, et un
+// 404 reste possible si aucun fichier n'avait ete joint a l'epoque - comportement accepte plutot
+// que d'interroger le serveur pour chaque entree juste pour le savoir a l'avance.
+const TYPES_AVEC_DECISION_EVENTUELLE = new Set(["LEVEE_GEL_CSAF", "DECISION_CSAF_ANNULATION_VENTE", "DECISION_CSAF_TRANSFERT_FORCE"]);
+function conflitIdDecision(entree: EntreeAudit): string | null {
+  if (!TYPES_AVEC_DECISION_EVENTUELLE.has(entree.typeOperation)) return null;
+  const id = entree.payload.conflitId;
+  return typeof id === "string" ? id : null;
 }
 
 interface ConflitCsaf {
@@ -305,6 +316,16 @@ async function confirmerLevee(conflitId: string) {
             <template v-if="entree.roleActeur"> - {{ entree.roleActeur.replaceAll("_", " ") }}</template>
           </p>
           <p class="mt-0.5 font-mono text-[0.65rem] text-texte-attenue">hash bloc : {{ entree.hashBloc.slice(0, 24) }}…</p>
+          <a
+            v-if="conflitIdDecision(entree)"
+            :href="`/api/csaf/conflits/${conflitIdDecision(entree)}/decision`"
+            target="_blank"
+            rel="noopener"
+            class="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primaire underline underline-offset-2"
+          >
+            <Paperclip :size="12" aria-hidden="true" />
+            Telecharger la decision (si un document a ete joint)
+          </a>
         </li>
       </ol>
     </BaseCard>
