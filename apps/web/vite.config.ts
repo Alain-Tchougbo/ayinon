@@ -42,21 +42,24 @@ export default defineConfig({
         description: "Plateforme de securisation et gouvernance fonciere de la Republique du Benin",
         start_url: "/",
         display: "standalone",
-        background_color: "#0b3d24",
-        theme_color: "#0b3d24",
+        background_color: "#0f3d2e",
+        theme_color: "#0f3d2e",
         lang: "fr",
         icons: [
-          { src: "/icons/icon.svg", sizes: "any", type: "image/svg+xml" },
-          { src: "/icons/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
+          { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+          { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
     }),
   ],
   server: {
-    port: 5173,
+    // Configurable via variables d'environnement (defauts inchanges) : utile quand les ports
+    // 3000/5173 sont deja pris par un autre projet sur le meme poste.
+    port: process.env.WEB_PORT ? Number(process.env.WEB_PORT) : 5173,
     proxy: {
       "/api": {
-        target: "http://localhost:3000",
+        target: `http://localhost:${process.env.API_PORT ?? 3000}`,
         changeOrigin: true,
       },
     },
