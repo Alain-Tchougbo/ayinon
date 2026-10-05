@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Landmark, TriangleAlert } from "@lucide/vue";
+import { Landmark, Printer, TriangleAlert } from "@lucide/vue";
 import { onMounted, ref } from "vue";
 import { api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
 import { PHRASES } from "../../voice/phrases";
+import BaseButton from "../../components/ui/BaseButton.vue";
 import BaseCard from "../../components/ui/BaseCard.vue";
 import PageHeader from "../../components/ui/PageHeader.vue";
 
@@ -39,6 +40,14 @@ onMounted(async () => {
     <PageHeader titre="Console de pilotage decentralisee" description="Six poles territoriaux - suivi du zonage et de l'integrite fonciere.">
       <template #icone><Landmark :size="22" class="text-primaire" aria-hidden="true" /></template>
     </PageHeader>
+
+    <div class="no-print flex justify-end">
+      <BaseButton taille="sm" variant="secondaire" @click="window.print()">
+        <Printer :size="14" aria-hidden="true" />
+        Imprimer le rapport
+      </BaseButton>
+    </div>
+    <p class="hidden text-xs text-texte-attenue print:block">Rapport genere le {{ new Date().toLocaleString("fr-FR") }}</p>
 
     <p v-if="chargement" class="text-sm text-texte-attenue" role="status">Chargement...</p>
     <p v-else-if="stats.length === 0" class="rounded-carte border border-dashed border-bordure p-4 text-sm text-texte-attenue">

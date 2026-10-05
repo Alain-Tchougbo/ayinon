@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, StreamableFile, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { GelConservatoireSchema, LeveeGelSchema, RoleUtilisateur, type GelConservatoireDto, type LeveeGelDto } from "@ayinon/shared";
 import { CurrentUser, type UtilisateurAuthentifie } from "../common/decorators/current-user.decorator";
@@ -35,5 +35,13 @@ export class CsafController {
   @Get("conflits-actifs")
   async listerConflitsActifs() {
     return this.csaf.listerConflitsActifs();
+  }
+
+  /** Telechargement du document de decision joint a la levee d'un gel (E8.8), reserve aux roles
+   * regaliens : limitation documentee (docs/decisions.md) desormais levee pour ce document. */
+  @Roles(RoleUtilisateur.MAGISTRAT_CSAF, RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.ADMIN)
+  @Get("conflits/:id/decision")
+  async telechargerDecision(@Param("id") id: string): Promise<StreamableFile> {
+    return this.csaf.telechargerDecision(id);
   }
 }

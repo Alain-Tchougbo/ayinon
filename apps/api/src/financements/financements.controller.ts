@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, StreamableFile, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import {
   DemanderFinancementSchema,
@@ -51,6 +51,13 @@ export class FinancementsController {
   @Get(":id")
   async obtenirParId(@Param("id") id: string, @CurrentUser() agent: UtilisateurAuthentifie) {
     return this.financements.obtenirParId(id, agent);
+  }
+
+  /** Reserve a la banque, a l'admin, ou a l'acheteur auteur de la demande (verifie cote service). */
+  @Roles(RoleUtilisateur.ACHETEUR, RoleUtilisateur.AGENT_BANQUE, RoleUtilisateur.ADMIN)
+  @Get(":id/justificatif")
+  async telechargerJustificatif(@Param("id") id: string, @CurrentUser() utilisateur: UtilisateurAuthentifie): Promise<StreamableFile> {
+    return this.financements.telechargerJustificatif(id, utilisateur);
   }
 
   @Roles(RoleUtilisateur.AGENT_BANQUE, RoleUtilisateur.ADMIN)

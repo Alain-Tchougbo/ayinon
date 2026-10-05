@@ -119,11 +119,21 @@ export class ConventionsService {
     };
   }
 
-  async invalider(conventionId: string) {
+  async invalider(conventionId: string, utilisateur: UtilisateurAuthentifie) {
     const convention = await this.prisma.convention.findUnique({ where: { id: conventionId } });
     if (!convention) {
       throw new BadRequestException("Convention introuvable");
     }
-    return this.prisma.convention.update({ where: { id: conventionId }, data: { valide: false } });
+    const miseAJour = await this.prisma.convention.update({ where: { id: conventionId }, data: { valide: false } });
+
+    await this.cryptoAudit.enregistrer({
+      parcelleId: convention.parcelleId,
+      typeOperation: TypeOperationAudit.INVALIDATION_CONVENTION,
+      acteurId: utilisateur.id,
+      roleActeur: utilisateur.role as RoleUtilisateur,
+      payload: { conventionId },
+    });
+
+    return miseAJour;
   }
 }

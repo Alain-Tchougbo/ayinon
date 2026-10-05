@@ -25,6 +25,7 @@ const router = createRouter({
       meta: { titre: "Accueil", forcerPublic: true },
     },
     { path: "/carte", name: "carte", component: () => import("../views/CarteView.vue"), meta: { titre: "Carte cadastrale" } },
+    { path: "/observatoire", name: "observatoire", component: () => import("../views/ObservatoireView.vue"), meta: { titre: "Observatoire foncier" } },
     { path: "/aide", name: "aide", component: () => import("../views/AideView.vue"), meta: { titre: "Aide" } },
     {
       path: "/scanner",
@@ -131,6 +132,22 @@ const router = createRouter({
       name: "csaf",
       component: () => import("../views/andf/GelCsafView.vue"),
       meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.MAGISTRAT_CSAF], titre: "Gel conservatoire CSAF" },
+    },
+    {
+      path: "/notaire",
+      name: "notaire",
+      component: () => import("../views/notaire/NotaireView.vue"),
+      meta: { necessiteAuth: true, rolesAutorises: [RoleUtilisateur.NOTAIRE, RoleUtilisateur.ADMIN], titre: "Espace notaire" },
+    },
+    {
+      path: "/documents-institutionnels",
+      name: "documents-institutionnels",
+      component: () => import("../views/documents-institutionnels/DocumentsInstitutionnelsView.vue"),
+      meta: {
+        necessiteAuth: true,
+        rolesAutorises: [RoleUtilisateur.AGENT_ANDF, RoleUtilisateur.MAGISTRAT_CSAF, RoleUtilisateur.NOTAIRE, RoleUtilisateur.ADMIN],
+        titre: "Documents institutionnels",
+      },
     },
     {
       path: "/banque/solvabilite",

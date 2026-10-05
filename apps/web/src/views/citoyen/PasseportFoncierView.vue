@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Lock, LockOpen, ShieldCheck } from "@lucide/vue";
+import { Lock, LockOpen, Scale, ScrollText, ShieldCheck, Users } from "@lucide/vue";
 import { computed, onMounted, ref } from "vue";
 import { ApiError, api } from "../../services/api";
 import { useVoiceAssistant } from "../../composables/useVoiceAssistant";
@@ -21,6 +21,41 @@ const parcelleActive = ref<string | null>(null);
 const message = ref<string | null>(null);
 const erreur = ref<string | null>(null);
 const enCours = ref(false);
+
+interface EvenementJudiciairePublic {
+  statut: string;
+  dateGel: string;
+  dateLevee: string | null;
+  motifLevee: string | null;
+}
+interface MutationProprietePublique {
+  vendeurNom: string;
+  acquereurNom: string;
+  date: string;
+}
+interface HistoriqueParcellePublic {
+  statutJudiciaire: "AUCUN_LITIGE" | "GEL_EN_COURS" | "ANTECEDENT_LEVE";
+  evenementsJudiciaires: EvenementJudiciairePublic[];
+  proprietairesSuccessifs: MutationProprietePublique[];
+}
+
+// Meme historique public (judiciaire + proprietaires successifs) que celui deja affiche a un
+// acheteur potentiel sur la fiche d'annonce (voir AnnonceDetailView.vue) : un proprietaire a au
+// moins autant de raison de consulter l'historique de son propre bien.
+const parcelleHistorique = ref<string | null>(null);
+const historique = ref<HistoriqueParcellePublic | null>(null);
+const chargementHistorique = ref(false);
+
+async function voirHistorique(parcelleId: string) {
+  parcelleHistorique.value = parcelleId;
+  historique.value = null;
+  chargementHistorique.value = true;
+  try {
+    historique.value = await api.get<HistoriqueParcellePublic>(`/parcelles/${parcelleId}/historique`);
+  } finally {
+    chargementHistorique.value = false;
+  }
+}
 
 onMounted(async () => {
   definirPhraseCourante(PHRASES.passeportIntro);
@@ -108,9 +143,15 @@ async function basculerVerrou(parcelleId: string, verrouActuel: boolean) {
                 </span>
               </td>
               <td class="px-4 py-3">
-                <BaseButton taille="sm" :variant="parcelle.verrouAntiVente ? 'danger' : 'secondaire'" @click="demanderOtp(parcelle.id)">
-                  {{ parcelle.verrouAntiVente ? "Deverrouiller" : "Verrouiller" }}
-                </BaseButton>
+                <div class="flex flex-col gap-2 sm:flex-row">
+                  <BaseButton taille="sm" :variant="parcelle.verrouAntiVente ? 'danger' : 'secondaire'" @click="demanderOtp(parcelle.id)">
+                    {{ parcelle.verrouAntiVente ? "Deverrouiller" : "Verrouiller" }}
+                  </BaseButton>
+                  <BaseButton taille="sm" variant="secondaire" @click="voirHistorique(parcelle.id)">
+                    <ScrollText :size="14" aria-hidden="true" />
+                    Historique
+                  </BaseButton>
+                </div>
               </td>
             </tr>
           </template>
@@ -138,6 +179,50 @@ async function basculerVerrou(parcelleId: string, verrouActuel: boolean) {
             Confirmer
           </BaseButton>
           <BaseButton taille="sm" variant="secondaire" @click="fermerModal">Annuler</BaseButton>
+        </div>
+      </div>
+    </BaseModal>
+
+    <BaseModal
+      :model-value="parcelleHistorique !== null"
+      titre="Historique de la parcelle"
+      @update:model-value="parcelleHistorique = null; historique = null"
+    >
+      <p v-if="chargementHistorique" class="text-sm text-texte-attenue" role="status">Chargement...</p>
+      <div v-else-if="historique" class="space-y-4">
+        <div>
+          <p class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+            <Scale :size="14" aria-hidden="true" /> Situation judiciaire
+          </p>
+          <p v-if="historique.statutJudiciaire === 'AUCUN_LITIGE'" class="rounded-carte bg-succes/10 px-3 py-2 text-sm text-succes">
+            Aucun litige ni gel judiciaire connu sur cette parcelle
+          </p>
+          <template v-else>
+            <p v-if="historique.statutJudiciaire === 'GEL_EN_COURS'" class="rounded-carte bg-danger/10 px-3 py-2 text-sm text-danger">
+              Gel conservatoire en cours - mutation bloquee
+            </p>
+            <p v-else class="rounded-carte bg-accent/10 px-3 py-2 text-sm text-accent">Litige anterieur, aujourd'hui leve</p>
+            <ul class="mt-2 space-y-1.5 text-sm text-texte">
+              <li v-for="(evenement, i) in historique.evenementsJudiciaires" :key="i">
+                <template v-if="evenement.statut === 'ACTIF'">Gel ouvert le {{ new Date(evenement.dateGel).toLocaleDateString("fr-FR") }}, procedure en cours.</template>
+                <template v-else>
+                  Gel du {{ new Date(evenement.dateGel).toLocaleDateString("fr-FR") }} leve le {{ new Date(evenement.dateLevee!).toLocaleDateString("fr-FR") }}<template v-if="evenement.motifLevee"> - {{ evenement.motifLevee }}</template>.
+                </template>
+              </li>
+            </ul>
+          </template>
+        </div>
+        <div>
+          <p class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-texte-attenue">
+            <Users :size="14" aria-hidden="true" /> Proprietaires successifs
+          </p>
+          <p v-if="!historique.proprietairesSuccessifs.length" class="text-sm text-texte-attenue">Aucune mutation avant le proprietaire actuel.</p>
+          <ol v-else class="space-y-1 text-sm text-texte">
+            <li v-for="(mutation, i) in historique.proprietairesSuccessifs" :key="i" class="flex items-center justify-between">
+              <span>{{ mutation.vendeurNom }} → {{ mutation.acquereurNom }}</span>
+              <span class="text-xs text-texte-attenue">{{ new Date(mutation.date).toLocaleDateString("fr-FR") }}</span>
+            </li>
+          </ol>
         </div>
       </div>
     </BaseModal>

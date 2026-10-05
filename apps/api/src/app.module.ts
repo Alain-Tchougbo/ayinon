@@ -16,10 +16,13 @@ import { RolesGuard } from "./common/guards/roles.guard";
 import { ConventionsModule } from "./conventions/conventions.module";
 import { CryptoAuditModule } from "./crypto-audit/crypto-audit.module";
 import { CsafModule } from "./csaf/csaf.module";
+import { DocumentsInstitutionnelsModule } from "./documents-institutionnels/documents-institutionnels.module";
 import { FamillesModule } from "./familles/familles.module";
 import { FinancementsModule } from "./financements/financements.module";
 import { GeometreModule } from "./geometre/geometre.module";
 import { HypothequesModule } from "./hypotheques/hypotheques.module";
+import { NotaireModule } from "./notaire/notaire.module";
+import { ObservatoireModule } from "./observatoire/observatoire.module";
 import { OtpModule } from "./otp/otp.module";
 import { ParcellesModule } from "./parcelles/parcelles.module";
 import { PrismaModule } from "./prisma/prisma.module";
@@ -56,6 +59,9 @@ import { VisitesModule } from "./visites/visites.module";
     SyncModule,
     BatisModule,
     ChatbotModule,
+    ObservatoireModule,
+    NotaireModule,
+    DocumentsInstitutionnelsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

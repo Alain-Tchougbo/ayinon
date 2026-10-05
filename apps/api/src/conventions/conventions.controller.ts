@@ -37,7 +37,7 @@ export class ConventionsController {
 
   @Roles(RoleUtilisateur.NOTAIRE, RoleUtilisateur.ADMIN, RoleUtilisateur.MAGISTRAT_CSAF)
   @Patch(":id/invalider")
-  async invalider(@Param("id") id: string) {
-    return this.conventions.invalider(id);
+  async invalider(@Param("id") id: string, @CurrentUser() utilisateur: UtilisateurAuthentifie) {
+    return this.conventions.invalider(id, utilisateur);
   }
 }
